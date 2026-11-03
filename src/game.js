@@ -1972,6 +1972,9 @@ function netSend(o) { try { if (NET.conn && NET.conn.open) NET.conn.send(o); } c
 function netClose(silent) {
   if (NET.conn) { try { netSend({ t: 'bye' }); NET.conn.close(); } catch (e) { } }
   if (NET.peer) { try { NET.peer.destroy(); } catch (e) { } }
+  if (NET.fbOff) { try { NET.fbOff(); } catch (e) { } NET.fbOff = null; }
+  if (NET.fbRef && !NET.conn && NET.slot === 0) { try { NET.fbRef.remove(); } catch (e) { } }
+  NET.fbRef = null; NET.tok = (NET.tok || 0) + 1;
   NET.conn = null; NET.peer = null; NET.on = false; NET.remote = { sel: null }; NET.menu = false;
   if (!silent) { NET.ui = 'menu'; }
   netInput(false);
@@ -1994,7 +1997,78 @@ function netWire(conn) {
   conn.on('close', () => netLost());
   conn.on('error', () => netLost());
 }
+
+// ---- server relay through Firebase Realtime Database (used when firebase-config.js is filled in) ----
+function fbDB() {
+  try {
+    const F = window.__MockFirebase || window.firebase, cfg = window.SHILLA_FIREBASE;
+    if (!F || !cfg || !cfg.databaseURL) return null;
+    if (!F.apps.length) F.initializeApp(cfg);
+    return F.database();
+  } catch (e) { return null; }
+}
+class FbConn {
+  constructor(ref, role) { this.ref = ref; this.role = role; this.h = {}; this.open = false; this.closed = false; this.pendIn = null; this.subs = []; this.me = role === 'host' ? 'H' : 'G'; this.op = role === 'host' ? 'G' : 'H'; }
+  on(e, f) { (this.h[e] = this.h[e] || []).push(f); }
+  emit(e, ...a) { (this.h[e] || []).forEach(f => { try { f(...a); } catch (er) { console.error(er); } }); }
+  start() {
+    const q = this.ref.child('m' + this.me);
+    const onAdd = sn => { const v = sn.val(); try { sn.ref.remove(); } catch (e) { } if (v && this.open) this.emit('data', v); };
+    q.on('child_added', onAdd); this.subs.push(() => q.off('child_added', onAdd));
+    const inRef = this.ref.child('i' + this.op);
+    const onIn = sn => { const v = sn.val(); if (v && this.open) { if (v.s && !Array.isArray(v.s)) v.s = Object.keys(v.s).sort((a, b) => a - b).map(k => v.s[k]); this.emit('data', v); } };
+    inRef.on('value', onIn); this.subs.push(() => inRef.off('value', onIn));
+    const leftRef = this.role === 'host' ? this.ref.child('byeG') : this.ref.child('t');
+    const onLeft = sn => { if (this.role === 'host' ? !!sn.val() : !sn.exists()) this.fireClose(); };
+    leftRef.on('value', onLeft); this.subs.push(() => leftRef.off('value', onLeft));
+    this.open = true; this.emit('open');
+    this.timer = setInterval(() => this.flush(), 50);
+  }
+  send(o) { if (!this.open) return; if (o.t === 'in') { this.pendIn = o; return; } this.ref.child('m' + this.op).push(o); }
+  flush() { if (this.pendIn && this.open) { const o = this.pendIn; this.pendIn = null; this.ref.child('i' + this.me).set(o); } }
+  cleanup() { this.subs.forEach(f => f()); this.subs = []; clearInterval(this.timer); }
+  fireClose() { if (this.closed) return; this.closed = true; this.open = false; this.cleanup(); this.emit('close'); }
+  close() { if (this.closed) return; this.flush(); this.closed = true; this.open = false; this.cleanup(); try { if (this.role === 'host') this.ref.remove(); else this.ref.child('byeG').set(true); } catch (e) { } }
+}
+function fbHost(db) {
+  NET.slot = 0; NET.ui = 'host'; NET.msg = ''; NET.via = 'server'; const tok = NET.tok = (NET.tok || 0) + 1;
+  const tryCode = n => {
+    const code = String(1000 + Math.floor(RR() * 9000)), ref = db.ref('rooms/' + code);
+    ref.transaction(cur => (!cur || !cur.t || Date.now() - cur.t > 3 * 3600e3) ? { t: Date.now(), v: 1 } : undefined, (err, ok) => {
+      if (NET.tok !== tok || NET.ui !== 'host') { if (ok) ref.remove(); return; }
+      if (err) { netFail(netNoNet()); return; }
+      if (!ok) { if (n < 8) tryCode(n + 1); else netFail('ما قدرنا نسوي غرفة — جرب مرة ثانية'); return; }
+      try { ref.onDisconnect().remove(); } catch (e) { }
+      NET.code = code; NET.msg = 'ready'; NET.fbRef = ref;
+      const g = ref.child('g');
+      const onG = sn => { if (sn.val() && !NET.conn && NET.tok === tok) { g.off('value', onG); NET.fbOff = null; const c = new FbConn(ref, 'host'); netWire(c); c.start(); } };
+      g.on('value', onG); NET.fbOff = () => g.off('value', onG);
+    }, false);
+  };
+  tryCode(0);
+  setTimeout(() => { if (NET.tok === tok && NET.ui === 'host' && NET.msg !== 'ready') netFail(netNoNet()); }, 15000);
+}
+function fbJoin(db, code) {
+  NET.slot = 1; NET.ui = 'join'; NET.code = code; NET.msg = ''; NET.via = 'server'; netInput(false); const tok = NET.tok = (NET.tok || 0) + 1;
+  const ref = db.ref('rooms/' + code); NET.fbRef = ref;
+  const to = setTimeout(() => { if (NET.tok === tok && NET.ui === 'join' && !NET.on) netFail(netNoNet()); }, 15000);
+  ref.once('value').then(sn => {
+    if (NET.tok !== tok || NET.ui !== 'join') return;
+    const v = sn.val();
+    if (!v || !v.t) { clearTimeout(to); netFail('ما في غرفة بهذا الكود ' + code + ' — تأكد إن صاحبك فاتح الغرفة'); return; }
+    ref.child('g').transaction(cur => cur ? undefined : Date.now(), (err, ok) => {
+      clearTimeout(to);
+      if (NET.tok !== tok || NET.ui !== 'join') return;
+      if (err) { netFail(netNoNet()); return; }
+      if (!ok) { netFail('الغرفة ' + code + ' فيها لاعبين — خل صاحبك يسوي غرفة جديدة'); return; }
+      try { ref.child('byeG').onDisconnect().set(true); } catch (e) { }
+      const c = new FbConn(ref, 'guest'); netWire(c); c.start();
+    }, false);
+  }).catch(() => { clearTimeout(to); if (NET.tok === tok) netFail(netNoNet()); });
+}
 function netHost() {
+  { const db = fbDB(); if (db) { fbHost(db); return; } }
+  NET.via = 'p2p';
   const P = PeerCtor(); if (!P || (!window.__MockPeer && typeof RTCPeerConnection === 'undefined')) { NET.ui = 'err'; NET.msg = NET_MSG_EMBED; return; }
   NET.slot = 0; NET.ui = 'host'; NET.code = String(1000 + Math.floor(RR() * 9000)); NET.msg = '';
   const peer = new P(NET_PREFIX + NET.code, Object.assign({ config: NET_ICE, debug: 0 }, NET_SRV)); NET.peer = peer;
@@ -2007,6 +2081,8 @@ function netHost() {
   });
 }
 function netJoin(code) {
+  { const db = fbDB(); if (db) { fbJoin(db, code); return; } }
+  NET.via = 'p2p';
   const P = PeerCtor(); if (!P || (!window.__MockPeer && typeof RTCPeerConnection === 'undefined')) { NET.ui = 'err'; NET.msg = NET_MSG_EMBED; return; }
   NET.slot = 1; NET.ui = 'join'; NET.code = code; NET.msg = ''; netInput(false);
   const peer = new P(undefined, Object.assign({ config: NET_ICE, debug: 0 }, NET_SRV)); NET.peer = peer;
@@ -2092,6 +2168,7 @@ function drawOnline() {
       txt(o, VW / 2, y + 2, { size: 40, weight: 800, color: sel ? '#fff' : 'rgba(255,255,255,0.55)' });
     });
     txt('واحد يسوي غرفة ويرسل الكود، والثاني يكتب الكود ويدخل', VW / 2, 640, { size: 20, weight: 700, color: 'rgba(255,255,255,0.6)' });
+    txt(fbDB() ? '🌐 الاتصال عن طريق السيرفر (Firebase)' : '🔗 اتصال مباشر بين الجهازين', VW / 2, 245, { size: 19, weight: 700, color: fbDB() ? '#7dffb0' : 'rgba(255,255,255,0.55)' });
   } else if (NET.ui === 'host') {
     if (NET.msg === 'ready') {
       txt('كود الغرفة', VW / 2, 300, { size: 34, weight: 800, color: 'rgba(255,255,255,0.8)' });
@@ -2158,6 +2235,7 @@ function netFightTick() {
     NET.lin[NET.lf] = sampled ? (v & 0x1fff) : ((v & 0x1fff) | NET.pendP); if (!sampled) NET.pendP = 0; NET.lf++; sampled++;
   }
   if (sampled) { const b = Math.max(0, NET.lf - 24); netSend({ t: 'in', m: NET.m, b, s: NET.lin.slice(b, NET.lf) }); }
+  if (NET.conn && NET.conn.flush && (G.frame & 1)) NET.conn.flush();
   // advance while both inputs are known (catch up a little when behind)
   let steps = 0;
   while (steps < 3 && NET.sf < NET.lf && NET.rin[NET.sf] !== undefined && G.scene === 'fight') {
@@ -2189,7 +2267,7 @@ function netStep(F) {
 function drawNetOverlay() {
   if (G.scene !== 'fight' || !NET.on) return;
   const ms = Math.round(NET.rtt);
-  txt(`📶 ${ms}ms`, VW / 2, VH - 14, { size: 16, font: FE, weight: 600, color: ms < 120 ? 'rgba(125,255,176,0.8)' : ms < 220 ? 'rgba(255,211,77,0.85)' : 'rgba(255,120,120,0.9)', rtl: false });
+  txt(`${NET.via === 'server' ? '🌐' : '📶'} ${ms}ms`, VW / 2, VH - 14, { size: 16, font: FE, weight: 600, color: ms < 120 ? 'rgba(125,255,176,0.8)' : ms < 220 ? 'rgba(255,211,77,0.85)' : 'rgba(255,120,120,0.9)', rtl: false });
   if (NET.desync) txt('⚠ تزامن', VW / 2 + 90, VH - 14, { size: 15, weight: 700, color: 'rgba(255,180,120,0.8)' });
   if (NET.stall > 12) {
     ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, VH / 2 - 40, VW, 80);
