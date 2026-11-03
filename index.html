@@ -2072,6 +2072,10 @@ function controlsPanel(cx, cy, s = 1) {
 // ================= ONLINE (WebRTC peer-to-peer via PeerJS) =================
 const NET = { on: false, ui: 'menu', idx: 0, peer: null, conn: null, code: '', slot: 0, msg: '', rtt: 120, lastRx: 0, m: 0, remote: { sel: null }, sentSel: '', D: 4, sf: 0, lf: 0, lin: [], rin: [], rmax: -1, pendP: 0, stall: 0, menu: false, midx: 0, desync: false, myH: {}, rH: {}, rng: null, res: null };
 const NET_PREFIX = 'shilla-fight-v1-';
+const NET_SRV = { host: '0.peerjs.com', port: 443, path: '/', secure: true };
+function netEmbedded() { try { return window.self !== window.top; } catch (e) { return true; } }
+const NET_MSG_EMBED = 'الأونلاين ما يشتغل داخل رابط Claude (Claude يمنع الاتصال بين الأجهزة) — افتح اللعبة من رابط Vercel أو من ملف shilla-fight.html';
+function netNoNet() { return netEmbedded() ? NET_MSG_EMBED : 'ما قدرنا نتصل بالإنترنت — تأكد من الاتصال وجرب مرة ثانية'; }
 const NET_ICE = { iceServers: [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
   { urls: 'stun:global.stun.twilio.com:3478' },
@@ -2109,27 +2113,27 @@ function netWire(conn) {
   conn.on('error', () => netLost());
 }
 function netHost() {
-  const P = PeerCtor(); if (!P) { NET.ui = 'err'; NET.msg = 'الأونلاين ما يشتغل في هذي الصفحة — افتح اللعبة من رابط الموقع (Vercel)'; return; }
+  const P = PeerCtor(); if (!P || (!window.__MockPeer && typeof RTCPeerConnection === 'undefined')) { NET.ui = 'err'; NET.msg = NET_MSG_EMBED; return; }
   NET.slot = 0; NET.ui = 'host'; NET.code = String(1000 + Math.floor(RR() * 9000)); NET.msg = '';
-  const peer = new P(NET_PREFIX + NET.code, { config: NET_ICE, debug: 0 }); NET.peer = peer;
+  const peer = new P(NET_PREFIX + NET.code, Object.assign({ config: NET_ICE, debug: 0 }, NET_SRV)); NET.peer = peer;
   peer.on('open', () => { if (NET.peer === peer) NET.msg = 'ready'; });
   peer.on('connection', conn => { if (NET.conn) { try { conn.close(); } catch (e) { } return; } netWire(conn); });
   peer.on('error', e => {
     if (NET.peer !== peer) return;
     if (e && e.type === 'unavailable-id') { try { peer.destroy(); } catch (er) { } NET.peer = null; netHost(); return; }
-    if (!NET.on) netFail('ما قدرنا نسوي غرفة — تأكد من الإنترنت وجرب مرة ثانية');
+    if (!NET.on) netFail(netNoNet());
   });
 }
 function netJoin(code) {
-  const P = PeerCtor(); if (!P) { NET.ui = 'err'; NET.msg = 'الأونلاين ما يشتغل في هذي الصفحة — افتح اللعبة من رابط الموقع (Vercel)'; return; }
+  const P = PeerCtor(); if (!P || (!window.__MockPeer && typeof RTCPeerConnection === 'undefined')) { NET.ui = 'err'; NET.msg = NET_MSG_EMBED; return; }
   NET.slot = 1; NET.ui = 'join'; NET.code = code; NET.msg = ''; netInput(false);
-  const peer = new P(undefined, { config: NET_ICE, debug: 0 }); NET.peer = peer;
+  const peer = new P(undefined, Object.assign({ config: NET_ICE, debug: 0 }, NET_SRV)); NET.peer = peer;
   const to = setTimeout(() => { if (NET.peer === peer && !NET.on) netFail('ما قدرنا نوصل للغرفة — تأكد من الكود وإن صاحبك فاتح الغرفة'); }, 15000);
   peer.on('open', () => { if (NET.peer !== peer) return; netWire(peer.connect(NET_PREFIX + code, { reliable: true, serialization: 'json' })); });
   peer.on('error', e => {
     if (NET.peer !== peer) return; clearTimeout(to);
     if (NET.on) return;
-    netFail(e && e.type === 'peer-unavailable' ? 'ما في غرفة بهذا الكود ' + code : 'ما قدرنا نتصل — تأكد من الإنترنت وجرب مرة ثانية');
+    netFail(e && e.type === 'peer-unavailable' ? 'ما في غرفة بهذا الكود ' + code + ' — تأكد إن صاحبك فاتح الغرفة' : netNoNet());
   });
 }
 addEventListener('pagehide', () => { if (NET.on) netSend({ t: 'bye' }); });
@@ -2221,8 +2225,9 @@ function drawOnline() {
     txt(TOUCH_ON ? 'المس هنا للإلغاء' : '○ / Esc = إلغاء', VW / 2, 650, { size: 20, weight: 700, color: 'rgba(255,255,255,0.5)' });
   } else if (NET.ui === 'err') {
     txt('⚠', VW / 2, 330, { size: 70, rtl: false });
-    txt(NET.msg, VW / 2, 420, { size: 28, weight: 800, color: '#ff9f9f' });
-    txt(TOUCH_ON ? 'المس الشاشة للرجوع' : 'اضغط أي زر للرجوع', VW / 2, 500, { size: 20, weight: 700, color: 'rgba(255,255,255,0.55)' });
+    const parts = NET.msg.split(' — ');
+    parts.forEach((t, i) => txt(t, VW / 2, 410 + i * 46, { size: i ? 22 : 28, weight: 800, color: i ? 'rgba(255,255,255,0.8)' : '#ff9f9f' }));
+    txt(TOUCH_ON ? 'المس الشاشة للرجوع' : 'اضغط أي زر للرجوع', VW / 2, 540, { size: 20, weight: 700, color: 'rgba(255,255,255,0.55)' });
   }
 }
 // ---- character select sync ----
