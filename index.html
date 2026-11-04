@@ -612,7 +612,7 @@ function buildRig(ci) {
 }
 
 // ================= POSES =================
-const BASE = { r: 0, lean: 0, ua: 0, fa: 15, bua: 0, bfa: 15, th: 0, sh: 0, bth: 0, bsh: 0, ft: 0, bft: 0, ffl: 1, bfl: 1, dx: 0, dy: 0 };
+const BASE = { r: 0, lean: 0, ua: 0, fa: 15, bua: 0, bfa: 15, th: 0, sh: 0, bth: 0, bsh: 0, ft: 0, bft: 0, ffl: 1, bfl: 1, dx: 0, dy: 0, fsc: 1 };
 const PK = Object.keys(BASE);
 const P = o => Object.assign({}, BASE, o);
 const GUARD = P({ lean: 6, ua: 34, fa: 128, bua: 26, bfa: 142, th: 18, sh: 22, bth: -14, bsh: 8 });
@@ -676,13 +676,13 @@ const MV = {
 // ================= SPECIAL SKILLS (charge every 10 s) =================
 const SKMAX = 600;
 const SKILL_IDS = ['sk_rush', 'sk_barrage', 'sk_slide', 'sk_cards', 'sk_hball', 'sk_rock', 'sk_roll', 'sk_cart', 'sk_chicken', 'sk_bike', 'sk_bob', 'sk_school', 'sk_karate', 'sk_blaster'];
-const SKILL_NAMES = ['الهجوم السريع', 'البكوس السريعة', 'السلايد', 'أوراق اللعب', 'كرة اليد', 'رمية الحجر', 'الكرة المتدحرجة', 'عربة السوبرماركت', 'جيش الدجاج', 'رمية السيكل', 'صاروخ البوب', 'هجوم الأدوات', 'إعصار الكاراتيه', 'سلاح القيمر'];
+const SKILL_NAMES = ['نطة الزعيم', 'القبضات العملاقة', 'السلايد', 'أوراق اللعب', 'كرة اليد', 'رمية الحجر', 'الكرة المتدحرجة', 'عربة السوبرماركت', 'جيش الدجاج', 'رمية السيكل', 'صاروخ البوب', 'هجوم الأدوات', 'إعصار الكاراتيه', 'سلاح القيمر'];
 const PZ_SUMMON = { ua: 178, fa: 10, bua: 176, bfa: 10, lean: -12 };
 const mixPose = (a, b, u) => { const o = {}; for (const k of PK) o[k] = lerp(a[k], b[k], u); return o; };
 function barragePose(f, mt) {
-  const m = f.mv;
-  if (mt < m.st) return Object.assign({}, GUARD, { lean: -6, ua: 30, fa: 145, bua: 26, bfa: 150, th: 30, bth: -24 });
-  const base = Object.assign({}, GUARD, { lean: 16, th: 34, sh: 30, bth: -30, bsh: 18, dx: 8 }, m.flPose || {});
+  const m = f.mv, big = m.fsc || 1;
+  if (mt < m.st) return Object.assign({}, GUARD, { lean: -6, ua: 30, fa: 145, bua: 26, bfa: 150, th: 30, bth: -24, fsc: 1 + (big - 1) * mt / m.st });
+  const base = Object.assign({}, GUARD, { lean: 16, th: 34, sh: 30, bth: -30, bsh: 18, dx: 8, fsc: big }, m.flPose || {});
   if (mt >= m.st + m.ac) return mixPose(base, GUARD, clamp((mt - m.st - m.ac) / m.rc, 0, 1));
   const ph = ((mt - m.st) >> 1) & 1, j = Math.sin(mt * 2.3) * 9;
   if (ph === 0) { base.ua = 88 + j; base.fa = 2; base.bua = 40; base.bfa = 115; } else { base.bua = 90 + j; base.bfa = 2; base.ua = 42; base.fa = 110; }
@@ -694,7 +694,10 @@ function barrageHB(f) {
   return { x: w[0], y: w[1], r: f.mv.r };
 }
 function barrageStep(f) {
-  const m = f.mv; if (f.mt < m.st || f.mt >= m.st + m.ac) return;
+  const m = f.mv;
+  if (m.fsc && f.mt === 2) { SFX.skill(); const w = f.toWorld(f.J.fH); for (let i = 0; i < 12; i++) FX.push({ t: 'p', x: w[0], y: w[1], vx: rnd(-4, 4), vy: rnd(-4, 2), life: 18, max: 18, c: i % 2 ? '#ff2a55' : '#ffd34d', sz: rnd(3, 6) }); }
+  if (f.mt < m.st || f.mt >= m.st + m.ac) return;
+  if (m.fsc && f.mt % 6 === 0) G.fight.shake(4);
   if (f.mt % 2 === 0) { const w = f.toWorld(f.J.fH[0] > f.J.bH[0] ? f.J.fH : f.J.bH); FX.push({ t: 'p', x: w[0], y: w[1] + rnd(-12, 12), vx: f.facing * rnd(4, 9), vy: rnd(-1, 1), life: 8, max: 8, c: '#ffffff', sz: rnd(2, 4) }); }
   if (f.mt % 12 === 0) SFX.whoosh(0);
 }
@@ -755,9 +758,21 @@ function spawnRock(f) {
   const vy = clamp((-175 - (y - ROCK_R * 0.85) - 0.5 * g * T * T) / T, -13, 3);
   spawnProj({ kind: 'rock', owner: f, x, y: y - ROCK_R * 0.85, vx: f.facing * vx, vy, g, r: ROCK_R, life: 120, vr: f.facing * 0.1, m: { dmg: 22, lvl: 'mid', hs: 0, bs: 16, push: 30, stop: 10, p: 1.7, kd: 1, kick: 1 } });
 }
-MV.sk_rush = { name: 'rush', skill: 1, limb: 'fH', lvl: 'mid', st: 8, ac: 18, rc: 20, dmg: 4, hs: 20, bs: 14, push: 20, stop: 4, r: 52, p: 1.2, mvx: [[8, 26, 17]], trail: 1, seq: 'rush',
+const STOMP_UP = { th: 100, sh: 135, bth: 92, bsh: 135, ua: 60, fa: 130, bua: 50, bfa: 130, lean: 14, ffl: 0.3, bfl: 0.3 };
+const STOMP_DN = { th: 12, sh: 6, bth: 28, bsh: 40, ua: 155, fa: 40, bua: 145, bfa: 40, lean: 2, ffl: 0, bfl: 0.4, ft: 20 };
+function stompHB(f) { if (!f.jumping || f.vy < 1 || !f.active()) return null; return { x: f.x + f.facing * 8, y: f.y - 70, r: 88 }; }
+function stompStep(f) {
+  const m = f.mv;
+  if (f.mt === m.st) { const op = G.fight.f[1 - f.slot], T = 2 * 23.5 / 0.92; f.vy = -23.5; f.vx = clamp((op.x - f.x) / T, -17, 17); f.y = -2; f.jumping = true; dust(f.x, 18); SFX.jump(); SFX.whoosh(1); G.fight.shake(6); }
+  if (f.jumping && f.mt > m.st && f.mt % 3 === 0) FX.push({ t: 'p', x: f.x + rnd(-30, 30), y: f.y - rnd(40, 200), vx: 0, vy: -1, life: 14, max: 14, c: '#ff4d3d', sz: rnd(2, 5) });
+  if (f.jumping && f.vy > 0 && f.vy < 1.5) { const op = G.fight.f[1 - f.slot]; const left = Math.max(8, (-f.y) / 14); f.vx = clamp((op.x - f.x) / left, -14, 14); }
+}
+function stompLand(f) { wave(f, { dmg: 7 }); wave(f, { dir: -f.facing, dmg: 7 }); G.fight.shake(26); dust(f.x, 34); SFX.thud(); SFX.rock(); for (let i = 0; i < 20; i++) { const a = rnd(Math.PI, Math.PI * 2); FX.push({ t: 'p', x: f.x + rnd(-40, 40), y: -6, vx: Math.cos(a) * rnd(3, 10), vy: Math.sin(a) * rnd(3, 9), life: 26, max: 26, c: '#b3a898', sz: rnd(3, 7) }); } }
+MV.sk_rush = { name: 'stomp', skill: 1, limb: null, lvl: 'mid', st: 8, ac: 95, rc: 16, dmg: 16, hs: 0, bs: 16, push: 28, stop: 10, r: 88, p: 1.8, kd: 1, jump: 1, trail: 1, hitboxFn: stompHB, onStep: stompStep, onLand: stompLand,
+  kf: [[0, {}], [7, { ...CROUCH, ua: 0, fa: 20, bua: 0, bfa: 20, lean: 30 }], [12, STOMP_UP], [36, STOMP_UP], [46, STOMP_DN], [104, STOMP_DN], [120, null]] };
+MV.sk_rush_old = { name: 'rush', skill: 1, limb: 'fH', lvl: 'mid', st: 8, ac: 18, rc: 20, dmg: 4, hs: 20, bs: 14, push: 20, stop: 4, r: 52, p: 1.2, mvx: [[8, 26, 17]], trail: 1, seq: 'rush',
   kf: [[0, {}], [6, { lean: -6, ua: 20, fa: 140, bua: 20, bfa: 140, th: 40, sh: 70, bth: 30, bsh: 60 }], [8, { lean: 28, ua: 82, fa: 30, bua: 60, bfa: 100, th: 60, sh: 60, bth: -40, bsh: 40, dx: 10 }], [26, {}], [34, { lean: 10, ua: 40, fa: 110, dx: 0, th: 20, sh: 20, bth: -14, bsh: 8 }], [46, null]] };
-MV.sk_barrage = { name: 'barrage', skill: 1, limb: 'fH', lvl: 'mid', st: 8, ac: 44, rc: 18, dmg: 2.4, hs: 14, bs: 7, push: 3, stop: 2, r: 36, p: 0.8, multi: 4, mvx: [[8, 52, 1.6]], poseFn: barragePose, hitboxFn: barrageHB, onStep: barrageStep, kf: [[0, {}], [70, null]] };
+MV.sk_barrage = { name: 'barrage', skill: 1, limb: 'fH', lvl: 'mid', st: 10, ac: 44, rc: 18, dmg: 2.8, hs: 14, bs: 7, push: 3, stop: 2, r: 56, p: 0.9, multi: 4, fsc: 1.85, mvx: [[10, 54, 2.4]], poseFn: barragePose, hitboxFn: barrageHB, onStep: barrageStep, kf: [[0, {}], [72, null]] };
 MV.sk_slide = { name: 'slide', skill: 1, limb: 'fT', lvl: 'low', st: 7, ac: 22, rc: 20, dmg: 14, hs: 0, bs: 16, push: 20, stop: 8, r: 44, p: 1.3, kd: 1, kick: 1, lowp: 1, onStep: slideStep, noDecay: 1,
   kf: [[0, {}], [5, { r: -28, lean: 10, th: 30, sh: 20, bth: 0, bsh: 90, ua: -20, fa: 40, bua: -10, bfa: 40 }], [8, { r: -55, lean: 16, th: 42, sh: 0, ffl: 0, ft: 10, bth: -5, bsh: 120, bfl: 0, ua: -40, fa: 30, bua: -30, bfa: 40 }], [29, {}], [40, { r: -10, lean: 20, th: 70, sh: 120, bth: 60, bsh: 120, ffl: 1, bfl: 1, ua: 20, fa: 120, bua: 20, bfa: 130 }], [49, null]] };
 MV.sk_cards = { name: 'cards', skill: 1, limb: null, lvl: 'mid', st: 14, ac: 1, rc: 18, p: 0.8, spawnAt: 14, spawn: spawnCards,
@@ -1033,14 +1048,15 @@ function solve(R, p) {
   const r = p.r * D2R, tr = r + p.lean * D2R;
   const J = { tr, r, segs: [] };
   // limbs
+  const fsc = p.fsc || 1;
   const arm = (pre, ua, fa, ox) => {
     const sh = rot(m.S[0] - hx + ox, m.S[1] - hy, tr);
     const pu = tr + (90 - ua) * D2R;
     const el = [sh[0] + R.L.ua * Math.cos(pu), sh[1] + R.L.ua * Math.sin(pu)];
     const pf = pu - fa * D2R;
-    const hd = [el[0] + R.L.fa * Math.cos(pf), el[1] + R.L.fa * Math.sin(pf)];
+    const hd = [el[0] + R.L.fa * fsc * Math.cos(pf), el[1] + R.L.fa * fsc * Math.sin(pf)];
     J[pre + 'H'] = hd;
-    J[pre + 'arm'] = [['uarm', sh, pu - R.a0.ua, m.S], ['farm', el, pf - R.a0.fa, m.E]];
+    J[pre + 'arm'] = [['uarm', sh, pu - R.a0.ua, m.S], ['farm', el, pf - R.a0.fa, m.E, fsc]];
   };
   const leg = (pre, th, sh_, ft, fl, ox) => {
     const hp = rot(ox, 0, r);
@@ -1573,7 +1589,7 @@ function drawFighter(f, opts = {}) {
   const rg = f.rage && !opts.refl && (G.frame % 20 < 10);
   const front = fl ? 'flash' : rg ? 'rage' : 'img';
   const back = fl ? 'flash' : 'dark';
-  const seg = (s, v) => { const [name, at, a, piv] = s; const Pp = R.P[name]; ctx.save(); ctx.translate(at[0], at[1]); ctx.rotate(a); ctx.drawImage(Pp[v], Pp.ox - piv[0], Pp.oy - piv[1]); ctx.restore(); };
+  const seg = (s, v) => { const [name, at, a, piv, sc] = s; const Pp = R.P[name]; ctx.save(); ctx.translate(at[0], at[1]); ctx.rotate(a); if (sc && sc !== 1) ctx.scale(sc, sc); ctx.drawImage(Pp[v], Pp.ox - piv[0], Pp.oy - piv[1]); ctx.restore(); };
   for (const s of J.barm) seg(s, back);
   for (const s of [J.bleg[1], J.bleg[2], J.bleg[0]]) seg(s, back);
   for (const s of [J.fleg[1], J.fleg[2], J.fleg[0]]) seg(s, front);
