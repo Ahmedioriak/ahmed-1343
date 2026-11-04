@@ -1147,7 +1147,9 @@ class Fighter {
     const h = this.in.h, p = this.in.p;
     switch (this.state) {
       case 'idle': case 'walk': case 'crouch': this.neutral(); break;
-      case 'land': if (this.canAct() && (this.buf || this.spBuf || this.cbBuf)) { this.neutral(); break; } if (this.t >= 6) this.setState('idle'); this.vx *= 0.7; break;
+      case 'land': if (this.canAct() && (this.buf || this.spBuf || this.cbBuf)) { this.neutral(); break; }
+        // holding up keeps hopping: jump → land → jump again, until the direction changes
+        if (h.up && !h.down && this.t >= 1 && G.fight && G.fight.phase === 'fight') { this.setState('jsq'); this.t = 2; this.upHold = 0; this.jumpDir = h.fwd ? this.facing : h.back ? -this.facing : 0; this.vx = 0; break; } if (this.t >= 6) this.setState('idle'); this.vx *= 0.7; break;
       case 'dash':
         this.vx *= this.dashBack ? 0.915 : 0.87; dashDust(this);
         if (this.t > (this.dashBack ? 10 : 4) && (this.buf || this.spBuf || this.cbBuf)) { this.neutral(); break; }
@@ -1165,7 +1167,7 @@ class Fighter {
             // long forward jump: aims to sail over the opponent and land just behind them
             this.vy = -21.5; const T = 2 * 21.5 / 0.92, tgt = clamp(opp.x + this.facing * 135, -STAGE + 10, STAGE - 10);
             this.vx = this.facing * clamp((tgt - this.x) * this.facing / T, 4.8 * this.C.spd, 10.5); this.crossJ = true; SFX.whoosh(1);
-          } else { this.vy = -18.5; this.vx = this.jumpDir * 5.2 * this.C.spd; this.crossJ = false; }
+          } else { this.vy = -21.5; this.vx = this.jumpDir * 5.2 * this.C.spd; this.crossJ = false; }
         }
         break;
       case 'air':
