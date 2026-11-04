@@ -1,5 +1,5 @@
 # Rebuild v2/index.html and v2/mobile.html (معركة الشلة 2) from the sources:  python3 src/build.py
-# The site root (index.html, mobile.html) is the first version with 8 fighters and is kept as it is.
+# The site root (index.html, mobile.html) is the main version with 14 fighters and is kept as it is.
 import os, re
 D = os.path.dirname(os.path.abspath(__file__)); R = os.path.dirname(D)
 rd = lambda n: open(os.path.join(D, n), encoding='utf-8').read()
