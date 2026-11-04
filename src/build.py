@@ -8,6 +8,8 @@ pj = rd('peerjs.min.js').replace('</script', '<\\/script').replace('//# sourceMa
 fb = '\n'.join(rd(f).replace('//# sourceMappingURL=' + f + '.map', '') for f in ['firebase-app-compat.js', 'firebase-database-compat.js'])
 def build(sub, out, title, cfg):
     s = rd(*sub, 'shell.html')
+    vp = os.path.join(D, *sub, 'voices.js')
+    s = s.replace('/*VOICES*/', open(vp, encoding='utf-8').read() if os.path.exists(vp) else '')
     s = s.replace('/*ASSETS*/', rd(*sub, 'assets.js')).replace('/*GAME*/', rd(*sub, 'game.js')).replace('/*PEER*/', pj).replace('/*FB*/', fb)
     for l in re.findall(r'<link[^>]*fonts\.(?:googleapis|gstatic)[^>]*>', s): s = s.replace(l, '')
     s = s.replace('</head>', '<style>' + rd('fonts.css') + '</style></head>', 1).replace('src="firebase-config.js"', 'src="' + cfg + '"')

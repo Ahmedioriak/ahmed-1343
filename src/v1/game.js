@@ -329,6 +329,7 @@ function audioInit() {
       Music.start();
     }
     if (AC.state === 'suspended') AC.resume();
+    if (!window.__ttsU && window.speechSynthesis) { window.__ttsU = 1; const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); }
   } catch (e) { }
 }
 const MASTER_VOL = 0.55, MUSIC_VOL = 0.16;
@@ -1058,7 +1059,7 @@ class Fighter {
   }
   talk(kind, text) {
     const P = PERSONA[this.ci] || {}; const line = text || (P[kind] && pickLine(P[kind])); if (!line) return;
-    this.bubble = { text: line, t: 0, dur: kind === 'win' ? 160 : 95 }; if (P.vo) SFX.voice(P.vo);
+    this.bubble = { text: line, t: 0, dur: kind === 'win' ? 160 : 95 }; charSpeak(this.ci, kind, line);
   }
   useSkill() {
     this.talk('skill');
@@ -1414,22 +1415,61 @@ const D0 = 900;
 
 // ================= PERSONALITY: lines, voices, stances =================
 const PERSONA = [
-  { vo: 'shout', intro: ['يلا تعال!', 'الزعيم وصل'], skill: ['نطّة الزعيم!', 'خذ هذي!'], st: { lean: 8, th: 6, bth: -6 }, br: 0.14, bob: 5 },
-  { vo: 'roar', intro: ['هههه… يا ضعيف', 'بكسّرك'], skill: ['آآآآاااه!!', 'قبضاااات!'], st: { lean: 14, ua: 6, bua: 6, th: 10, bth: -12 }, br: 0.06, ba: 2.4 },
-  { vo: 'whistle', intro: ['يلا نلعب!', 'جاهز للمباراة؟'], skill: ['سلااايد!'], st: { lean: 4 }, br: 0.16, bob: 5 },
-  { vo: 'laugh', intro: ['حسبتها كلها', 'هممم… مثير'], skill: ['اختار ورقة!'], st: { lean: -2, fa: 12, bfa: 10 }, br: 0.05, ba: 1 },
-  { vo: 'grunt', intro: ['ولا كورة تعدّي', 'الشباك مقفل'], skill: ['خذ الكورة!'], st: { ua: 22, fa: -60, bua: 20, bfa: -70, th: 20, bth: -18, lean: 16 }, br: 0.1 },
-  { vo: 'deep', intro: ['وخّر من دربي', 'البلدوزر جاي'], skill: ['حجرررر!'], st: { lean: 10, th: 8 }, br: 0.05, ba: 2.6 },
-  { vo: 'hum', intro: ['ركّز يا ولد', 'الدرس بيبدأ'], skill: ['الدرس الأول!'], st: { lean: -4, ua: -10, fa: -14 }, br: 0.04, ba: 1.4 },
-  { vo: 'yell', intro: ['لا تستصغرني', 'أصغرهم… وأخطرهم'], skill: ['وخّروا… عربة!'], st: { lean: 10 }, br: 0.18, bob: 4 },
-  { vo: 'cluck', intro: ['كاك كاك!', 'البيض جاهز'], skill: ['يا دجاج… هجوم!'], st: { ua: 16, bua: 14, fa: -20 }, br: 0.12, flap: 1 },
-  { vo: 'bell', intro: ['جاهز تطير؟', 'ترن ترن…'], skill: ['خذ سيكلك!'], st: { lean: 2, th: 10, bth: -8 }, br: 0.07 },
-  { vo: 'huff', intro: ['كورة وحدة تكفي', 'إلا الحارس…'], skill: ['صاروووخ!'], st: { lean: 4 }, br: 0.05, ba: 3 },
-  { vo: 'schoolbell', intro: ['عندي اختبار بعدين', 'شنطتي جاهزة'], skill: ['الواجب كله عليك!'], st: { lean: 6 }, br: 0.2, bob: 6 },
-  { vo: 'kiai', intro: ['أوس!', 'خلني أسخّن'], skill: ['هاااي!'], st: { th: 30, sh: 26, bth: -30, bsh: 30, lean: 2, ua: -6 }, br: 0.07, ba: 1 },
-  { vo: 'gamer', intro: ['ريسبون… وجاي', 'لاق؟ لا… مهارة'], skill: ['GG!'], st: { ua: -8, fa: -6 }, br: 0.08 },
+  { vo: 'shout', intro: ["يلا تعال!"], skill: ["نطّة الزعيم!"], win: ["قلت لك لا تلعب معي!"], st: { lean: 8, th: 6, bth: -6 }, br: 0.14, bob: 5 },
+  { vo: 'roar', intro: ["بكسّرك!"], skill: ["آآآاه!!"], win: ["روح تمرّن وتعال!"], st: { lean: 14, ua: 6, bua: 6, th: 10, bth: -12 }, br: 0.06, ba: 2.4 },
+  { vo: 'whistle', intro: ["يلا نلعب!"], skill: ["سلايد!"], win: ["أسرع منك بمليون مرة"], st: { lean: 4 }, br: 0.16, bob: 5 },
+  { vo: 'laugh', intro: ["حسبتها كلها"], skill: ["اختار ورقة!"], win: ["حسبتها قبل لا تبدأ"], st: { lean: -2, fa: 12, bfa: 10 }, br: 0.05, ba: 1 },
+  { vo: 'grunt', intro: ["ولا كورة تعدّي"], skill: ["خذ الكورة!"], win: ["ولا كورة تعدّي… ولا ضربة!"], st: { ua: 22, fa: -60, bua: 20, bfa: -70, th: 20, bth: -18, lean: 16 }, br: 0.1 },
+  { vo: 'deep', intro: ["وخّر من دربي"], skill: ["حجر!"], win: ["قلت لك وخّر من دربي"], st: { lean: 10, th: 8 }, br: 0.05, ba: 2.6 },
+  { vo: 'hum', intro: ["ركّز يا ولد"], skill: ["الدرس الأول!"], win: ["الدرس خلص… روح البيت"], st: { lean: -4, ua: -10, fa: -14 }, br: 0.04, ba: 1.4 },
+  { vo: 'yell', intro: ["لا تستصغرني"], skill: ["وخّروا… عربة!"], win: ["لا تستصغرني مرة ثانية"], st: { lean: 10 }, br: 0.18, bob: 4 },
+  { vo: 'cluck', intro: ["كاك كاك!"], skill: ["يا دجاج… هجوم!"], win: ["روح جيب بيض… خلصت عليك!"], st: { ua: 16, bua: 14, fa: -20 }, br: 0.12, flap: 1 },
+  { vo: 'bell', intro: ["جاهز تطير؟"], skill: ["خذ سيكلك!"], win: ["المرة الجاية جيب سيكلك معك"], st: { lean: 2, th: 10, bth: -8 }, br: 0.07 },
+  { vo: 'huff', intro: ["كورة وحدة تكفي"], skill: ["صاروخ!"], win: ["كورة وحدة كفاية عليك!"], st: { lean: 4 }, br: 0.05, ba: 3 },
+  { vo: 'schoolbell', intro: ["عندي اختبار بعدين"], skill: ["الواجب كله عليك!"], win: ["رحت المدرسة… ورجعت فايز!"], st: { lean: 6 }, br: 0.2, bob: 6 },
+  { vo: 'kiai', intro: ["أوس!"], skill: ["هاي!"], win: ["خلني أكمل خبزتي"], st: { th: 30, sh: 26, bth: -30, bsh: 30, lean: 2, ua: -6 }, br: 0.07, ba: 1 },
+  { vo: 'gamer', intro: ["ريسبون… وجاي"], skill: ["جي جي!"], win: ["جي جي… حظ أوفر المرة الجاية"], st: { ua: -8, fa: -6 }, br: 0.08 },
 ];
 const pickLine = a => a[(Math.random() * a.length) | 0];
+// ---- Arabic voices: the browser's Arabic voice when it has one, otherwise the built-in recorded lines ----
+const VOX = { clips: window.VOICE_CLIPS || {}, bufs: {}, last: {}, voices: null };
+function arVoices() {
+  if (VOX.voices) return VOX.voices;
+  try {
+    const all = (window.speechSynthesis && speechSynthesis.getVoices()) || []; if (!all.length) return [];
+    const ar = all.filter(v => /^ar/i.test(v.lang));
+    const fem = /laila|hoda|zariyah|salma|amany|amina|fatima|iman|mouna|rana|reem|sana|layla|noura|female|woman/i;
+    const rank = v => (/BH|KW|SA|AE|QA|OM/i.test(v.lang) ? 0 : 2) + (/natural|online|neural|premium|enhanced/i.test(v.name) ? 0 : 1) + (fem.test(v.name) ? 5 : 0);
+    VOX.voices = ar.sort((a, b) => rank(a) - rank(b)).filter((v, i, a) => !fem.test(v.name) || a.length < 2);
+  } catch (e) { VOX.voices = []; }
+  return VOX.voices;
+}
+try { if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => { VOX.voices = null; }; } catch (e) { }
+function clipBuf(key) {
+  if (VOX.bufs[key] !== undefined || !AC) return VOX.bufs[key];
+  const b64 = VOX.clips[key]; if (!b64) return (VOX.bufs[key] = null);
+  VOX.bufs[key] = 0;
+  try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    AC.decodeAudioData(u.buffer, buf => { VOX.bufs[key] = buf; if (VOX.pending === key) { VOX.pending = null; playClip(key); } }, () => { VOX.bufs[key] = null; }); } catch (e) { VOX.bufs[key] = null; }
+  return 0;
+}
+function playClip(key) {
+  const buf = clipBuf(key); if (buf === 0) { VOX.pending = key; return true; } if (!buf) return false;
+  const s = AC.createBufferSource(); s.buffer = buf; const g = AC.createGain(); g.gain.value = 1.15; s.connect(g); g.connect(master); s.start(); return true;
+}
+function speakAr(text, pitch = 1, rate = 1, vi = 0) {
+  const vs = arVoices(); if (!vs.length) return false;
+  try { const u = new SpeechSynthesisUtterance(text.replace(/[🏆🎉📖😋✨…]/gu, ' ')); const v = vs[vi % vs.length]; u.voice = v; u.lang = v.lang; u.pitch = clamp(pitch, 0, 2); u.rate = clamp(rate, 0.5, 2); u.volume = clamp(SET.vol, 0, 1); speechSynthesis.speak(u); return true; } catch (e) { return false; }
+}
+function charSpeak(ci, kind, text) {
+  if (!SET.voice || muted) return;
+  const now = performance.now(); if (VOX.last[ci] && now - VOX.last[ci] < 700) return; VOX.last[ci] = now;
+  const T = (window.VOICE_TTS && window.VOICE_TTS[ci]) || [1, 1];
+  if (speakAr(text, T[0], T[1], ci)) return;
+  if (playClip(ci + '_' + kind)) return;
+  const P = PERSONA[ci]; if (P && P.vo) SFX.voice(P.vo);
+}
+
 function vox(f0, f1, dur, F, vol = 0.06, t0 = 0, type = 'sawtooth') {
   if (!AC) return; const t = AC.currentTime + t0;
   const o = AC.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur);
@@ -2167,7 +2207,7 @@ class Fight {
       const w = this.koBy;
       const perfect = w && w.hp === w.maxHp;
       if (w) {
-        this.wins[w.slot]++; w.setState('win'); w.mv = null; if (this.wins[w.slot] >= 2) w.talk('win', w.C.quote);
+        this.wins[w.slot]++; w.setState('win'); w.mv = null; if (this.wins[w.slot] >= 2) w.talk('win');
         const l = this.f[1 - w.slot]; if (this.timeout && !l.ko) { l.setState('lose'); }
         this.msg(perfect ? 'PERFECT' : 'WINNER', perfect ? 'ko' : 'en', 120, perfect ? '#ffd34d' : '#ffffff', w.C.name);
         if (perfect) say('Perfect!');
@@ -2823,7 +2863,8 @@ function storyScript(ch, phase) {
   return [['N', 'الظل اختفى… والكأس رجع للشلة! 🏆'], ['P', CHARS[S.pc].quote], ['N', 'والشلة رجعت تضحك… لين البطولة الجاية.'], ['N', 'النهاية 🎉 — شكراً إنك لعبت!']];
 }
 function storyChapter() { const S = G.story; S.step = 'card'; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; if (AC) Music.intensity = 0; }
-function storyTalk(phase) { const S = G.story; S.step = 'talk'; S.phase = phase; S.lines = storyScript(S.ch, phase); S.li = 0; S.ct = 0; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; }
+function storySpeak() { const S = G.story, L = S && S.lines[S.li]; if (!L || !SET.voice || muted) return; try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } const boss = S.ch === 4, oc = boss ? S.pc : S.opps[S.ch]; const ci = L[0] === 'P' ? S.pc : oc; const T = L[0] === 'N' ? [0.95, 0.95] : ((window.VOICE_TTS && window.VOICE_TTS[ci]) || [1, 1]); speakAr(L[1], L[0] === 'O' && boss ? T[0] * 0.6 : T[0], T[1], L[0] === 'N' ? 99 : ci); }
+function storyTalk(phase) { const S = G.story; S.step = 'talk'; S.phase = phase; S.lines = storyScript(S.ch, phase); S.li = 0; S.ct = 0; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; storySpeak(); }
 function storyFight() {
   const S = G.story, boss = S.ch === 4; G.mode = 'cpu'; G.stageId = CH_STAGE[S.ch];
   G.sel = { cur: [S.pc, boss ? S.pc : S.opps[S.ch]], done: [true, true], t: 0, readyT: 0 };
@@ -2852,7 +2893,7 @@ function updStory() {
   if (S.step === 'talk') {
     const L = S.lines[S.li]; S.ct += 1.5;
     if (back && S.t > 10) { SFX.move(); storyAdvance(); return; }
-    if (ok && S.t > 6) { if (S.ct < L[1].length) S.ct = 999; else { S.li++; S.ct = 0; SFX.move(); if (S.li >= S.lines.length) storyAdvance(); } }
+    if (ok && S.t > 6) { if (S.ct < L[1].length) S.ct = 999; else { S.li++; S.ct = 0; SFX.move(); if (S.li >= S.lines.length) { try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } storyAdvance(); } else storySpeak(); } }
     return;
   }
   if (S.step === 'lost') { if (S.t > 30) { if (ok) { SFX.ok(); storyFight(); } else if (back) { SFX.move(); G.story = null; G.toTitle(); } } }
@@ -2923,7 +2964,7 @@ const G = {
   toFight() { this.scene = 'fight'; this.t = 0; this.fight = new Fight(this.sel.cur[0], this.sel.cur[1], this.mode); if (this.mode === 'online') netFightInit(this.fight); if (this.story) storySetupFight(this.fight); },
   toResult(w, fight) { if (this.story) { storyResult(w); return; } this.scene = 'result'; this.t = 0; this.res = { w, ci: fight.cis[w], wins: fight.wins.slice() }; if (AC) Music.intensity = 0; say(`${w === 0 ? 'Player one' : (this.mode === 'cpu' ? 'Computer' : 'Player two')} wins`); },
 };
-window.__storyAPI = { storyAdvance, storyStart, storyFight }; window.__NET = NET; window.__netHost = () => netHost(); window.__netJoin = c => netJoin(c); window.__netHash = () => G.fight ? netHash(G.fight) : 0;
+window.__storyAPI = { storyAdvance, storyStart, storyFight }; window.__VOX = VOX; window.__NET = NET; window.__netHost = () => netHost(); window.__netJoin = c => netJoin(c); window.__netHash = () => G.fight ? netHash(G.fight) : 0;
 window.__G = G; window.__MV = MV; window.__SK = SKILL_IDS; window.__COMBOS = COMBOS; window.__CPU = CPUPad; window.__txt = txt; window.__IMG = IMG; window.__FX = FX; window.__spark = spark;
 
 const SET_ROWS = [
