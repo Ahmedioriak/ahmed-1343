@@ -140,6 +140,28 @@ function rumble(slot, strong, weak, ms) {
 }
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
+// ---- Install as an app (PWA) + offline play ----
+const PWA = { evt: null, standalone: false };
+try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
+const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); PWA.evt = e; });
+addEventListener('appinstalled', () => { PWA.evt = null; PWA.standalone = true; toast('تم تثبيت اللعبة ✓ تلقاها في الشاشة الرئيسية'); });
+try {
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !netEmbedded()) {
+    addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { }));
+    navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.t === 'upd') toast('نزل تحديث جديد للعبة ✨ سكّرها وافتحها من جديد'); });
+  }
+} catch (e) { }
+function pwaInstall() {
+  if (PWA.standalone) { toast('اللعبة مثبتة على جهازك ✓'); return; }
+  if (PWA.evt) { const e = PWA.evt; PWA.evt = null; try { e.prompt(); } catch (er) { } return; }
+  G.pwaHelp = netEmbedded() || !/^https?:$/.test(location.protocol) ? 'embed' : IS_IOS ? 'ios' : 'other';
+}
+const PWA_HELP = {
+  ios: ['في الآيفون والآيباد:', '1) افتح رابط اللعبة في Safari', '2) اضغط زر المشاركة ⬆️ تحت', '3) اختر «إضافة إلى الشاشة الرئيسية»'],
+  other: ['من قائمة المتصفح ⋮ فوق', 'اختر «تثبيت التطبيق»', 'أو «إضافة إلى الشاشة الرئيسية»'],
+  embed: ['التثبيت ما يشتغل من داخل Claude', 'افتح اللعبة من رابط موقعك (Vercel)', 'وبعدها ثبّتها من نفس الزر'],
+};
 class KeyPad {
   constructor(i) { this.slot = i; this.map = MAPS[i]; this.h = {}; this.p = {}; this.cpu = false; }
   read() {
@@ -2976,17 +2998,18 @@ window.__storyAPI = { storyAdvance, storyStart, storyFight }; window.__VOX = VOX
 window.__G = G; window.__MV = MV; window.__SK = SKILL_IDS; window.__COMBOS = COMBOS; window.__CPU = CPUPad; window.__txt = txt; window.__IMG = IMG; window.__FX = FX; window.__spark = spark;
 
 const SET_ROWS = [
-  ['vol', 'مستوى الصوت العام'], ['music', 'الموسيقى'], ['fx', 'أصوات المعركة والضربات'], ['gong', 'جرس بداية الجولة و K.O.'], ['voice', 'أصوات وكلام الشخصيات'], ['ui', 'أصوات القوائم'], ['rumble', 'اهتزاز يد التحكم'], ['back', 'رجوع']];
+  ['vol', 'مستوى الصوت العام'], ['music', 'الموسيقى'], ['fx', 'أصوات المعركة والضربات'], ['gong', 'جرس بداية الجولة و K.O.'], ['voice', 'أصوات وكلام الشخصيات'], ['ui', 'أصوات القوائم'], ['rumble', 'اهتزاز يد التحكم'], ['install', 'ثبّت اللعبة كتطبيق 📲'], ['back', 'رجوع']];
 let setIdx = 0;
 function applySet() { if (master && !muted) master.gain.value = MASTER_VOL * SET.vol; if (musG) musG.gain.value = SET.music ? MUSIC_VOL : 0; musicOn = SET.music; saveSet(); }
 function updSettings() { // returns true when closed
   const P0 = pads[0].p, P1 = pads[1].p, any = k => P0[k] || P1[k];
   if (any('up')) { setIdx = (setIdx + SET_ROWS.length - 1) % SET_ROWS.length; SFX.move(); }
   if (any('down')) { setIdx = (setIdx + 1) % SET_ROWS.length; SFX.move(); }
+  if (G.pwaHelp) { if (any('back') || any('ok') || G.tap || anyP('Escape', 'Click', 'GPStart')) { G.pwaHelp = null; SFX.move(); } return false; }
   if (any('back') || anyP('Escape', 'GPStart')) { setIdx = 0; SFX.move(); return true; }
   let tapOk = false;
   if (G.tap && Math.abs(G.tap[0] - VW / 2) < 440) {
-    const i = Math.round((G.tap[1] - 175) / 66);
+    const i = Math.round((G.tap[1] - 165) / 58);
     if (i >= 0 && i < SET_ROWS.length) {
       setIdx = i; tapOk = true;
       if (SET_ROWS[i][0] === 'vol' && G.tap[0] < VW / 2 - 130) { SET.vol = clamp(Math.floor((G.tap[0] - (VW / 2 - 360)) / 44) + 1, 0, 5) / 5; applySet(); SFX.ok(); return false; }
@@ -2994,6 +3017,7 @@ function updSettings() { // returns true when closed
   }
   const key = SET_ROWS[setIdx][0], l = any('left'), r = any('right'), ok = any('ok') || tapOk;
   if (key === 'back') { if (ok) { setIdx = 0; SFX.ok(); return true; } return false; }
+  if (key === 'install') { if (ok) { SFX.ok(); pwaInstall(); } return false; }
   if (key === 'vol') { if (l || r) { SET.vol = clamp(Math.round((SET.vol + (r ? 0.2 : -0.2)) * 10) / 10, 0, 1); applySet(); SFX.ok(); } }
   else if (l || r || ok) { SET[key] = !SET[key]; applySet(); SFX.ok(); }
   return false;
@@ -3002,12 +3026,14 @@ function drawSettings() {
   ctx.fillStyle = 'rgba(3,4,10,0.94)'; ctx.fillRect(0, 0, VW, VH);
   txt('الإعدادات', VW / 2, 80, { size: 60, weight: 900, color: '#fff', glow: '#ff2040' });
   SET_ROWS.forEach(([key, label], i) => {
-    const y = 175 + i * 66, sel = i === setIdx;
+    const y = 165 + i * 58, sel = i === setIdx;
     ctx.fillStyle = sel ? 'rgba(230,20,40,0.85)' : 'rgba(255,255,255,0.05)';
-    ctx.beginPath(); ctx.moveTo(VW / 2 - 400, y - 26); ctx.lineTo(VW / 2 + 420, y - 26); ctx.lineTo(VW / 2 + 400, y + 26); ctx.lineTo(VW / 2 - 420, y + 26); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(VW / 2 - 400, y - 24); ctx.lineTo(VW / 2 + 420, y - 24); ctx.lineTo(VW / 2 + 400, y + 24); ctx.lineTo(VW / 2 - 420, y + 24); ctx.closePath(); ctx.fill();
     if (key === 'back') { txt(label, VW / 2, y + 2, { size: 30, weight: 800, color: '#fff' }); return; }
     txt(label, VW / 2 + 370, y + 2, { size: 28, weight: 800, color: '#fff', align: 'right' });
-    if (key === 'vol') {
+    if (key === 'install') {
+      const ok = PWA.standalone; txt(ok ? 'مثبتة ✓' : 'اضغط هنا', VW / 2 - 300, y + 2, { size: 24, weight: 800, color: ok ? '#7dffb0' : '#ffd34d' });
+    } else if (key === 'vol') {
       for (let q = 0; q < 5; q++) { ctx.fillStyle = q < Math.round(SET.vol * 5) ? '#ffd34d' : 'rgba(255,255,255,0.18)'; ctx.fillRect(VW / 2 - 360 + q * 44, y - 12, 38, 24); }
       txt(Math.round(SET.vol * 100) + '%', VW / 2 - 110, y + 2, { size: 30, font: FE, weight: 700, color: '#fff', rtl: false });
     } else {
@@ -3017,6 +3043,13 @@ function drawSettings() {
     }
   });
   txt('فوق/تحت للاختيار  ·  يمين/يسار أو زر الاختيار للتغيير  ·  Esc أو ○ للرجوع', VW / 2, 690, { size: 18, weight: 700, color: 'rgba(255,255,255,0.55)' });
+  if (G.pwaHelp) {
+    const L = PWA_HELP[G.pwaHelp]; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, VW, VH);
+    ctx.fillStyle = '#10142a'; rrect(VW / 2 - 330, 170, 660, 150 + L.length * 62, 24); ctx.fill(); ctx.strokeStyle = '#ff2a3a'; ctx.lineWidth = 3; ctx.stroke();
+    txt('📲 ثبّت اللعبة', VW / 2, 225, { size: 40, weight: 900, color: '#fff', glow: '#ff2040' });
+    L.forEach((l, i) => txt(l, VW / 2, 300 + i * 58, { size: i === 0 ? 28 : 26, weight: 800, color: i === 0 ? '#ffd34d' : '#fff' }));
+    txt('اضغط أي مكان للرجوع', VW / 2, 290 + L.length * 62, { size: 18, weight: 700, color: 'rgba(255,255,255,0.55)' });
+  }
 }
 function updTitle() {
   G.t++;

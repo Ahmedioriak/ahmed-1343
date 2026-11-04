@@ -16,7 +16,7 @@ def build(sub, out, title, cfg):
     O = os.path.join(R, out); os.makedirs(O, exist_ok=True)
     open(os.path.join(O, 'index.html'), 'w', encoding='utf-8').write(s)
     i = s.index('<script>')
-    m = (s[:i] + '<script>window.FORCE_TOUCH=true;</script>\n' + s[i:]).replace('<title>' + title + '</title>', '<title>' + title + ' — جوال</title>', 1)
+    m = (s[:i] + '<script>window.FORCE_TOUCH=true;</script>\n' + s[i:]).replace('<title>' + title + '</title>', '<title>' + title + ' — جوال</title>', 1).replace('href="manifest.webmanifest"', 'href="manifest-mobile.webmanifest"')
     open(os.path.join(O, 'mobile.html'), 'w', encoding='utf-8').write(m)
     print('built', out or '.', len(s) // 1024, 'KB')
 build(('v1',), '', 'معركة الشلة', 'firebase-config.js')
