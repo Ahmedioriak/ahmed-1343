@@ -44,6 +44,7 @@ const CHARS = [
   { name: 'الطالب', en: 'THE STUDENT', h: 0.76, tag: 'شنطته مليانة مفاجآت', hp: 0.9, dmg: 0.95, spd: 1.12, color: '#3a56c8', stats: [3, 5, 3], quote: 'رحت المدرسة… ورجعت فايز!' },
   { name: 'العبد', en: 'AL-ABD', h: 0.93, eat: 1, tag: 'كاراتيه… وبعدها خبز وماي', hp: 0.98, dmg: 1.08, spd: 1.06, color: '#f2f2f2', stats: [5, 4, 2], quote: 'خلني أكمل خبزتي بعدين نتفاهم' },
   { name: 'القيمر', en: 'THE GAMER', h: 0.9, tag: 'جاب سلاحه من اللعبة', hp: 0.96, dmg: 1.0, spd: 1.08, color: '#e01b30', stats: [4, 4, 3], quote: 'GG… حظ أوفر المرة الجاية' },
+  { name: 'النجم', en: 'THE SPIKER', h: 0.96, tag: 'يطير… ويضرب من فوق', hp: 1.0, dmg: 1.05, spd: 1.05, color: '#ffffff', stats: [4, 4, 4], quote: 'نقطة… ومباراة… وفوز' },
 ];
 const NCH = CHARS.length;
 
@@ -530,8 +531,8 @@ const MV = {
 };
 // ================= SPECIAL SKILLS (charge every 10 s) =================
 const SKMAX = 600;
-const SKILL_IDS = ['sk_rush', 'sk_barrage', 'sk_slide', 'sk_cards', 'sk_hball', 'sk_rock', 'sk_roll', 'sk_cart', 'sk_chicken', 'sk_bike', 'sk_bob', 'sk_school', 'sk_karate', 'sk_blaster'];
-const SKILL_NAMES = ['الهجوم السريع', 'البكوس السريعة', 'السلايد', 'أوراق اللعب', 'كرة اليد', 'رمية الحجر', 'الكرة المتدحرجة', 'عربة السوبرماركت', 'جيش الدجاج', 'رمية السيكل', 'صاروخ البوب', 'هجوم الأدوات', 'إعصار الكاراتيه', 'سلاح القيمر'];
+const SKILL_IDS = ['sk_rush', 'sk_barrage', 'sk_slide', 'sk_cards', 'sk_hball', 'sk_rock', 'sk_roll', 'sk_cart', 'sk_chicken', 'sk_bike', 'sk_bob', 'sk_school', 'sk_karate', 'sk_blaster', 'sk_spike'];
+const SKILL_NAMES = ['الهجوم السريع', 'البكوس السريعة', 'السلايد', 'أوراق اللعب', 'كرة اليد', 'رمية الحجر', 'الكرة المتدحرجة', 'عربة السوبرماركت', 'جيش الدجاج', 'رمية السيكل', 'صاروخ البوب', 'هجوم الأدوات', 'إعصار الكاراتيه', 'سلاح القيمر', 'الضربة الساحقة'];
 const PZ_SUMMON = { ua: 178, fa: 10, bua: 176, bfa: 10, lean: -12 };
 const mixPose = (a, b, u) => { const o = {}; for (const k of PK) o[k] = lerp(a[k], b[k], u); return o; };
 function barragePose(f, mt) {
@@ -703,6 +704,20 @@ const wave = (f, o = {}) => shoot(f, Object.assign({ kind: 'wave', from: 'ground
 const poof = (x, y = -150) => { dust(x, 14); for (let i = 0; i < 12; i++) FX.push({ t: 'p', x: x + rnd(-40, 40), y: y + rnd(-120, 120), vx: rnd(-3, 3), vy: rnd(-3, 1), life: 26, max: 26, c: i % 2 ? '#ffffff' : '#d0102a', sz: rnd(3, 6) }); };
 const quake = (f, both) => { G.fight.shake(both ? 22 : 14); SFX.rock(); dust(f.x, 22); wave(f, { dmg: both ? 11 : 9 }); if (both) wave(f, { dir: -f.facing, dmg: 11 }); };
 const JUMPAIR = { th: 60, sh: 100, bth: 30, bsh: 90, lean: 6, ffl: 0.3, bfl: 0.3 };
+// ---- النجم: volleyball — jump and spike ----
+const vball = (f, o) => shoot(f, Object.assign({ kind: 'vball', r: 20, sp: 22, dmg: 9, vr: 0.4 }, o));
+function spikeAt(f, o = {}) {
+  const w = f.toWorld(f.J.fH), op = G.fight.f[1 - f.slot], tx = op.x, ty = -60;
+  const dx = Math.max(60, Math.abs(tx - w[0])), ang = clamp(Math.atan2(ty - w[1], dx), 0.15, 1.2);
+  SFX.kick(); spark(w[0] + f.facing * 10, w[1], 'hit', f.facing);
+  vball(f, Object.assign({ ang, sp: o.sp || 26, r: o.r || 22, dmg: o.dmg || 12, kd: 1, p: 1.5, vr: 0.6, life: 80 }, o));
+}
+const SPIKEUP = { ua: 190, fa: 40, bua: 120, bfa: 60, lean: -20, th: 60, sh: 110, bth: 20, bsh: 90, ffl: 0.3, bfl: 0.3 };
+const SPIKEHIT = { ua: 110, fa: 0, bua: 60, bfa: 90, lean: 26, th: 40, sh: 70, bth: 10, bsh: 80, ffl: 0.3, bfl: 0.3 };
+MV.sk_spike = { name: 'spike', skill: 1, limb: null, lvl: 'mid', st: 30, ac: 1, rc: 30, p: 1.7, jump: 1,
+  onStep: f => { if (f.mt === 6) { f.vy = -19; f.vx = f.facing * 3; f.y = -2; f.jumping = true; dust(f.x, 10); SFX.jump(); } if (f.mt === 30) spikeAt(f, { sp: 30, r: 24, dmg: 18, fire: 1 }); },
+  kf: [[0, {}], [6, LANDP], [12, SPIKEUP], [28, SPIKEUP], [31, SPIKEHIT], [40, JUMPAIR], [61, null]] };
+
 // ---- البوب: handballs (the Keeper saves every ball he throws) ----
 const bobBall = (f, o) => shoot(f, Object.assign({ kind: 'hball', r: 19, sp: 20, dmg: 9, vr: 0.35, bob: 1 }, o));
 MV.sk_bob = { name: 'bobrocket', skill: 1, limb: null, lvl: 'mid', st: 22, ac: 1, rc: 22, p: 1.6, spawnAt: 22, spawn: f => { SFX.throw(); SFX.skill(); bobBall(f, { sp: 27, r: 30, dmg: 18, kd: 1, p: 1.7, fire: 1, vr: 0.5, life: 90 }); },
@@ -860,6 +875,13 @@ const COMBOS = [
     '13': ['الشوت الكبير', projMove(22, 22, AIM, AIM, f => blasterShot(f, { dmg: 16, r: 26, sp: 22, col: '#ff3cf0', kd: 1 }), { gun: 1, onStep: f => { if (f.mt < 22 && f.mt % 2 === 0) { const [x, y] = blasterMuzzle(f); FX.push({ t: 'p', x: x + rnd(-14, 14), y: y + rnd(-14, 14), vx: 0, vy: 0, life: 8, max: 8, c: '#ff3cf0', sz: rnd(2, 5) }); } } })],
     '14': ['الطلقة الواطية', projMove(12, 18, { ...CROUCH, ua: 70, fa: 4, bua: 66, bfa: 30, lean: 10 }, { ...CROUCH, ua: 70, fa: 4, bua: 66, bfa: 30, lean: 10 }, f => blasterShot(f, { dmg: 9, lvl: 'low', vy: 0, sp: 26, kd: 1 }), { gun: 1, base: 'CROUCH' })],
     '34': ['ضربة الأخمص', dashMove({ st: 8, ac: 8, rc: 18, sp: 12, limb: 'fH', r: 50, dmg: 12, kd: 1, gun: 1, pose: { ...AIM, lean: 24, dx: 14 } })] },
+  // 14 النجم — volleyball
+  { '12': ['الإرسال', projMove(14, 18, { ua: 175, fa: 60, bua: 150, bfa: 30, lean: -12 }, { ua: 100, fa: 0, lean: 22, dx: 10, th: 36, bth: -30 }, f => { SFX.kick(); vball(f, { sp: 22, dmg: 9 }); })],
+    '23': ['الإرسال القافز', jumpMove({ st: 6, ac: 50, vy: -15, vx: 5, projLimit: 1, airPose: SPIKEUP, step: f => { if (f.mt === 18) { f.pose = Object.assign({}, f.pose, SPIKEHIT); spikeAt(f, { dmg: 12 }); } } })],
+    '24': ['الصدّة', jumpMove({ st: 5, ac: 40, vy: -14, vx: 2, hitboxFn: highHandHB, r: 50, dmg: 11, launchHit: 1, airPose: { ua: 178, fa: 5, bua: 176, bfa: 5, lean: -6, th: 20, sh: 30, bth: 10, bsh: 30 } })],
+    '13': ['الساعدين', M({ st: 8, ac: 6, rc: 18, hitboxFn: barrageHB, r: 46, dmg: 10, launch: 1, lvl: 'low', mvx: [[4, 12, 7]], kf: [[0, {}], [6, { ...CROUCH, ua: 30, fa: 5, bua: 30, bfa: 5 }], [9, { ...CROUCH, ua: 65, fa: 0, bua: 65, bfa: 0, lean: 30 }], [14, { ua: 80, fa: 0, bua: 80, bfa: 0 }], [32, null]] })],
+    '14': ['الكرة الخادعة', projMove(12, 18, { ua: 170, fa: 40, lean: -10 }, { ua: 150, fa: 20, lean: 0 }, f => { SFX.throw(); vball(f, { sp: 14, ang: -0.85, g: 0.5, r: 20, dmg: 10, life: 140 }); })],
+    '34': ['السبايك المزدوج', jumpMove({ st: 6, ac: 56, vy: -17, vx: 4, projLimit: 1, airPose: SPIKEUP, step: f => { if (f.mt === 16 || f.mt === 28) { f.pose = Object.assign({}, f.pose, SPIKEHIT); spikeAt(f, { dmg: 8, r: 20 }); } } })] },
 ];
 const COMBO_NAME = {};
 COMBOS.forEach((set, ci) => { for (const k of COMBO_KEYS) { const [name, mv] = set[k]; const id = `cb${ci}_${k}`; MV[id] = mv; mv.cname = name; COMBO_NAME[id] = name; set[k] = id; } });
@@ -1470,6 +1492,8 @@ function updProj(F) {
     if (p.kind === 'grenade' && (p.life <= 1 || (p.bounces || 0) >= 2)) { p.kind = 'boom'; p.r = 95; p.vx = 0; p.vy = 0; p.g = 0; p.bounce = 0; p.life = 10; p.wide = true; SFX.rock(); SFX.thud(); dust(p.x, 20); if (G.fight) G.fight.shake(14); for (let i = 0; i < 26; i++) { const a = rnd(0, 7), sp = rnd(3, 12); FX.push({ t: 'p', x: p.x, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 22, max: 22, c: i % 3 ? '#ff8a2a' : '#ffe06a', sz: rnd(3, 7) }); } }
     if (p.kind === 'grenade') continue;
     if (p.kind === 'laser' && p.t % 2 === 0) FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 16, y: p.y, vx: 0, vy: 0, life: 6, max: 6, c: p.col, sz: 3 });
+    if (p.kind === 'vball' && p.fire && p.t % 2 === 0) FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 18, y: p.y - Math.sign(p.vy) * 10, vx: 0, vy: 0, life: 10, max: 10, c: '#ffd34d', sz: rnd(4, 7) });
+    if (p.kind === 'vball' && p.y >= -p.r && p.vy > 0 && !p.bounce) { p.bounce = 0.55; }
     if (p.kind === 'hball' && p.fire && p.t % 2 === 0) FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 20, y: p.y + rnd(-10, 10), vx: -Math.sign(p.vx) * 2, vy: rnd(-1, 1), life: 12, max: 12, c: '#ff8a2a', sz: rnd(4, 8) });
     if (p.kind === 'egg' && p.y >= -p.r * 0.6 && p.vy > 0) { p.y = -4; eggSplat(p); p.dead = true; continue; }
     if (p.kind === 'bike' && p.y >= -p.r * 0.55 && p.vy > 0) { bikeCrash(p); p.dead = true; continue; }
@@ -1632,6 +1656,13 @@ function drawBike(x, y, rot, r, dir = 1) {
   ctx.restore();
 }
 
+function drawVolleyball(x, y, rot, r) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.fillStyle = '#fbfbf6'; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.save(); ctx.clip();
+  for (const [a, col] of [[0, '#1f4fd8'], [2.1, '#ffd21f'], [4.2, '#1f4fd8']]) { ctx.save(); ctx.rotate(a); ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(r * 0.55, 0, r * 0.9, r * 0.32, 0.5, 0, 7); ctx.fill(); ctx.restore(); }
+  ctx.restore(); ctx.strokeStyle = 'rgba(30,40,70,0.7)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.stroke();
+  ctx.restore();
+}
 function drawPen(x, y, ang, r, col) {
   const L = r * 4.2, w = r * 0.62;
   ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
@@ -1713,6 +1744,7 @@ function drawProj(p) {
   else if (p.kind === 'cartwreck') drawCart(p.x, p.y, p.dir, p.rot * p.dir, Math.min(1, p.life / 25));
   else if (p.kind === 'cartgone') drawCart(p.x, p.y, p.dir, 0, Math.min(1, p.life / 20));
   else if (p.kind === 'egg') drawEgg(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'vball') { if (p.fire) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, p.r * 2); g.addColorStop(0, 'rgba(255,230,120,0.8)'); g.addColorStop(1, 'rgba(255,120,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2, 0, 7); ctx.fill(); ctx.restore(); } drawVolleyball(p.x, p.y, p.rot, p.r); }
   else if (p.kind === 'pen') drawPen(p.x, p.y, Math.atan2(p.vy, p.vx), p.r, p.col);
   else if (p.kind === 'book') drawBook(p.x, p.y, p.rot, p.r, p.col, p.t, p.heavy);
   else if (p.kind === 'laser') drawLaser(p);
@@ -2697,16 +2729,16 @@ function updSelect() {
     if (S.done[s]) { if (pd.p.back) { S.done[s] = false; SFX.move(); } continue; }
     if (pd.p.left) { S.cur[s] = (S.cur[s] + NCH - 1) % NCH; SFX.move(); }
     if (pd.p.right) { S.cur[s] = (S.cur[s] + 1) % NCH; SFX.move(); }
-    if (pd.p.up || pd.p.down) { S.cur[s] = (S.cur[s] + 7) % NCH; SFX.move(); }
+    if (pd.p.up || pd.p.down) { S.cur[s] = (S.cur[s] + 8) % NCH; SFX.move(); }
     if (pd.p.ok && S.t > 8) { S.done[s] = true; SFX.ok(); S.flash = [s, 14]; }
     else if (pd.p.back && cpu && s === 1) { S.done[0] = false; SFX.move(); }
     else if (pd.p.back && (!cpu || s === 0) && S.t > 8) { if (online) { netClose(); G.scene = 'online'; G.t = 0; return; } G.toTitle(); return; }
   }
   if (G.tap && S.t > 8) {
-    const tw = 80, gap = 8, x0 = VW / 2 - (7 * tw + 6 * gap) / 2, ty0 = 185, rowH = tw + 40;
+    const tw = 72, gap = 6, x0 = VW / 2 - (8 * tw + 7 * gap) / 2, ty0 = 190, rowH = tw + 40;
     const col = Math.floor((G.tap[0] - x0) / (tw + gap)), row = Math.floor((G.tap[1] - ty0) / rowH), s = online ? NET.slot : (cpu && S.done[0] ? 1 : 0);
-    if (col >= 0 && col < 7 && row >= 0 && row < 2 && !S.done[s] && row * 7 + col < NCH) {
-      const i = row * 7 + col;
+    if (col >= 0 && col < 8 && row >= 0 && row < 2 && !S.done[s] && row * 8 + col < NCH) {
+      const i = row * 8 + col;
       if (S.cur[s] === i) { S.done[s] = true; SFX.ok(); S.flash = [s, 14]; } else { S.cur[s] = i; SFX.move(); }
     }
   }
@@ -2747,8 +2779,8 @@ function drawSelect() {
     }
   }
   // tiles
-  const tw = 80, gap = 8, total = 7 * tw + 6 * gap, x0 = VW / 2 - total / 2, ty0 = 185, rowH = tw + 40;
-  const tpos = i => [x0 + (i % 7) * (tw + gap), ty0 + ((i / 7) | 0) * rowH];
+  const tw = 72, gap = 6, total = 8 * tw + 7 * gap, x0 = VW / 2 - total / 2, ty0 = 190, rowH = tw + 40;
+  const tpos = i => [x0 + (i % 8) * (tw + gap), ty0 + ((i / 8) | 0) * rowH];
   for (let i = 0; i < NCH; i++) {
     const [x, ty] = tpos(i);
     ctx.save();
@@ -2756,7 +2788,7 @@ function drawSelect() {
     ctx.drawImage(IMG['face' + (i + 1)], x, ty, tw, tw);
     ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 2; ctx.strokeRect(x, ty, tw, tw);
     ctx.restore();
-    txt(CHARS[i].name, x + tw / 2, ty + tw + 16, { size: 14, weight: 800, color: 'rgba(255,255,255,0.85)' });
+    txt(CHARS[i].name, x + tw / 2, ty + tw + 15, { size: 13, weight: 800, color: 'rgba(255,255,255,0.85)' });
   }
   for (let s = 0; s < 2; s++) {
     const i = S.cur[s], [x, ty] = tpos(i), both = S.cur[0] === S.cur[1];
