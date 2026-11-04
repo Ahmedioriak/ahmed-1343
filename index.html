@@ -457,7 +457,8 @@ tcRoot.addEventListener('pointerdown', e => {
   if (sys) { tPtr.set(e.pointerId, { kind: 'sys', x, y }); if (sys.id === 'pause') TOUCH.pause = true; else tryFS(true); return; }
   if (fsOK() && !window.__rec) tryFS(false);
   if (tcHit(x, y).length) { tPtr.set(e.pointerId, { kind: 'btn', x, y }); tcUpdate(); return; }
-  if (x < innerWidth * 0.45 && y > innerHeight * 0.22 && STK.id === null) {
+  if (x < innerWidth * 0.45 && y > innerHeight * 0.22) {
+    if (STK.id !== null) tPtr.delete(STK.id); // a new thumb on the stick always takes over (old one may be a lost touch)
     STK.id = e.pointerId;
     if (Math.hypot(x - STK.cx, y - STK.cy) < STK.R * 1.6) { STK.ox = STK.cx; STK.oy = STK.cy; }
     else { STK.ox = clamp(x, STK.R + 4, innerWidth * 0.45); STK.oy = clamp(y, STK.R + 4, innerHeight - STK.R - 4); }
@@ -469,6 +470,23 @@ tcRoot.addEventListener('pointerdown', e => {
 tcRoot.addEventListener('pointermove', e => { const pt = tPtr.get(e.pointerId); if (!pt) return; pt.x = e.clientX; pt.y = e.clientY; if (pt.kind === 'btn' || pt.kind === 'stick') tcUpdate(); });
 const tcEnd = e => { const pt = tPtr.get(e.pointerId); if (!pt) return; tPtr.delete(e.pointerId); if (STK.id === e.pointerId) { STK.id = null; STK.ox = STK.cx; STK.oy = STK.cy; } tcUpdate(); };
 tcRoot.addEventListener('pointerup', tcEnd); tcRoot.addEventListener('pointercancel', tcEnd); tcRoot.addEventListener('lostpointercapture', tcEnd);
+// Phones sometimes never send "finger lifted" (edge swipe, notification, many fingers) → the stick stayed stuck.
+// Cross-check against the fingers really on the screen and drop any ghost touches.
+function tcReset() { if (!tPtr.size && STK.id === null) return; tPtr.clear(); STK.id = null; STK.ox = STK.cx; STK.oy = STK.cy; tcUpdate(); }
+function tcReconcile(e) {
+  const list = e.touches; if (!list || !list.length) { tcReset(); return; }
+  if (tPtr.size <= list.length) return;
+  const left = Array.from(list, t => [t.clientX, t.clientY]); let changed = false;
+  for (const [id, pt] of [...tPtr.entries()]) {
+    let bi = -1, bd = 1e9; left.forEach((q, i) => { const d = Math.hypot(q[0] - pt.x, q[1] - pt.y); if (d < bd) { bd = d; bi = i; } });
+    if (bi >= 0 && bd < 110) left.splice(bi, 1);
+    else { tPtr.delete(id); if (STK.id === id) { STK.id = null; STK.ox = STK.cx; STK.oy = STK.cy; } changed = true; }
+  }
+  if (changed) tcUpdate();
+}
+for (const ev of ['touchstart', 'touchend', 'touchcancel']) addEventListener(ev, tcReconcile, { passive: true });
+addEventListener('blur', tcReset); addEventListener('pagehide', tcReset);
+document.addEventListener('visibilitychange', () => { if (document.hidden) tcReset(); });
 tcRoot.addEventListener('contextmenu', e => e.preventDefault());
 function enableTouch() {
   if (TOUCH_ON) return; TOUCH_ON = true; tcRoot.classList.add('on'); resize(); tcLayout();
@@ -1296,7 +1314,14 @@ class Fighter {
         if (this.t >= 16) this.setState('idle'); break;
       }
       case 'jsq':
-        if (this.t >= 4) { this.setState('air'); this.vy = -17.5; this.vx = this.jumpDir * 4.8 * this.C.spd; this.airUsed = false; SFX.jump(); dust(this.x, 6); }
+        if (this.t >= 4) {
+          this.setState('air'); this.airUsed = false; SFX.jump(); dust(this.x, 6);
+          if (this.jumpDir && this.jumpDir === this.facing) {
+            // long forward jump: aims to sail over the opponent and land just behind them
+            this.vy = -21.5; const T = 2 * 21.5 / 0.92, tgt = clamp(opp.x + this.facing * 135, -STAGE + 10, STAGE - 10);
+            this.vx = this.facing * clamp((tgt - this.x) * this.facing / T, 4.8 * this.C.spd, 10.5); this.crossJ = true; SFX.whoosh(1);
+          } else { this.vy = -18.5; this.vx = this.jumpDir * 5.2 * this.C.spd; this.crossJ = false; }
+        }
         break;
       case 'air':
         if (!this.airUsed && this.buf) { const id = this.resolve(this.buf.b, this.buf.h, true); this.startMove(id); }
@@ -1381,7 +1406,7 @@ class Fighter {
     if (this.x < -STAGE || this.x > STAGE) { this.x = clamp(this.x, -STAGE, STAGE); if (this.state === 'juggle') this.vx *= -0.3; }
   }
   landed() {
-    if (this.state === 'air') { this.setState('land'); this.vx = 0; SFX.land(); dust(this.x, 6); }
+    if (this.state === 'air') { this.setState('land'); this.vx = 0; SFX.land(); dust(this.x, this.crossJ ? 12 : 6); this.crossJ = false; }
     else if (this.state === 'attack') { const m = this.mv; this.jumping = false; if (m && m.onLand) m.onLand(this); this.mv = null; this.setState('land'); this.vx = 0; SFX.land(); dust(this.x, 6); }
     else if (this.state === 'juggle') {
       SFX.thud(); dust(this.x, 14); G.fight.shake(this.ko ? 14 : 7);
@@ -2269,7 +2294,7 @@ class Fight {
   pushApart() {
     const [a, b] = this.f; const minD = 104;
     if (a.state === 'rageVic' || b.state === 'rageVic') return;
-    const dy = Math.abs(a.y - b.y); if (dy > 150 || Math.abs((a.z || 0) - (b.z || 0)) > 70) return;
+    const dy = Math.abs(a.y - b.y); if (dy > 150 || (dy > 60 && (a.airborne() || b.airborne())) || Math.abs((a.z || 0) - (b.z || 0)) > 70) return;
     const d = b.x - a.x, ad = Math.abs(d);
     if (ad < minD) {
       const ov = (minD - ad) / 2, s = d === 0 ? (a.facing > 0 ? 1 : -1) : Math.sign(d);
