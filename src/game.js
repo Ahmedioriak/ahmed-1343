@@ -38,6 +38,8 @@ const CHARS = [
   { name: 'البلدوزر', en: 'BULLDOZER', tag: 'يكسر اللي قدامه', hp: 1.12, dmg: 1.1, spd: 0.88, color: '#c9ccd6', stats: [5, 2, 5], quote: 'قلت لك وخّر من دربي' },
   { name: 'المعلّم', en: 'AL-MUALLIM', tag: 'هادي… بس لا تستفزه', hp: 1.15, dmg: 1.05, spd: 0.87, color: '#7c8f5a', stats: [4, 2, 5], quote: 'الدرس خلص… روح البيت' },
   { name: 'التنين', en: 'THE DRAGON', tag: 'أصغرهم وأخطرهم', hp: 0.92, dmg: 0.97, spd: 1.15, color: '#ff3b4a', stats: [3, 5, 3], quote: 'لا تستصغرني مرة ثانية' },
+  { name: 'أبو الدجاج', en: 'ABU DAJAJ', h: 0.76, tag: 'بيض ودجاج… وفوضى', hp: 0.95, dmg: 0.96, spd: 1.1, color: '#ffc21a', stats: [3, 4, 3], quote: 'روح جيب بيض… خلصت عليك!' },
+  { name: 'أبو الأسود', en: 'ABU ASWAD', h: 0.88, tag: 'ملك السياكل', hp: 1.02, dmg: 1.04, spd: 1.02, color: '#e9e9ee', stats: [4, 4, 4], quote: 'المرة الجاية جيب سيكلك معك' },
 ];
 const NCH = CHARS.length;
 
@@ -364,12 +366,15 @@ const SFX = {
   throw() { nz(0.16, 'bandpass', 700, 1.4, 0.16, 0, 1800); },
   rock() { tn('sine', 70, 32, 0.35, 0.7); nz(0.3, 'lowpass', 600, 0.6, 0.45); },
   rattle() { for (let i = 0; i < 2; i++) tn('triangle', rrnd(700, 900), rrnd(500, 650), 0.03, 0.035, i * 0.03); },
+  cluck() { tn('square', rrnd(820, 900), 560, 0.05, 0.022); tn('square', rrnd(1000, 1100), 640, 0.07, 0.022, 0.08); },
+  splat() { nz(0.12, 'lowpass', 900, 1.2, 0.09); tn('sine', 300, 120, 0.08, 0.04); },
+  boing() { tn('sine', 180, 420, 0.12, 0.05); },
   roll() { nz(0.2, 'lowpass', 250, 0.8, 0.15); },
   ready() { tn('sine', 990, 990, 0.08, 0.06); tn('sine', 1320, 1320, 0.12, 0.05, 0.07); },
   gong() { tn('sine', 220, 218, 1.0, 0.16); tn('sine', 330, 328, 0.8, 0.08); tn('sine', 440, 438, 0.6, 0.05); },
 };
 const SFX_CAT = { move: 'ui', ok: 'ui', ready: 'ui', gong: 'gong' };
-const SFX_GAP = { whoosh: 70, rattle: 90, roll: 120, block: 50, hit: 35, kick: 35, throw: 60, land: 80, jump: 80 };
+const SFX_GAP = { cluck: 140, splat: 60, boing: 90, whoosh: 70, rattle: 90, roll: 120, block: 50, hit: 35, kick: 35, throw: 60, land: 80, jump: 80 };
 for (const k in SFX) { const fn = SFX[k]; SFX[k] = (...a) => {
   if (window.__sfxLog) window.__sfxLog.push([k, G.frame, a[0]]);
   if (!SET[SFX_CAT[k] || 'fx']) return;
@@ -520,8 +525,9 @@ const MV = {
 };
 // ================= SPECIAL SKILLS (charge every 10 s) =================
 const SKMAX = 600;
-const SKILL_IDS = ['sk_rush', 'sk_barrage', 'sk_slide', 'sk_cards', 'sk_hball', 'sk_rock', 'sk_roll', 'sk_cart'];
-const SKILL_NAMES = ['الهجوم السريع', 'البكوس السريعة', 'السلايد', 'أوراق اللعب', 'كرة اليد', 'رمية الحجر', 'الكرة المتدحرجة', 'عربة السوبرماركت'];
+const SKILL_IDS = ['sk_rush', 'sk_barrage', 'sk_slide', 'sk_cards', 'sk_hball', 'sk_rock', 'sk_roll', 'sk_cart', 'sk_chicken', 'sk_bike'];
+const SKILL_NAMES = ['الهجوم السريع', 'البكوس السريعة', 'السلايد', 'أوراق اللعب', 'كرة اليد', 'رمية الحجر', 'الكرة المتدحرجة', 'عربة السوبرماركت', 'جيش الدجاج', 'رمية السيكل'];
+const PZ_SUMMON = { ua: 178, fa: 10, bua: 176, bfa: 10, lean: -12 };
 const mixPose = (a, b, u) => { const o = {}; for (const k of PK) o[k] = lerp(a[k], b[k], u); return o; };
 function barragePose(f, mt) {
   const m = f.mv;
@@ -613,6 +619,35 @@ MV.sk_rock = { name: 'rock', skill: 1, limb: null, lvl: 'mid', st: 32, ac: 1, rc
 MV.sk_roll = { name: 'roll', skill: 1, limb: 'fH', lvl: 'mid', st: 12, ac: 46, rc: 14, dmg: 16, hs: 0, bs: 16, push: 24, stop: 9, p: 1.5, launchHit: 1, ball: 1, lowp: 1, mvx: [[12, 58, 14]], hitboxFn: rollHB, onStep: rollStep, onHit: rollHit,
   kf: [[0, {}], [12, { ...CROUCH, lean: 60, ua: 60, fa: 150, bua: 60, bfa: 150 }], [58, {}], [72, null]] };
 MV.sk_cart = { name: 'cart', skill: 1, limb: 'fH', lvl: 'mid', st: 10, ac: 40, rc: 16, dmg: 16, hs: 0, bs: 16, push: 30, stop: 9, p: 1.5, launchHit: 1, cart: 1, mvx: [[10, 50, 12.5]], poseFn: cartPose, hitboxFn: cartHB, onStep: cartStep, onHit: cartHit, kf: [[0, {}], [66, null]] };
+
+// ---- أبو الدجاج: eggs & chickens ----
+function chickenRun(f, o = {}) {
+  const w = f.toWorld(f.J.fH); SFX.cluck();
+  spawnProj(Object.assign({ kind: 'chicken', owner: f, x: f.x + f.facing * 60, y: -36, vx: f.facing * (o.sp || 11), vy: 0, r: 36, ground: 1, life: 110, vr: 0,
+    m: { dmg: o.dmg || 6, lvl: 'low', hs: 16, bs: 8, push: 14, stop: 5, p: 0.9, kd: o.kd } }, o.extra || {}));
+  for (let i = 0; i < 5; i++) FX.push({ t: 'p', x: w[0], y: w[1], vx: rnd(-3, 3), vy: rnd(-4, 0), life: 22, max: 22, c: '#ffffff', sz: rnd(2, 4) });
+}
+function eggSplat(p) {
+  SFX.splat();
+  const n = p.r > 25 ? 26 : 12;
+  for (let i = 0; i < n; i++) { const a = rnd(0, Math.PI * 2), sp = rnd(1, p.r > 25 ? 9 : 6); FX.push({ t: 'p', x: p.x, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2, life: rnd(14, 26), max: 26, c: i % 3 ? '#ffc21a' : '#fff7e0', sz: rnd(3, p.r > 25 ? 8 : 5) }); }
+}
+function featherPuff(x, y, n = 8) { for (let i = 0; i < n; i++) FX.push({ t: 'p', x: x + rnd(-20, 20), y: y + rnd(-20, 20), vx: rnd(-3, 3), vy: rnd(-3, 1), life: 30, max: 30, c: '#ffffff', sz: rnd(3, 5) }); }
+const egg = (f, o) => shoot(f, Object.assign({ kind: 'egg', r: 13, sp: 18, dmg: 7, vr: 0.3 }, o));
+MV.sk_chicken = { name: 'chickens', skill: 1, limb: null, lvl: 'low', st: 12, ac: 1, rc: 32, p: 1.2, spawnAt: 12, spawn: f => chickenRun(f, { sp: 12, dmg: 7 }),
+  onStep: f => { if (f.mt === 20) chickenRun(f, { sp: 13.5, dmg: 7 }); if (f.mt === 28) chickenRun(f, { sp: 15, dmg: 8, kd: 1 }); },
+  kf: [[0, {}], [8, { ...PZ_SUMMON, lean: -10 }], [12, { ua: 70, fa: 10, bua: 60, bfa: 20, lean: 26, dx: 8 }], [20, { ua: 50, fa: 20, lean: 20 }], [28, { ua: 75, fa: 10, lean: 26 }], [34, {}], [45, null]] };
+// ---- أبو الأسود: bikes & tires ----
+function spawnBike(f) {
+  const [x, y] = handsMid(f); SFX.throw();
+  const op = G.fight.f[1 - f.slot], vx = 14, g = 0.5, T = Math.max(80, Math.abs(op.x - x)) / vx, R0 = 72;
+  const vy = clamp((-160 - (y - R0) - 0.5 * g * T * T) / T, -14, 2);
+  spawnProj({ kind: 'bike', owner: f, x, y: y - R0, vx: f.facing * vx, vy, g, r: R0, life: 120, vr: f.facing * 0.16, m: { dmg: 21, lvl: 'mid', hs: 0, bs: 16, push: 30, stop: 10, p: 1.7, kd: 1 } });
+}
+function bikeCrash(p) { SFX.rock(); SFX.rattle(); dust(p.x, 18); if (G.fight) G.fight.shake(12); spawnProj({ kind: 'bikewreck', owner: p.owner, x: p.x, y: Math.min(-40, p.y), vx: (p.vx || 0) * 0.4, vy: -7, g: 0.6, vr: (p.dir || 1) * 0.2, r: p.r, life: 55, noHit: true, dir: p.dir }); }
+const tire = (f, o) => shoot(f, Object.assign({ kind: 'tire', r: 36, sp: 17, dmg: 10, vr: 0.35 }, o));
+MV.sk_bike = { name: 'bike', skill: 1, limb: null, lvl: 'mid', st: 30, ac: 1, rc: 22, p: 1.5, spawnAt: 30, spawn: spawnBike, onStep: f => { if (f.mt === 10) { const w = f.toWorld(f.J.fH); dust(w[0], 8); SFX.rattle(); } },
+  kf: [[0, {}], [10, { ...CROUCH, ua: 0, fa: 5, bua: 0, bfa: 5, lean: 46 }], [14, {}], [22, { ...GUARD, ua: 175, fa: 35, bua: 172, bfa: 35, lean: -10 }], [28, { lean: -18, ua: 195, bua: 192 }], [30, { ua: 80, fa: 10, bua: 78, bfa: 10, lean: 24, dx: 12 }], [36, {}], [53, null]] };
 // ================= COMBO MOVES (two buttons together: 6 per character) =================
 const COMBO_KEYS = ['12', '23', '24', '13', '14', '34'];
 const CB_CD = 180; // 3 seconds between two-button moves
@@ -720,6 +755,20 @@ const COMBOS = [
     '13': ['العربة الطايرة', projMove(16, 22, { ...PZ.summon, lean: -18 }, { ua: 80, fa: 10, bua: 78, bfa: 10, lean: 24, dx: 12 }, f => { SFX.throw(); shoot(f, { kind: 'cartproj', from: 'mid', sp: 12, ang: -0.55, g: 0.5, r: 70, dmg: 16, kd: 1, p: 1.6, vr: 0.12, life: 120 }); })],
     '14': ['عربة من السما', projMove(14, 24, PZ.summon, { ...PZ.summon, lean: -20 }, f => { SFX.skill(); shoot(f, { kind: 'cartproj', from: 'sky', vy: 5, g: 0.7, r: 75, dmg: 18, kd: 1, p: 1.7, vr: 0.06, life: 150 }); })],
     '34': ['زحمة التخفيضات', M({ st: 8, ac: 30, rc: 16, projLimit: 1, poseFn: barragePose, hitboxFn: () => null, onStep: f => { if (f.mt >= 8 && f.mt < 38 && f.mt % 5 === 0) { SFX.throw(); const k = (f.mt / 5) % 2 ? 'can' : 'apple'; shoot(f, { kind: k, from: f.J.fH[0] > f.J.bH[0] ? 'hand' : 'mid', sp: 16, ang: rnd(-0.35, 0.05), g: 0.2, r: 16, dmg: 3.5, hs: 14, vr: 0.4 }); } }, kf: [[0, {}], [54, null]] })] },
+  // 8 أبو الدجاج — eggs & chickens
+  { '12': ['بيضة سريعة', projMove(10, 16, { ua: -30, fa: 150 }, { ua: 92, fa: 0, lean: 18, dx: 10 }, f => { SFX.throw(); egg(f, { sp: 23, dmg: 8 }); })],
+    '23': ['رشة بيض', projMove(12, 18, PZ.windup, PZ.release, f => { SFX.throw(); [-0.5, -0.36, -0.22].forEach((a, i) => egg(f, { ang: a, sp: 14 - i, g: 0.45, dmg: 5 })); })],
+    '24': ['الدجاجة الطايرة', projMove(14, 20, PZ.windup, PZ.release, f => { SFX.cluck(); shoot(f, { kind: 'chicken', sp: 10, r: 38, dmg: 12, kd: 1, sin: [45, 0.14], vr: 0, life: 120 }); })],
+    '13': ['مطر البيض', projMove(14, 24, PZ.summon, { ...PZ.summon, lean: -20 }, f => { SFX.cluck(); for (let i = 0; i < 5; i++) egg(f, { from: 'sky', off: (i - 2) * 60, hy: i * 55, vy: 9, g: 0.25, r: 14, dmg: 4, vr: 0.2, life: 130 }); })],
+    '14': ['البيضة العملاقة', projMove(20, 22, { ...PZ.windup, ua: 215, lean: -20 }, PZ.release, f => { SFX.throw(); egg(f, { sp: 12, r: 34, dmg: 16, kd: 1, p: 1.6, vr: 0.12, life: 120 }); })],
+    '34': ['قفزة الديك', jumpMove({ st: 6, ac: 50, vy: -14, vx: 8, limb: 'fT', r: 44, dmg: 13, launchHit: 1, kick: 1, step: f => { if (f.mt === 8) { SFX.cluck(); featherPuff(f.x, -120, 12); } if (f.mt > 8 && f.mt % 5 === 0 && f.jumping) featherPuff(f.x, f.y - 120, 2); }, airPose: { th: 110, sh: 10, ffl: 0, lean: -8, ua: 150, fa: 40, bua: 140, bfa: 40, bth: 20, bsh: 80 } })] },
+  // 9 أبو الأسود — bikes & tires
+  { '12': ['تاير طاير', projMove(12, 18, PZ.windup, PZ.release, f => { SFX.throw(); tire(f, { sp: 18 }); })],
+    '23': ['التاير المتدحرج', projMove(14, 20, { ...CROUCH, ua: 10, fa: 20, lean: 40 }, { ua: 75, fa: 5, lean: 30, dx: 10, th: 50, bth: -40 }, f => { SFX.roll(); tire(f, { from: 'ground', gx: 80, r: 40, sp: 12, ground: 1, lvl: 'low', dmg: 12, kd: 1, vr: 0.3, life: 110 }); })],
+    '24': ['التاير النطّاط', projMove(12, 20, PZ.windup, { ...PZ.release, ua: 120 }, f => { SFX.throw(); tire(f, { sp: 13, ang: -0.5, g: 0.5, bounce: 0.75, r: 34, dmg: 9, life: 150, vr: 0.3 }); })],
+    '13': ['سيكل من السما', projMove(16, 24, PZ.summon, { ...PZ.summon, lean: -22 }, f => { SFX.skill(); shoot(f, { kind: 'bike', from: 'sky', vy: 5, g: 0.6, r: 72, dmg: 18, kd: 1, p: 1.7, vr: 0.05, life: 160 }); })],
+    '14': ['دبل تاير', projMove(12, 26, PZ.windup, PZ.release, f => { SFX.throw(); tire(f, { sp: 17, dmg: 7, r: 32 }); }, { onStep: f => { if (f.mt === 22) { SFX.roll(); tire(f, { from: 'ground', gx: 70, r: 36, sp: 13, ground: 1, lvl: 'low', dmg: 7, vr: 0.3 }); } } })],
+    '34': ['ركلة البدّال', M({ st: 10, ac: 14, rc: 18, multi: 3, limb: 'fT', r: 44, dmg: 5, kick: 1, launch: 1, mvx: [[6, 24, 6]], kf: [[0, {}], [8, { th: 80, sh: 110, ffl: 0.3, lean: 4 }], [12, { th: 105, sh: 5, ffl: 0, lean: -12, dx: 6 }], [16, { th: 70, sh: 90 }], [20, { th: 110, sh: 2, ffl: 0, lean: -14 }], [24, {}], [42, null]] })] },
 ];
 const COMBO_NAME = {};
 COMBOS.forEach((set, ci) => { for (const k of COMBO_KEYS) { const [name, mv] = set[k]; const id = `cb${ci}_${k}`; MV[id] = mv; mv.cname = name; COMBO_NAME[id] = name; set[k] = id; } });
@@ -1325,6 +1374,11 @@ function updProj(F) {
     if (p.kind === 'card' && p.t % 3 === 0) FX.push({ t: 'p', x: p.x, y: p.y, vx: -p.vx * 0.05, vy: 0, life: 10, max: 10, c: '#ffffff', sz: 2 });
     if (p.kind === 'hball' && p.t % 2 === 0) FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 14, y: p.y, vx: 0, vy: 0, life: 9, max: 9, c: '#ffd34d', sz: 3 });
     if (p.kind === 'rock' && !p.ground && !p.bounce && p.y >= -p.r * 0.6 && p.vy > 0) { crumble(p); p.dead = true; continue; }
+    if (p.kind === 'egg' && p.y >= -p.r * 0.6 && p.vy > 0) { p.y = -4; eggSplat(p); p.dead = true; continue; }
+    if (p.kind === 'bike' && p.y >= -p.r * 0.55 && p.vy > 0) { bikeCrash(p); p.dead = true; continue; }
+    if (p.kind === 'bikewreck' && p.y >= -30 && p.vy > 0) { p.y = -30; p.vy *= -0.35; p.vx *= 0.6; p.vr *= 0.5; if (Math.abs(p.vy) > 2) { dust(p.x, 5); SFX.rattle(); } }
+    if (p.kind === 'chicken' && p.t % 9 === 0) { FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 20, y: p.y - 10, vx: -Math.sign(p.vx) * rnd(1, 3), vy: rnd(-2, 0), life: 18, max: 18, c: '#ffffff', sz: rnd(2, 4) }); if (p.t % 27 === 0) SFX.cluck(); }
+    if (p.kind === 'tire' && p.bounce && p.y >= -p.r - 1 && p.vy < 0 && p.t > 2 && p.vy < -2) SFX.boing();
     if (p.kind === 'cartwreck' && p.y >= 0 && p.vy > 0) { p.y = 0; p.vy *= -0.35; p.vx *= 0.7; p.vr *= 0.5; if (Math.abs(p.vy) > 2) { dust(p.x, 6); SFX.rattle(); } }
     if (p.life <= 0 || Math.abs(p.x) > STAGE + 350 || p.y > 60) p.dead = true;
     if (p.noHit || p.dead) continue;
@@ -1335,12 +1389,12 @@ function updProj(F) {
     const r = d.hurt; const cx = clamp(p.x, r.x0, r.x1), cy = clamp(p.y, r.y0, r.y1);
     if (Math.hypot(p.x - cx, p.y - cy) <= p.r) {
       F.hitResolve(p.owner, d, p.m, { x: p.x, y: p.y, proj: true }, Math.sign(p.vx) || p.owner.facing);
-      p.dead = true; if (p.kind === 'rock') crumble(p);
+      p.dead = true; if (p.kind === 'rock') crumble(p); if (p.kind === 'egg') eggSplat(p); if (p.kind === 'chicken') featherPuff(p.x, p.y, 14); if (p.kind === 'bike') bikeCrash(p);
     }
   }
   for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
     const a = P[i], b = P[j]; if (a.dead || b.dead || a.noHit || b.noHit || a.owner === b.owner) continue;
-    if (Math.hypot(a.x - b.x, a.y - b.y) < a.r + b.r) { a.dead = b.dead = true; spark((a.x + b.x) / 2, (a.y + b.y) / 2, 'block', 0); SFX.block(); if (a.kind === 'rock') crumble(a); if (b.kind === 'rock') crumble(b); }
+    if (Math.hypot(a.x - b.x, a.y - b.y) < a.r + b.r) { a.dead = b.dead = true; spark((a.x + b.x) / 2, (a.y + b.y) / 2, 'block', 0); SFX.block(); for (const q of [a, b]) { if (q.kind === 'rock') crumble(q); if (q.kind === 'egg') eggSplat(q); if (q.kind === 'chicken') featherPuff(q.x, q.y, 10); if (q.kind === 'bike') bikeCrash(q); } }
   }
   F.proj = P.filter(p => !p.dead);
 }
@@ -1422,6 +1476,63 @@ function drawWave(p) {
   for (let i = 0; i < 3; i++) { ctx.strokeStyle = `rgba(${i ? '255,200,120' : '255,255,255'},${(0.7 - i * 0.2) * a})`; ctx.lineWidth = 7 - i * 2; ctx.beginPath(); ctx.ellipse(-i * 14, -10, 26 + i * 6, 46 + i * 10, 0, -Math.PI / 2, Math.PI / 2); ctx.stroke(); }
   ctx.restore();
 }
+
+function drawEgg(x, y, rot, r) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  const g = ctx.createRadialGradient(-r * 0.35, -r * 0.45, 1, 0, 0, r * 1.3); g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, '#f3ead8'); g.addColorStop(1, '#c9b894');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, r * 0.82, r * 1.05, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(120,96,60,0.6)'; ctx.lineWidth = Math.max(1, r / 10); ctx.stroke();
+  if (r > 25) { ctx.strokeStyle = 'rgba(110,80,40,0.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-r * 0.3, -r * 0.2); ctx.lineTo(-r * 0.05, 0); ctx.lineTo(-r * 0.2, r * 0.2); ctx.stroke(); }
+  ctx.restore();
+}
+function drawChicken(x, y, dir, r, t, running) {
+  const s = r / 30, flap = Math.sin(t * 0.6);
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir * s, s);
+  // legs
+  ctx.strokeStyle = '#f08a12'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  const st = running ? Math.sin(t * 0.8) * 9 : 3;
+  ctx.beginPath(); ctx.moveTo(-4, 14); ctx.lineTo(-4 + st, 30); ctx.moveTo(6, 14); ctx.lineTo(6 - st, 30); ctx.stroke();
+  // tail
+  ctx.fillStyle = '#f4f1ea'; ctx.beginPath(); ctx.moveTo(-22, -4); ctx.lineTo(-38, -22); ctx.lineTo(-34, 2); ctx.closePath(); ctx.fill();
+  // body
+  const g = ctx.createRadialGradient(-4, -8, 3, 0, 0, 30); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#ddd6c8');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 2, 26, 18, -0.15, 0, 7); ctx.fill();
+  // head
+  ctx.beginPath(); ctx.arc(20, -16, 11, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e0141e'; ctx.beginPath(); ctx.arc(16, -28, 5, 0, 7); ctx.arc(22, -29, 5, 0, 7); ctx.arc(27, -26, 4, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(27, -7, 3, 5, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#f5a21a'; ctx.beginPath(); ctx.moveTo(29, -18); ctx.lineTo(39, -14); ctx.lineTo(29, -11); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(23, -18, 2.2, 0, 7); ctx.fill();
+  // wing
+  ctx.save(); ctx.translate(-4, -2); ctx.rotate(-0.4 - flap * 0.7);
+  ctx.fillStyle = '#ebe5d8'; ctx.strokeStyle = 'rgba(120,110,95,0.6)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(-8, 0, 18, 9, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.restore();
+  ctx.restore();
+}
+function drawTire(x, y, rot, r) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.strokeStyle = '#141519'; ctx.lineWidth = r * 0.32; ctx.beginPath(); ctx.arc(0, 0, r * 0.84, 0, 7); ctx.stroke();
+  ctx.strokeStyle = '#2c2e35'; ctx.lineWidth = 2; for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(Math.cos(a) * r * 0.7, Math.sin(a) * r * 0.7); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); ctx.stroke(); }
+  ctx.strokeStyle = '#b9bfc9'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, r * 0.66, 0, 7); ctx.stroke();
+  ctx.strokeStyle = 'rgba(210,215,225,0.85)'; ctx.lineWidth = 1.3; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * r * 0.64, Math.sin(a) * r * 0.64); ctx.stroke(); }
+  ctx.fillStyle = '#d41a2c'; ctx.beginPath(); ctx.arc(0, 0, r * 0.12, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function drawBike(x, y, rot, r, dir = 1) {
+  const k = r / 56;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale((dir || 1) * k, k);
+  const wr = 30, A = [-42, 18], B = [42, 18];
+  drawTire(A[0], A[1], rot * 3, wr); drawTire(B[0], B[1], rot * 3, wr);
+  ctx.strokeStyle = '#d41a2c'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const P = [-2, 18], S = [-14, -22], H = [30, -26];
+  ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(P[0], P[1]); ctx.lineTo(S[0], S[1]); ctx.closePath(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(P[0], P[1]); ctx.lineTo(H[0] - 4, H[1] + 8); ctx.lineTo(S[0], S[1]); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(H[0] - 4, H[1] + 8); ctx.lineTo(B[0], B[1]); ctx.stroke();
+  ctx.strokeStyle = '#e8e8ee'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(H[0] - 4, H[1] + 8); ctx.lineTo(H[0], H[1]); ctx.lineTo(H[0] + 12, H[1] - 4); ctx.stroke();
+  ctx.fillStyle = '#16171c'; rrect(S[0] - 14, S[1] - 7, 24, 7, 3); ctx.fill();
+  ctx.strokeStyle = '#9aa0ab'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(P[0], P[1], 7, 0, 7); ctx.stroke();
+  ctx.restore();
+}
 function drawProj(p) {
   if (p.kind === 'card') drawCard(p.x, p.y, p.rot * 0.3, Math.cos(p.t * 0.7), p.suit);
   else if (p.kind === 'rock') drawRock(p.x, p.y, p.rot, p.r);
@@ -1434,6 +1545,11 @@ function drawProj(p) {
   else if (p.kind === 'wave') drawWave(p);
   else if (p.kind === 'cartwreck') drawCart(p.x, p.y, p.dir, p.rot * p.dir, Math.min(1, p.life / 25));
   else if (p.kind === 'cartgone') drawCart(p.x, p.y, p.dir, 0, Math.min(1, p.life / 20));
+  else if (p.kind === 'egg') drawEgg(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'chicken') drawChicken(p.x, p.y, Math.sign(p.vx) || p.dir, p.r, p.t, !!p.ground);
+  else if (p.kind === 'tire') drawTire(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'bike') drawBike(p.x, p.y, p.rot, p.r, p.dir);
+  else if (p.kind === 'bikewreck') { ctx.save(); ctx.globalAlpha *= Math.min(1, p.life / 20); drawBike(p.x, p.y, p.rot, p.r, p.dir); ctx.restore(); }
 }
 function drawHeld(f) {
   const m = f.mv; if (f.state !== 'attack' || !m) return;
@@ -2360,7 +2476,7 @@ function drawTitle() {
   for (const back of [true, false]) for (let i = 0; i < NCH; i++) {
     if ((i % 2 === 0) !== back) continue;
     const im = IMG['front' + (i + 1)]; const hgt = back ? 330 : 380, w = im.width * hgt / im.height;
-    const bob = Math.sin(G.frame * 0.04 + i) * 4, x = 110 + i * 151;
+    const bob = Math.sin(G.frame * 0.04 + i) * 4, x = 92 + i * (1096 / (NCH - 1));
     ctx.save(); ctx.globalAlpha = back ? 0.7 : 0.97; ctx.drawImage(im, x - w / 2, (back ? 315 : 330) + bob, w, hgt); ctx.restore();
   }
   const gr = ctx.createLinearGradient(0, 380, 0, VH); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, 'rgba(0,0,0,0.75)'); gr.addColorStop(1, 'rgba(0,0,0,0.95)');
@@ -2406,16 +2522,16 @@ function updSelect() {
     if (S.done[s]) { if (pd.p.back) { S.done[s] = false; SFX.move(); } continue; }
     if (pd.p.left) { S.cur[s] = (S.cur[s] + NCH - 1) % NCH; SFX.move(); }
     if (pd.p.right) { S.cur[s] = (S.cur[s] + 1) % NCH; SFX.move(); }
-    if (pd.p.up || pd.p.down) { S.cur[s] = (S.cur[s] + 4) % NCH; SFX.move(); }
+    if (pd.p.up || pd.p.down) { S.cur[s] = (S.cur[s] + 5) % NCH; SFX.move(); }
     if (pd.p.ok && S.t > 8) { S.done[s] = true; SFX.ok(); S.flash = [s, 14]; }
     else if (pd.p.back && cpu && s === 1) { S.done[0] = false; SFX.move(); }
     else if (pd.p.back && (!cpu || s === 0) && S.t > 8) { if (online) { netClose(); G.scene = 'online'; G.t = 0; return; } G.toTitle(); return; }
   }
   if (G.tap && S.t > 8) {
-    const tw = 112, gap = 12, x0 = VW / 2 - (4 * tw + 3 * gap) / 2, ty0 = 165, rowH = tw + 40;
+    const tw = 100, gap = 10, x0 = VW / 2 - (5 * tw + 4 * gap) / 2, ty0 = 175, rowH = tw + 44;
     const col = Math.floor((G.tap[0] - x0) / (tw + gap)), row = Math.floor((G.tap[1] - ty0) / rowH), s = online ? NET.slot : (cpu && S.done[0] ? 1 : 0);
-    if (col >= 0 && col < 4 && row >= 0 && row < 2 && !S.done[s]) {
-      const i = row * 4 + col;
+    if (col >= 0 && col < 5 && row >= 0 && row < 2 && !S.done[s] && row * 5 + col < NCH) {
+      const i = row * 5 + col;
       if (S.cur[s] === i) { S.done[s] = true; SFX.ok(); S.flash = [s, 14]; } else { S.cur[s] = i; SFX.move(); }
     }
   }
@@ -2456,8 +2572,8 @@ function drawSelect() {
     }
   }
   // tiles
-  const tw = 112, gap = 12, total = 4 * tw + 3 * gap, x0 = VW / 2 - total / 2, ty0 = 165, rowH = tw + 40;
-  const tpos = i => [x0 + (i % 4) * (tw + gap), ty0 + ((i / 4) | 0) * rowH];
+  const tw = 100, gap = 10, total = 5 * tw + 4 * gap, x0 = VW / 2 - total / 2, ty0 = 175, rowH = tw + 44;
+  const tpos = i => [x0 + (i % 5) * (tw + gap), ty0 + ((i / 5) | 0) * rowH];
   for (let i = 0; i < NCH; i++) {
     const [x, ty] = tpos(i);
     ctx.save();
@@ -2465,7 +2581,7 @@ function drawSelect() {
     ctx.drawImage(IMG['face' + (i + 1)], x, ty, tw, tw);
     ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 2; ctx.strokeRect(x, ty, tw, tw);
     ctx.restore();
-    txt(CHARS[i].name, x + tw / 2, ty + tw + 18, { size: 18, weight: 800, color: 'rgba(255,255,255,0.85)' });
+    txt(CHARS[i].name, x + tw / 2, ty + tw + 18, { size: 16, weight: 800, color: 'rgba(255,255,255,0.85)' });
   }
   for (let s = 0; s < 2; s++) {
     const i = S.cur[s], [x, ty] = tpos(i), both = S.cur[0] === S.cur[1];
