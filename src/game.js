@@ -40,6 +40,10 @@ const CHARS = [
   { name: 'التنين', en: 'THE DRAGON', tag: 'أصغرهم وأخطرهم', hp: 0.92, dmg: 0.97, spd: 1.15, color: '#ff3b4a', stats: [3, 5, 3], quote: 'لا تستصغرني مرة ثانية' },
   { name: 'أبو الدجاج', en: 'ABU DAJAJ', h: 0.76, tag: 'بيض ودجاج… وفوضى', hp: 0.95, dmg: 0.96, spd: 1.1, color: '#ffc21a', stats: [3, 4, 3], quote: 'روح جيب بيض… خلصت عليك!' },
   { name: 'أبو الأسود', en: 'ABU ASWAD', h: 0.88, tag: 'ملك السياكل', hp: 1.02, dmg: 1.04, spd: 1.02, color: '#e9e9ee', stats: [4, 4, 4], quote: 'المرة الجاية جيب سيكلك معك' },
+  { name: 'البوب', en: 'AL-BOB', h: 0.95, tag: 'كوراته ما تنصد… إلا من الحارس', hp: 1.12, dmg: 1.06, spd: 0.9, color: '#9aa3b5', stats: [4, 2, 5], quote: 'كورة وحدة كفاية عليك!' },
+  { name: 'الطالب', en: 'THE STUDENT', h: 0.76, tag: 'شنطته مليانة مفاجآت', hp: 0.9, dmg: 0.95, spd: 1.12, color: '#3a56c8', stats: [3, 5, 3], quote: 'رحت المدرسة… ورجعت فايز!' },
+  { name: 'العبد', en: 'AL-ABD', h: 0.93, eat: 1, tag: 'كاراتيه… وبعدها خبز وماي', hp: 0.98, dmg: 1.08, spd: 1.06, color: '#f2f2f2', stats: [5, 4, 2], quote: 'خلني أكمل خبزتي بعدين نتفاهم' },
+  { name: 'القيمر', en: 'THE GAMER', h: 0.9, tag: 'جاب سلاحه من اللعبة', hp: 0.96, dmg: 1.0, spd: 1.08, color: '#e01b30', stats: [4, 4, 3], quote: 'GG… حظ أوفر المرة الجاية' },
 ];
 const NCH = CHARS.length;
 
@@ -369,12 +373,13 @@ const SFX = {
   cluck() { tn('square', rrnd(820, 900), 560, 0.05, 0.022); tn('square', rrnd(1000, 1100), 640, 0.07, 0.022, 0.08); },
   splat() { nz(0.12, 'lowpass', 900, 1.2, 0.09); tn('sine', 300, 120, 0.08, 0.04); },
   boing() { tn('sine', 180, 420, 0.12, 0.05); },
+  zap() { tn('sawtooth', 1400, 300, 0.08, 0.03); tn('sine', 900, 200, 0.06, 0.03); },
   roll() { nz(0.2, 'lowpass', 250, 0.8, 0.15); },
   ready() { tn('sine', 990, 990, 0.08, 0.06); tn('sine', 1320, 1320, 0.12, 0.05, 0.07); },
   gong() { tn('sine', 220, 218, 1.0, 0.16); tn('sine', 330, 328, 0.8, 0.08); tn('sine', 440, 438, 0.6, 0.05); },
 };
 const SFX_CAT = { move: 'ui', ok: 'ui', ready: 'ui', gong: 'gong' };
-const SFX_GAP = { cluck: 140, splat: 60, boing: 90, whoosh: 70, rattle: 90, roll: 120, block: 50, hit: 35, kick: 35, throw: 60, land: 80, jump: 80 };
+const SFX_GAP = { zap: 45, cluck: 140, splat: 60, boing: 90, whoosh: 70, rattle: 90, roll: 120, block: 50, hit: 35, kick: 35, throw: 60, land: 80, jump: 80 };
 for (const k in SFX) { const fn = SFX[k]; SFX[k] = (...a) => {
   if (window.__sfxLog) window.__sfxLog.push([k, G.frame, a[0]]);
   if (!SET[SFX_CAT[k] || 'fx']) return;
@@ -525,8 +530,8 @@ const MV = {
 };
 // ================= SPECIAL SKILLS (charge every 10 s) =================
 const SKMAX = 600;
-const SKILL_IDS = ['sk_rush', 'sk_barrage', 'sk_slide', 'sk_cards', 'sk_hball', 'sk_rock', 'sk_roll', 'sk_cart', 'sk_chicken', 'sk_bike'];
-const SKILL_NAMES = ['الهجوم السريع', 'البكوس السريعة', 'السلايد', 'أوراق اللعب', 'كرة اليد', 'رمية الحجر', 'الكرة المتدحرجة', 'عربة السوبرماركت', 'جيش الدجاج', 'رمية السيكل'];
+const SKILL_IDS = ['sk_rush', 'sk_barrage', 'sk_slide', 'sk_cards', 'sk_hball', 'sk_rock', 'sk_roll', 'sk_cart', 'sk_chicken', 'sk_bike', 'sk_bob', 'sk_school', 'sk_karate', 'sk_blaster'];
+const SKILL_NAMES = ['الهجوم السريع', 'البكوس السريعة', 'السلايد', 'أوراق اللعب', 'كرة اليد', 'رمية الحجر', 'الكرة المتدحرجة', 'عربة السوبرماركت', 'جيش الدجاج', 'رمية السيكل', 'صاروخ البوب', 'هجوم الأدوات', 'إعصار الكاراتيه', 'سلاح القيمر'];
 const PZ_SUMMON = { ua: 178, fa: 10, bua: 176, bfa: 10, lean: -12 };
 const mixPose = (a, b, u) => { const o = {}; for (const k of PK) o[k] = lerp(a[k], b[k], u); return o; };
 function barragePose(f, mt) {
@@ -691,13 +696,71 @@ function shoot(f, o) {
   if (o.from === 'sky') { x = clamp(op.x + (o.off || 0) * f.facing, -STAGE, STAGE); y = -780 - (o.hy || 0); }
   const a = o.ang || 0, sp = o.sp || 15;
   const vx = o.from === 'sky' ? 0 : dir * sp * Math.cos(a), vy = o.from === 'sky' ? (o.vy || 6) : (o.vy !== undefined ? o.vy : sp * Math.sin(a));
-  spawnProj({ kind: o.kind, owner: f, x, y, vx, vy, g: o.g || 0, r: o.r || 18, life: o.life || 90, vr: dir * (o.vr !== undefined ? o.vr : 0.2), bounce: o.bounce, ground: o.ground, sin: o.sin, base: y, suit: o.suit, dir,
+  spawnProj({ kind: o.kind, owner: f, x, y, vx, vy, g: o.g || 0, r: o.r || 18, life: o.life || 90, vr: dir * (o.vr !== undefined ? o.vr : 0.2), bounce: o.bounce, ground: o.ground, sin: o.sin, base: y, suit: o.suit, dir, col: o.col, bob: o.bob, fire: o.fire, heavy: o.heavy,
     m: { dmg: o.dmg || 8, lvl: o.lvl || 'mid', hs: o.hs || 16, bs: o.bs || 10, push: o.push || 16, stop: o.stop || 6, p: o.p || 1, kd: o.kd, launchHit: o.launch, kick: o.kick } });
 }
 const wave = (f, o = {}) => shoot(f, Object.assign({ kind: 'wave', from: 'ground', r: 34, sp: 11, lvl: 'low', dmg: 9, life: 55, vr: 0, kd: 1, gx: 60 }, o));
 const poof = (x, y = -150) => { dust(x, 14); for (let i = 0; i < 12; i++) FX.push({ t: 'p', x: x + rnd(-40, 40), y: y + rnd(-120, 120), vx: rnd(-3, 3), vy: rnd(-3, 1), life: 26, max: 26, c: i % 2 ? '#ffffff' : '#d0102a', sz: rnd(3, 6) }); };
 const quake = (f, both) => { G.fight.shake(both ? 22 : 14); SFX.rock(); dust(f.x, 22); wave(f, { dmg: both ? 11 : 9 }); if (both) wave(f, { dir: -f.facing, dmg: 11 }); };
 const JUMPAIR = { th: 60, sh: 100, bth: 30, bsh: 90, lean: 6, ffl: 0.3, bfl: 0.3 };
+// ---- البوب: handballs (the Keeper saves every ball he throws) ----
+const bobBall = (f, o) => shoot(f, Object.assign({ kind: 'hball', r: 19, sp: 20, dmg: 9, vr: 0.35, bob: 1 }, o));
+MV.sk_bob = { name: 'bobrocket', skill: 1, limb: null, lvl: 'mid', st: 22, ac: 1, rc: 22, p: 1.6, spawnAt: 22, spawn: f => { SFX.throw(); SFX.skill(); bobBall(f, { sp: 27, r: 30, dmg: 18, kd: 1, p: 1.7, fire: 1, vr: 0.5, life: 90 }); },
+  onStep: f => { if (f.mt < 22 && f.mt % 3 === 0) { const w = f.toWorld(f.J.fH); FX.push({ t: 'p', x: w[0], y: w[1], vx: rnd(-2, 2), vy: rnd(-3, 0), life: 14, max: 14, c: '#ff8a2a', sz: rnd(3, 6) }); } },
+  kf: [[0, {}], [14, { ua: 215, fa: 60, lean: -20, bua: 30, bfa: 120, th: 30, sh: 20, bth: -24, bsh: 10 }], [22, { ua: 78, fa: 4, lean: 26, dx: 12, th: 44, bth: -34 }], [28, {}], [44, null]] };
+// ---- الطالب: pens & notebooks ----
+const pen = (f, o) => shoot(f, Object.assign({ kind: 'pen', r: 11, sp: 24, dmg: 5, vr: 0, col: ['#1f4fd8', '#d41a2c', '#111111', '#1c9a3a'][(f.clock + (o.i || 0)) % 4] }, o));
+const notebook = (f, o) => shoot(f, Object.assign({ kind: 'book', r: 24, sp: 15, dmg: 10, vr: 0.12, col: ['#e8a10f', '#2a7ad8', '#d43a6a'][(f.clock + (o.i || 0)) % 3] }, o));
+MV.sk_school = { name: 'school', skill: 1, limb: null, lvl: 'mid', st: 8, ac: 34, rc: 18, p: 1, poseFn: barragePose, hitboxFn: () => null,
+  onStep: f => { const t = f.mt - 8; if (t >= 0 && t < 34 && t % 5 === 0) { SFX.throw(); const k = t / 5; if (k === 6) notebook(f, { from: 'mid', sp: 14, r: 30, dmg: 12, kd: 1, i: k }); else if (k % 3 === 2) notebook(f, { sp: 16, ang: rnd(-0.12, 0.05), dmg: 6, i: k }); else pen(f, { ang: rnd(-0.1, 0.06), dmg: 4, i: k }); } },
+  kf: [[0, {}], [60, null]] };
+// ---- العبد: karate, then a bread-and-water break ----
+MV.sk_karate = Object.assign(flurryMove({ st: 6, ac: 40, rc: 14, multi: 8, dmg: 3, hs: 14, bs: 7, push: 3, stop: 2, r: 40, flPose: { lean: 24, th: 50, sh: 20, bth: -40, bsh: 20 }, mvx: [[6, 46, 2.4]] }), { skill: 1, combo: 0, eatAfter: 1 });
+function eatPose(f, mt) {
+  if (mt < 16) return Object.assign({}, BDASHP, { lean: -10, ua: 30, fa: 140, bua: 26, bfa: 150 });
+  const sit = { r: 0, lean: -6, th: 92, sh: 0, bth: 86, bsh: 8, ft: 0, bft: 0, ffl: 0.2, bfl: 0.2, bua: 20, bfa: 40, dx: 0, dy: 0 };
+  if (mt < 22) return mixPose(Object.assign({}, GUARD), Object.assign({}, GUARD, sit, { ua: 40, fa: 120 }), (mt - 16) / 6);
+  const m = f.mv, end = m.st - 14;
+  if (mt >= end) return mixPose(Object.assign({}, GUARD, sit, { ua: 40, fa: 120 }), GUARD, clamp((mt - end) / 14, 0, 1));
+  const cyc = ((mt - 22) % 40) / 40, dip = cyc < 0.35 ? Math.sin(cyc / 0.35 * Math.PI) : 0;
+  const chew = cyc >= 0.5 ? Math.sin(mt * 0.9) * 4 : 0;
+  return Object.assign({}, GUARD, sit, { ua: lerp(58, 78, dip), fa: lerp(150, 25, dip), lean: -6 + dip * 14 + chew * 0.3 });
+}
+MV.ab_eat = { name: 'eat', limb: null, lvl: 'mid', st: 150, ac: 1, rc: 1, p: 0, eat: 1, mvx: [[0, 14, -27]], poseFn: eatPose,
+  onStep: f => { if (f.mt === 1) { SFX.whoosh(1); dust(f.x, 10, f.facing); } if (f.mt < 14 && f.mt % 2 === 0) dust(f.x, 2, f.facing); if (f.mt === 18) { dust(f.x, 8); SFX.land(); }
+    if (f.mt >= 24 && f.mt < 136 && f.mt % 6 === 0) { const add = Math.min(f.maxHp - f.hp, f.maxHp * 0.0065); if (add > 0) { f.hp += add; f.trailHp = Math.max(f.trailHp, f.hp); } }
+    if (f.mt === 24) popText('😋 خبز وماي', f.x, -300, '#ffd34d', 30); if ((f.mt - 22) % 40 === 6 && f.mt > 22) SFX.splat(); },
+  kf: [[0, {}], [152, null]] };
+function drawEatProps(f) {
+  const m = f.mv; if (!m || !m.eat || f.mt < 18) return;
+  const a = Math.min(1, (f.mt - 18) / 5) * (f.mt > m.st - 6 ? Math.max(0, (m.st - f.mt) / 6) : 1);
+  ctx.save(); ctx.globalAlpha *= a;
+  // cup of water on the floor
+  const cx = f.x + f.facing * 120, cy = 0;
+  ctx.fillStyle = 'rgba(200,225,255,0.35)'; ctx.strokeStyle = 'rgba(230,240,255,0.9)'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(cx - 20, cy - 52); ctx.lineTo(cx + 20, cy - 52); ctx.lineTo(cx + 15, cy); ctx.lineTo(cx - 15, cy); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(70,150,255,0.6)'; ctx.beginPath(); ctx.moveTo(cx - 18, cy - 36); ctx.lineTo(cx + 18, cy - 36); ctx.lineTo(cx + 15, cy - 2); ctx.lineTo(cx - 15, cy - 2); ctx.closePath(); ctx.fill();
+  // bread in the hand
+  const w = f.toWorld(f.J.fH);
+  ctx.translate(w[0] + f.facing * 8, w[1] - 6); ctx.rotate(f.facing * 0.5);
+  const g = ctx.createRadialGradient(-6, -6, 2, 0, 0, 26); g.addColorStop(0, '#f6d79a'); g.addColorStop(1, '#c08a3e');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, 26, 18, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(120,70,20,0.35)'; for (const [x, y] of [[-8, -4], [6, 3], [-2, 7], [10, -6]]) { ctx.beginPath(); ctx.arc(x, y, 2.5, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+// ---- القيمر: a game blaster appears in his hands ----
+function blasterMuzzle(f) { const w = f.toWorld(f.J.fH); return [w[0] + f.facing * 70, w[1] - 14]; }
+function blasterShot(f, o = {}) {
+  const [x, y] = blasterMuzzle(f); SFX.zap();
+  spawnProj({ kind: 'laser', owner: f, x, y, vx: f.facing * (o.sp || 30), vy: o.vy || 0, r: o.r || 12, life: 60, col: o.col || '#3cf2ff', vr: 0, m: { dmg: o.dmg || 4, lvl: o.lvl || 'mid', hs: 14, bs: 6, push: 6, stop: 3, p: 0.7, kd: o.kd } });
+  FX.push({ t: 'ring', x, y, life: 8, max: 8, c: o.col || '#3cf2ff', r0: 4, r1: 30 });
+}
+const AIM = { ua: 92, fa: 4, bua: 86, bfa: 30, lean: 6, th: 30, sh: 20, bth: -20, bsh: 10 };
+MV.sk_blaster = { name: 'blaster', skill: 1, limb: null, lvl: 'mid', st: 14, ac: 40, rc: 18, p: 1, gun: 1,
+  onStep: f => { if (f.mt === 4) { SFX.skill(); const w = f.toWorld(f.J.fH); for (let i = 0; i < 14; i++) FX.push({ t: 'p', x: w[0] + f.facing * 30, y: w[1], vx: rnd(-3, 3), vy: rnd(-3, 3), life: 18, max: 18, c: i % 2 ? '#3cf2ff' : '#ff3cf0', sz: rnd(2, 5) }); }
+    const t = f.mt - 14; if (t >= 0 && t < 40 && t % 6 === 0) blasterShot(f, { dmg: t === 36 ? 10 : 4, r: t === 36 ? 20 : 12, col: t === 36 ? '#ff3cf0' : '#3cf2ff', kd: t === 36 ? 1 : 0 }); },
+  kf: [[0, {}], [10, AIM], [54, AIM], [62, {}], [72, null]] };
+
 const COMBOS = [
   // 0 الزعيم — street rush
   { '12': ['ضربة البرق', dashMove({ st: 5, ac: 10, rc: 16, sp: 24, trail: 1, limb: 'fH', r: 44, dmg: 10, pose: PZ.punch })],
@@ -769,6 +832,34 @@ const COMBOS = [
     '13': ['سيكل من السما', projMove(16, 24, PZ.summon, { ...PZ.summon, lean: -22 }, f => { SFX.skill(); shoot(f, { kind: 'bike', from: 'sky', vy: 5, g: 0.6, r: 72, dmg: 18, kd: 1, p: 1.7, vr: 0.05, life: 160 }); })],
     '14': ['دبل تاير', projMove(12, 26, PZ.windup, PZ.release, f => { SFX.throw(); tire(f, { sp: 17, dmg: 7, r: 32 }); }, { onStep: f => { if (f.mt === 22) { SFX.roll(); tire(f, { from: 'ground', gx: 70, r: 36, sp: 13, ground: 1, lvl: 'low', dmg: 7, vr: 0.3 }); } } })],
     '34': ['ركلة البدّال', M({ st: 10, ac: 14, rc: 18, multi: 3, limb: 'fT', r: 44, dmg: 5, kick: 1, launch: 1, mvx: [[6, 24, 6]], kf: [[0, {}], [8, { th: 80, sh: 110, ffl: 0.3, lean: 4 }], [12, { th: 105, sh: 5, ffl: 0, lean: -12, dx: 6 }], [16, { th: 70, sh: 90 }], [20, { th: 110, sh: 2, ffl: 0, lean: -14 }], [24, {}], [42, null]] })] },
+  // 10 البوب — handballs & weight
+  { '12': ['كورة البوب', projMove(12, 18, PZ.windup, PZ.release, f => { SFX.throw(); bobBall(f, {}); })],
+    '23': ['الكورة الأرضية', projMove(14, 20, PZ.windup, { ...PZ.release, ua: 60 }, f => { SFX.throw(); bobBall(f, { sp: 15, ang: 0.25, g: 0.4, bounce: 0.75, lvl: 'low', dmg: 9, life: 130 }); })],
+    '24': ['دبل كورة', projMove(12, 26, PZ.windup, PZ.release, f => { SFX.throw(); bobBall(f, { sp: 19, dmg: 6, ang: -0.08 }); }, { onStep: f => { if (f.mt === 22) { SFX.throw(); bobBall(f, { sp: 21, dmg: 6, ang: 0.06 }); } } })],
+    '13': ['دفشة الكرش', dashMove({ st: 8, ac: 8, rc: 22, sp: 9, hitboxFn: bodyHB(85, -130, 64), dmg: 12, push: 75, p: 1.4, pose: { lean: -24, dx: 22, th: 22, bth: -32, ua: -30, fa: 30, bua: -30, bfa: 30 } })],
+    '14': ['نطة البوب', jumpMove({ st: 8, ac: 60, vy: -15, vx: 6, hitboxFn: bodyHB(30, -50, 72), dmg: 15, kd: 1, onLand: f => quake(f, false), airPose: PZ.tuck })],
+    '34': ['كتف البوب', dashMove({ st: 10, ac: 14, rc: 20, sp: 15, hitboxFn: bodyHB(70, -230, 62), dmg: 13, kd: 1, push: 50, pose: PZ.shoulder })] },
+  // 11 الطالب — pens & notebooks
+  { '12': ['قلم سريع', projMove(9, 14, { ua: -30, fa: 150 }, { ua: 92, fa: 0, lean: 18, dx: 10 }, f => { SFX.throw(); pen(f, { sp: 28, dmg: 7 }); })],
+    '23': ['ثلاث أقلام', projMove(12, 18, PZ.windup, PZ.release, f => { SFX.throw(); [-0.14, 0, 0.14].forEach((a, i) => pen(f, { ang: a, sp: 22, dmg: 4, i })); })],
+    '24': ['الدفتر الطاير', projMove(12, 20, PZ.windup, PZ.release, f => { SFX.throw(); notebook(f, { sp: 14, sin: [40, 0.16], dmg: 11, kd: 1, life: 110 }); })],
+    '13': ['مطر الأقلام', projMove(14, 24, PZ.summon, { ...PZ.summon, lean: -20 }, f => { SFX.skill(); for (let i = 0; i < 6; i++) pen(f, { from: 'sky', off: (i - 2.5) * 45, hy: i * 45, vy: 11, g: 0.2, dmg: 3.5, vr: 0, i, life: 120 }); })],
+    '14': ['الكتاب الثقيل', projMove(20, 22, { ...PZ.windup, ua: 215, lean: -20 }, PZ.release, f => { SFX.throw(); notebook(f, { sp: 12, r: 36, dmg: 16, kd: 1, p: 1.6, heavy: 1, vr: 0.08, life: 120 }); })],
+    '34': ['ضربة المسطرة', dashMove({ st: 7, ac: 10, rc: 18, sp: 14, limb: 'fH', r: 56, dmg: 11, kd: 1, ruler: 1, pose: { ua: 100, fa: 0, lean: 20, dx: 12, th: 34, bth: -28 } })] },
+  // 12 العبد — karate
+  { '12': ['ضربة السيف', M({ st: 10, ac: 5, rc: 18, limb: 'fH', r: 42, dmg: 12, kd: 1, mvx: [[6, 14, 5]], kf: [[0, {}], [8, { ua: 180, fa: 70, lean: -12 }], [11, { ua: 95, fa: 0, lean: 24, dx: 10, th: 36, bth: -30 }], [16, {}], [33, null]] })],
+    '23': ['ركلة أمامية', M({ st: 9, ac: 5, rc: 18, limb: 'fT', r: 42, dmg: 11, push: 55, kick: 1, kf: [[0, {}], [6, { th: 95, sh: 110, ffl: 0.3, lean: -4 }], [10, { th: 95, sh: 2, ft: -40, ffl: 0, lean: -12, dx: 8 }], [15, {}], [32, null]] })],
+    '24': ['الركلة الدائرية العالية', M({ st: 12, ac: 6, rc: 20, limb: 'fT', lvl: 'high', r: 46, dmg: 15, kd: 1, kick: 1, track: 1, kf: [[0, {}], [8, { th: 70, sh: 120, r: -10, ffl: 0.3 }], [13, { r: -26, th: 150, sh: 2, lean: -22, ffl: 0 }], [19, {}], [38, null]] })],
+    '13': ['اللكمة المستقيمة', dashMove({ st: 5, ac: 8, rc: 16, sp: 22, trail: 1, limb: 'fH', r: 42, dmg: 11, pose: PZ.punch })],
+    '14': ['سلسلة الكاراتيه', flurryMove({ st: 6, ac: 30, rc: 16, multi: 6, dmg: 2.8, hs: 14, bs: 7, push: 3, stop: 2, r: 38, flPose: { lean: 26 }, mvx: [[6, 36, 2.2]] })],
+    '34': ['الركلة الطايرة', jumpMove({ st: 6, ac: 46, vy: -13, vx: 11, limb: 'fT', r: 46, dmg: 14, launchHit: 1, kick: 1, trail: 1, airPose: { r: -18, th: 110, sh: 0, ffl: 0, lean: -16, bth: 30, bsh: 120, ua: 30, fa: 140 } })] },
+  // 13 القيمر — game blaster
+  { '12': ['طلقة سريعة', projMove(10, 18, AIM, AIM, f => blasterShot(f, { dmg: 7, sp: 34 }), { gun: 1 })],
+    '23': ['رشاش', M({ st: 10, ac: 24, rc: 16, gun: 1, projLimit: 0, onStep: f => { const t = f.mt - 10; if (t >= 0 && t < 24 && t % 4 === 0) blasterShot(f, { dmg: 2.5, r: 10, sp: 32 }); }, kf: [[0, {}], [8, AIM], [34, AIM], [50, null]] })],
+    '24': ['القنبلة', projMove(14, 20, PZ.windup, PZ.release, f => { SFX.throw(); shoot(f, { kind: 'grenade', sp: 13, ang: -0.6, g: 0.5, bounce: 0.45, r: 16, dmg: 14, kd: 1, vr: 0.3, life: 70, boom: 1 }); })],
+    '13': ['الشوت الكبير', projMove(22, 22, AIM, AIM, f => blasterShot(f, { dmg: 16, r: 26, sp: 22, col: '#ff3cf0', kd: 1 }), { gun: 1, onStep: f => { if (f.mt < 22 && f.mt % 2 === 0) { const [x, y] = blasterMuzzle(f); FX.push({ t: 'p', x: x + rnd(-14, 14), y: y + rnd(-14, 14), vx: 0, vy: 0, life: 8, max: 8, c: '#ff3cf0', sz: rnd(2, 5) }); } } })],
+    '14': ['الطلقة الواطية', projMove(12, 18, { ...CROUCH, ua: 70, fa: 4, bua: 66, bfa: 30, lean: 10 }, { ...CROUCH, ua: 70, fa: 4, bua: 66, bfa: 30, lean: 10 }, f => blasterShot(f, { dmg: 9, lvl: 'low', vy: 0, sp: 26, kd: 1 }), { gun: 1, base: 'CROUCH' })],
+    '34': ['ضربة الأخمص', dashMove({ st: 8, ac: 8, rc: 18, sp: 12, limb: 'fH', r: 50, dmg: 12, kd: 1, gun: 1, pose: { ...AIM, lean: 24, dx: 14 } })] },
 ];
 const COMBO_NAME = {};
 COMBOS.forEach((set, ci) => { for (const k of COMBO_KEYS) { const [name, mv] = set[k]; const id = `cb${ci}_${k}`; MV[id] = mv; mv.cname = name; COMBO_NAME[id] = name; set[k] = id; } });
@@ -902,7 +993,7 @@ class Fighter {
     this.state = 'intro'; this.t = 0; this.mv = null; this.mt = 0; this.stun = 0;
     this.pose = Object.assign({}, GUARD); this.flash = 0; this.combo = 0; this.comboDmg = 0; this.comboT = 0;
     this.rageUsed = false; this.invuln = 0; this.juggle = 0; this.ko = false; this.walkPh = 0;
-    this.lastFwd = -99; this.lastBack = -99; this.clock = 0; this.buf = null; this.bufT = 0;
+    this.lastFwd = -99; this.lastBack = -99; this.clock = 0; this.buf = null; this.bufT = 0; this.eatN = 0; this.eatPend = false;
     this.connected = false; this.hitThis = false; this.lowHit = false; this.blockLow = false;
     this.airUsed = false; this.jumpDir = 0; this.J = null; this.hipY = 0; this.hurt = null; this.shakeT = 0; this.vic = null;
     this.sk = 0; this.spBuf = 0; this.cartGone = false; this.rollAng = 0; this.cbCD = 0;
@@ -961,6 +1052,7 @@ class Fighter {
     return false;
   }
   startMove(id) {
+    if (this.C.eat) { if (MV[id].eatAfter) this.eatPend = true; else if (!MV[id].eat && !MV[id].skill) { this.eatN = (this.eatN || 0) + 1; if (this.eatN >= 9) this.eatPend = true; } }
     this.mv = MV[id]; this.state = 'attack'; this.mt = 0; this.hitThis = false; this.connected = false; this.buf = null; this.bufT = 0;
     if (this.mv.air) this.airUsed = true;
     if (!this.mv.air && !this.mv.mvx) this.vx = 0;
@@ -1004,6 +1096,7 @@ class Fighter {
   }
   neutral() {
     const h = this.in.h, p = this.in.p;
+    if (this.eatPend && G.fight && G.fight.phase === 'fight' && this.state !== 'air' && !this.jumping) { this.eatPend = false; this.eatN = 0; this.startMove('ab_eat'); return; }
     if (p.fwd) { if (this.clock - this.lastFwd < 13) { this.setState('dash'); this.dashBack = false; this.vx = this.facing * 11 * this.C.spd; dust(this.x, 5, -this.facing); this.lastFwd = -99; SFX.whoosh(0); return; } this.lastFwd = this.clock; }
     if (p.back) { if (this.clock - this.lastBack < 15) { this.setState('dash'); this.dashBack = true; this.vx = -this.facing * 19 * this.C.spd; dust(this.x, 8, this.facing); this.lastBack = -99; SFX.whoosh(1); return; } this.lastBack = this.clock; }
     if (this.spBuf > 0 && this.sk >= SKMAX) { this.useSkill(); return; }
@@ -1374,6 +1467,10 @@ function updProj(F) {
     if (p.kind === 'card' && p.t % 3 === 0) FX.push({ t: 'p', x: p.x, y: p.y, vx: -p.vx * 0.05, vy: 0, life: 10, max: 10, c: '#ffffff', sz: 2 });
     if (p.kind === 'hball' && p.t % 2 === 0) FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 14, y: p.y, vx: 0, vy: 0, life: 9, max: 9, c: '#ffd34d', sz: 3 });
     if (p.kind === 'rock' && !p.ground && !p.bounce && p.y >= -p.r * 0.6 && p.vy > 0) { crumble(p); p.dead = true; continue; }
+    if (p.kind === 'grenade' && (p.life <= 1 || (p.bounces || 0) >= 2)) { p.kind = 'boom'; p.r = 95; p.vx = 0; p.vy = 0; p.g = 0; p.bounce = 0; p.life = 10; p.wide = true; SFX.rock(); SFX.thud(); dust(p.x, 20); if (G.fight) G.fight.shake(14); for (let i = 0; i < 26; i++) { const a = rnd(0, 7), sp = rnd(3, 12); FX.push({ t: 'p', x: p.x, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 22, max: 22, c: i % 3 ? '#ff8a2a' : '#ffe06a', sz: rnd(3, 7) }); } }
+    if (p.kind === 'grenade') continue;
+    if (p.kind === 'laser' && p.t % 2 === 0) FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 16, y: p.y, vx: 0, vy: 0, life: 6, max: 6, c: p.col, sz: 3 });
+    if (p.kind === 'hball' && p.fire && p.t % 2 === 0) FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 20, y: p.y + rnd(-10, 10), vx: -Math.sign(p.vx) * 2, vy: rnd(-1, 1), life: 12, max: 12, c: '#ff8a2a', sz: rnd(4, 8) });
     if (p.kind === 'egg' && p.y >= -p.r * 0.6 && p.vy > 0) { p.y = -4; eggSplat(p); p.dead = true; continue; }
     if (p.kind === 'bike' && p.y >= -p.r * 0.55 && p.vy > 0) { bikeCrash(p); p.dead = true; continue; }
     if (p.kind === 'bikewreck' && p.y >= -30 && p.vy > 0) { p.y = -30; p.vy *= -0.35; p.vx *= 0.6; p.vr *= 0.5; if (Math.abs(p.vy) > 2) { dust(p.x, 5); SFX.rattle(); } }
@@ -1387,6 +1484,7 @@ function updProj(F) {
     if (!p.wide && Math.abs(p.z - (d.z || 0)) > 60) continue;
     if (p.m.lvl === 'high' && d.lowProfile() && d.state !== 'juggle') continue;
     const r = d.hurt; const cx = clamp(p.x, r.x0, r.x1), cy = clamp(p.y, r.y0, r.y1);
+    if (Math.hypot(p.x - cx, p.y - cy) <= p.r && p.bob && d.ci === 4) { p.dead = true; spark(p.x, p.y, 'block', d.facing); SFX.block(); popText('صدّها! 🧤', p.x, p.y - 50, '#7fd6ff', 34); d.flash = 6; continue; }
     if (Math.hypot(p.x - cx, p.y - cy) <= p.r) {
       F.hitResolve(p.owner, d, p.m, { x: p.x, y: p.y, proj: true }, Math.sign(p.vx) || p.owner.facing);
       p.dead = true; if (p.kind === 'rock') crumble(p); if (p.kind === 'egg') eggSplat(p); if (p.kind === 'chicken') featherPuff(p.x, p.y, 14); if (p.kind === 'bike') bikeCrash(p);
@@ -1533,10 +1631,79 @@ function drawBike(x, y, rot, r, dir = 1) {
   ctx.strokeStyle = '#9aa0ab'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(P[0], P[1], 7, 0, 7); ctx.stroke();
   ctx.restore();
 }
+
+function drawPen(x, y, ang, r, col) {
+  const L = r * 4.2, w = r * 0.62;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+  ctx.fillStyle = col || '#1f4fd8'; rrect(-L / 2, -w / 2, L * 0.78, w, w / 2); ctx.fill();
+  ctx.fillStyle = '#e9e4d8'; ctx.beginPath(); ctx.moveTo(L * 0.28, -w / 2); ctx.lineTo(L / 2, 0); ctx.lineTo(L * 0.28, w / 2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(L / 2 - 1, 0, 1.8, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(-L / 2 + 3, -w / 2 + 1, L * 0.6, w * 0.25);
+  ctx.fillStyle = col || '#1f4fd8'; ctx.fillRect(-L / 2 + 4, -w / 2 - 2, L * 0.3, 2); ctx.restore();
+}
+function drawBook(x, y, rot, r, col, t, heavy) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  const W = r * 1.6, H = r * 2.1;
+  if (heavy) {
+    ctx.fillStyle = '#6a3a1c'; rrect(-W / 2, -H / 2, W, H, 4); ctx.fill(); ctx.fillStyle = '#efe6d0'; ctx.fillRect(-W / 2 + W - 10, -H / 2 + 4, 6, H - 8);
+    ctx.strokeStyle = '#d8b25a'; ctx.lineWidth = 2; rrect(-W / 2 + 6, -H / 2 + 6, W - 20, H - 12, 3); ctx.stroke();
+    ctx.fillStyle = '#d8b25a'; ctx.font = `900 ${Math.round(r * 0.5)}px ${FA}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('كتاب', -4, 0);
+  } else {
+    const open = 0.35 + 0.35 * Math.abs(Math.sin(t * 0.35));
+    for (const sd of [-1, 1]) {
+      ctx.save(); ctx.scale(sd, 1); ctx.transform(1, 0, -0.2 * open, 1, 0, 0);
+      ctx.fillStyle = col || '#2a7ad8'; ctx.fillRect(0, -H / 2, W / 2 * (1 - open * 0.3), H);
+      ctx.fillStyle = '#fbfaf4'; ctx.fillRect(2, -H / 2 + 3, W / 2 * (1 - open * 0.3) - 4, H - 6);
+      ctx.strokeStyle = 'rgba(80,120,200,0.55)'; ctx.lineWidth = 1; for (let k = -H / 2 + 9; k < H / 2 - 4; k += 6) { ctx.beginPath(); ctx.moveTo(4, k); ctx.lineTo(W / 2 * (1 - open * 0.3) - 4, k); ctx.stroke(); }
+      ctx.restore();
+    }
+    ctx.fillStyle = '#333'; ctx.fillRect(-1.5, -H / 2, 3, H);
+  }
+  ctx.restore();
+}
+function drawLaser(p) {
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(p.x, p.y); ctx.scale(Math.sign(p.vx) || 1, 1);
+  const L = p.r * 3.2;
+  const g = ctx.createLinearGradient(-L, 0, p.r, 0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, p.col);
+  ctx.fillStyle = g; rrect(-L, -p.r * 0.5, L + p.r, p.r, p.r * 0.5); ctx.fill();
+  ctx.fillStyle = '#ffffff'; rrect(-L * 0.5, -p.r * 0.22, L * 0.5 + p.r * 0.8, p.r * 0.44, p.r * 0.22); ctx.fill();
+  ctx.restore();
+}
+function drawGrenade(x, y, rot, r) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.fillStyle = '#3d4a2c'; ctx.beginPath(); ctx.ellipse(0, 2, r * 0.85, r, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.5; for (const k of [-0.4, 0, 0.4]) { ctx.beginPath(); ctx.moveTo(-r * 0.8, k * r + 2); ctx.lineTo(r * 0.8, k * r + 2); ctx.stroke(); }
+  ctx.fillStyle = '#9aa0ab'; ctx.fillRect(-r * 0.3, -r - 6, r * 0.6, 8); ctx.strokeStyle = '#c9ced6'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(r * 0.45, -r - 2, 5, 0, 7); ctx.stroke();
+  ctx.restore();
+}
+function drawBoom(p) {
+  const u = 1 - p.life / 10; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, p.r * (0.6 + u)); g.addColorStop(0, 'rgba(255,250,200,0.95)'); g.addColorStop(0.4, 'rgba(255,150,40,0.8)'); g.addColorStop(1, 'rgba(255,40,0,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.6 + u), 0, 7); ctx.fill(); ctx.restore();
+}
+// futuristic game blaster (original design)
+function drawBlaster(f) {
+  const w = f.toWorld(f.J.fH), dir = f.facing;
+  ctx.save(); ctx.translate(w[0], w[1]); ctx.scale(dir, 1); ctx.rotate(-0.03);
+  ctx.fillStyle = '#1c1f2a'; rrect(-26, -24, 92, 22, 6); ctx.fill();
+  ctx.fillStyle = '#7a3cff'; rrect(-18, -30, 60, 8, 3); ctx.fill();
+  ctx.fillStyle = '#e01b30'; rrect(40, -22, 30, 14, 4); ctx.fill();
+  ctx.fillStyle = '#3cf2ff'; ctx.fillRect(-14, -18, 46, 5); ctx.fillStyle = '#ffd34d'; ctx.fillRect(-26, -20, 8, 14);
+  ctx.fillStyle = '#2a2e3c'; rrect(-8, -4, 16, 26, 3); ctx.fill(); rrect(22, -4, 12, 18, 3); ctx.fill();
+  ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(60,242,255,0.5)'; ctx.beginPath(); ctx.arc(70, -15, 6, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function drawRuler(f) {
+  const a = f.toWorld(f.J.fH), e = f.toWorld(f.J.farm[1][1] || f.J.fH), ang = Math.atan2(a[1] - e[1], a[0] - e[0]);
+  ctx.save(); ctx.translate(a[0], a[1]); ctx.rotate(ang);
+  ctx.fillStyle = '#f2c94c'; ctx.fillRect(-6, -7, 110, 14); ctx.strokeStyle = 'rgba(60,40,0,0.7)'; ctx.lineWidth = 1;
+  for (let k = 0; k < 104; k += 8) { ctx.beginPath(); ctx.moveTo(k - 4, -7); ctx.lineTo(k - 4, k % 24 === 0 ? 1 : -2); ctx.stroke(); }
+  ctx.restore();
+}
 function drawProj(p) {
   if (p.kind === 'card') drawCard(p.x, p.y, p.rot * 0.3, Math.cos(p.t * 0.7), p.suit);
   else if (p.kind === 'rock') drawRock(p.x, p.y, p.rot, p.r);
-  else if (p.kind === 'hball') drawHandball(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'hball') { if (p.fire) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, p.r * 2); g.addColorStop(0, 'rgba(255,170,60,0.8)'); g.addColorStop(1, 'rgba(255,60,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2, 0, 7); ctx.fill(); ctx.restore(); } drawHandball(p.x, p.y, p.rot, p.r); }
   else if (p.kind === 'joker') drawCard(p.x, p.y, p.rot * 0.2, Math.cos(p.t * 0.3), 'J', 2.6);
   else if (p.kind === 'football') drawFootball(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'can') drawCan(p.x, p.y, p.rot, p.r);
@@ -1546,6 +1713,11 @@ function drawProj(p) {
   else if (p.kind === 'cartwreck') drawCart(p.x, p.y, p.dir, p.rot * p.dir, Math.min(1, p.life / 25));
   else if (p.kind === 'cartgone') drawCart(p.x, p.y, p.dir, 0, Math.min(1, p.life / 20));
   else if (p.kind === 'egg') drawEgg(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'pen') drawPen(p.x, p.y, Math.atan2(p.vy, p.vx), p.r, p.col);
+  else if (p.kind === 'book') drawBook(p.x, p.y, p.rot, p.r, p.col, p.t, p.heavy);
+  else if (p.kind === 'laser') drawLaser(p);
+  else if (p.kind === 'grenade') drawGrenade(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'boom') drawBoom(p);
   else if (p.kind === 'chicken') drawChicken(p.x, p.y, Math.sign(p.vx) || p.dir, p.r, p.t, !!p.ground);
   else if (p.kind === 'tire') drawTire(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'bike') drawBike(p.x, p.y, p.rot, p.r, p.dir);
@@ -1553,6 +1725,9 @@ function drawProj(p) {
 }
 function drawHeld(f) {
   const m = f.mv; if (f.state !== 'attack' || !m) return;
+  if (m.gun && f.mt >= 3 && f.mt < m.total - 4) drawBlaster(f);
+  if (m.ruler && f.mt < m.total - 4) drawRuler(f);
+  if (m.eat) drawEatProps(f);
   if (m.id === 'sk_cards' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); for (let i = 0; i < 3; i++) drawCard(w[0] + f.facing * (i - 1) * 6, w[1] - 8, f.facing * (i - 1) * 0.35, 1, '♠♥♦'[i], 0.8); }
   if (m.id === 'sk_hball' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawHandball(w[0] + f.facing * 6, w[1] - 6, 0); }
   if (m.id === 'sk_rock' && f.mt >= 12 && f.mt < m.spawnAt) { const [x, y] = handsMid(f); const lift = f.mt < 18 ? 0 : 1; drawRock(x, y - (lift ? ROCK_R * 0.85 : ROCK_R * 0.5), f.mt * 0.02, ROCK_R); }
@@ -2475,9 +2650,9 @@ function drawTitle() {
   // characters line-up
   for (const back of [true, false]) for (let i = 0; i < NCH; i++) {
     if ((i % 2 === 0) !== back) continue;
-    const im = IMG['front' + (i + 1)]; const hgt = back ? 330 : 380, w = im.width * hgt / im.height;
-    const bob = Math.sin(G.frame * 0.04 + i) * 4, x = 92 + i * (1096 / (NCH - 1));
-    ctx.save(); ctx.globalAlpha = back ? 0.7 : 0.97; ctx.drawImage(im, x - w / 2, (back ? 315 : 330) + bob, w, hgt); ctx.restore();
+    const im = IMG['front' + (i + 1)]; const hgt = back ? 300 : 345, w = im.width * hgt / im.height;
+    const bob = Math.sin(G.frame * 0.04 + i) * 4, x = 70 + i * (1140 / (NCH - 1));
+    ctx.save(); ctx.globalAlpha = back ? 0.7 : 0.97; ctx.drawImage(im, x - w / 2, (back ? 335 : 355) + bob, w, hgt); ctx.restore();
   }
   const gr = ctx.createLinearGradient(0, 380, 0, VH); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, 'rgba(0,0,0,0.75)'); gr.addColorStop(1, 'rgba(0,0,0,0.95)');
   ctx.fillStyle = gr; ctx.fillRect(0, 380, VW, VH - 380);
@@ -2522,16 +2697,16 @@ function updSelect() {
     if (S.done[s]) { if (pd.p.back) { S.done[s] = false; SFX.move(); } continue; }
     if (pd.p.left) { S.cur[s] = (S.cur[s] + NCH - 1) % NCH; SFX.move(); }
     if (pd.p.right) { S.cur[s] = (S.cur[s] + 1) % NCH; SFX.move(); }
-    if (pd.p.up || pd.p.down) { S.cur[s] = (S.cur[s] + 5) % NCH; SFX.move(); }
+    if (pd.p.up || pd.p.down) { S.cur[s] = (S.cur[s] + 7) % NCH; SFX.move(); }
     if (pd.p.ok && S.t > 8) { S.done[s] = true; SFX.ok(); S.flash = [s, 14]; }
     else if (pd.p.back && cpu && s === 1) { S.done[0] = false; SFX.move(); }
     else if (pd.p.back && (!cpu || s === 0) && S.t > 8) { if (online) { netClose(); G.scene = 'online'; G.t = 0; return; } G.toTitle(); return; }
   }
   if (G.tap && S.t > 8) {
-    const tw = 100, gap = 10, x0 = VW / 2 - (5 * tw + 4 * gap) / 2, ty0 = 175, rowH = tw + 44;
+    const tw = 80, gap = 8, x0 = VW / 2 - (7 * tw + 6 * gap) / 2, ty0 = 185, rowH = tw + 40;
     const col = Math.floor((G.tap[0] - x0) / (tw + gap)), row = Math.floor((G.tap[1] - ty0) / rowH), s = online ? NET.slot : (cpu && S.done[0] ? 1 : 0);
-    if (col >= 0 && col < 5 && row >= 0 && row < 2 && !S.done[s] && row * 5 + col < NCH) {
-      const i = row * 5 + col;
+    if (col >= 0 && col < 7 && row >= 0 && row < 2 && !S.done[s] && row * 7 + col < NCH) {
+      const i = row * 7 + col;
       if (S.cur[s] === i) { S.done[s] = true; SFX.ok(); S.flash = [s, 14]; } else { S.cur[s] = i; SFX.move(); }
     }
   }
@@ -2572,8 +2747,8 @@ function drawSelect() {
     }
   }
   // tiles
-  const tw = 100, gap = 10, total = 5 * tw + 4 * gap, x0 = VW / 2 - total / 2, ty0 = 175, rowH = tw + 44;
-  const tpos = i => [x0 + (i % 5) * (tw + gap), ty0 + ((i / 5) | 0) * rowH];
+  const tw = 80, gap = 8, total = 7 * tw + 6 * gap, x0 = VW / 2 - total / 2, ty0 = 185, rowH = tw + 40;
+  const tpos = i => [x0 + (i % 7) * (tw + gap), ty0 + ((i / 7) | 0) * rowH];
   for (let i = 0; i < NCH; i++) {
     const [x, ty] = tpos(i);
     ctx.save();
@@ -2581,7 +2756,7 @@ function drawSelect() {
     ctx.drawImage(IMG['face' + (i + 1)], x, ty, tw, tw);
     ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 2; ctx.strokeRect(x, ty, tw, tw);
     ctx.restore();
-    txt(CHARS[i].name, x + tw / 2, ty + tw + 18, { size: 16, weight: 800, color: 'rgba(255,255,255,0.85)' });
+    txt(CHARS[i].name, x + tw / 2, ty + tw + 16, { size: 14, weight: 800, color: 'rgba(255,255,255,0.85)' });
   }
   for (let s = 0; s < 2; s++) {
     const i = S.cur[s], [x, ty] = tpos(i), both = S.cur[0] === S.cur[1];
