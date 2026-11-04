@@ -4,12 +4,14 @@
 
 | الملف | وش هو |
 |---|---|
-| `index.html` | اللعبة (كمبيوتر وجوال — أزرار اللمس تطلع لحالها في الجوال) |
-| `mobile.html` | نسخة الجوال (أزرار اللمس دايماً) ← الرابط `/mobile` |
+| `index.html` | **الإصدار 1** — اللعبة بـ8 شخصيات (كمبيوتر وجوال) |
+| `v2/index.html` | **معركة الشلة 2** — الإصدار الجديد بـ15 شخصية ← الرابط `/v2` |
+| `v2/mobile.html` | نسخة الجوال من الإصدار 2 ← الرابط `/v2/mobile` |
+| `mobile.html` | نسخة الجوال من الإصدار 1 ← الرابط `/mobile` |
 | `firebase-config.js` | إعدادات سيرفر الأونلاين (Firebase) — الصق إعدادات مشروعك هنا |
 | `database.rules.json` | قواعد قاعدة البيانات في Firebase |
 | `firebase.json` / `vercel.json` | إعدادات الاستضافة |
-| `src/` | ملفات المصدر — بعد أي تعديل: `python3 src/build.py` |
+| `src/` | ملفات مصدر الإصدار 2 — بعد أي تعديل: `python3 src/build.py` (يحدّث مجلد `v2` بس) |
 
 ## سيرفر الأونلاين (Firebase)
 1. https://console.firebase.google.com ← **Create a project**.

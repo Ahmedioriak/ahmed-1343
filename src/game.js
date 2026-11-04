@@ -2693,7 +2693,7 @@ function drawTitle() {
   ctx.save(); ctx.translate(VW / 2, 150); ctx.scale(pulse, pulse);
   ctx.save(); ctx.rotate(-0.04); ctx.fillStyle = 'rgba(220,20,40,0.9)'; ctx.fillRect(-380, 50, 760, 10); ctx.restore();
   txt('معركة الشلة', 0, -8, { size: 128, weight: 900, color: '#ffffff', stroke: '#1a0004', sw: 14, glow: '#ff1030', glowBlur: 40 });
-  txt('SHILLA FIGHT', 0, 92, { size: 52, font: FE, weight: 700, color: '#ff2a3a', italic: true, rtl: false, stroke: '#000', sw: 6 });
+  txt('SHILLA FIGHT 2', 0, 92, { size: 52, font: FE, weight: 700, color: '#ff2a3a', italic: true, rtl: false, stroke: '#000', sw: 6 });
   ctx.restore();
   // menu
   const opts = ['لاعب ضد لاعب', 'ضد الكمبيوتر', 'أونلاين 🌐', 'الإعدادات'];
