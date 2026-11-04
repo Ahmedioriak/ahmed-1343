@@ -216,9 +216,9 @@ const MAPS = [
   { up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'], b1: ['KeyR'], b2: ['KeyT'], b3: ['KeyF'], b4: ['KeyG'], sp: ['KeyE'], dg: ['KeyQ'], ok: ['KeyR', 'Space', 'KeyF'], back: ['KeyT', 'Escape'] },
   { up: ['ArrowUp'], down: ['ArrowDown'], left: ['ArrowLeft'], right: ['ArrowRight'], b1: ['KeyI', 'Numpad4'], b2: ['KeyO', 'Numpad5'], b3: ['KeyK', 'Numpad1'], b4: ['KeyL', 'Numpad2'], sp: ['KeyU', 'Numpad6'], dg: ['KeyY', 'Numpad3'], ok: ['KeyI', 'Enter', 'NumpadEnter', 'KeyK'], back: ['KeyO', 'Backspace'] },
 ];
-const PADKEYS = ['up', 'down', 'left', 'right', 'b1', 'b2', 'b3', 'b4', 'sp', 'c12', 'c34', 'c13', 'c24', 'dg', 'ok', 'back'];
+const PADKEYS = ['up', 'down', 'left', 'right', 'b1', 'b2', 'b3', 'b4', 'sp', 'c12', 'c34', 'c13', 'c24', 'dg', 'ra', 'ok', 'back'];
 // ---- Game controllers (PS4 / PS5 / Xbox via the Gamepad API, standard mapping) ----
-// Square/X = 1, Triangle/Y = 2, Cross/A = 3, Circle/B = 4, R1/RB = 1+2 (Rage Art), Options/Menu = pause, Share/View = swap player
+// Square/X = 1, Triangle/Y = 2, Cross/A = 3, Circle/B = 4, R1/RB = 1+2, L2+R2 together = Finisher (القاضية), Options/Menu = pause, Share/View = swap player
 const GP = { slots: {}, prev: {}, kind: {}, blocked: false, anyPress: false, start: false, seen: false };
 const GPS = [{ h: {}, p: {} }, { h: {}, p: {} }];
 function gpKind(id) {
@@ -254,7 +254,7 @@ function gpPoll() {
     const ax = g.axes[0] || 0, ay = g.axes[1] || 0;
     const cur = {
       up: B(12) || ay < -0.5, down: B(13) || ay > 0.5, left: B(14) || ax < -0.5, right: B(15) || ax > 0.5,
-      b1: B(2), b2: B(3), b3: B(0), b4: B(1), sp: B(10) || B(11), c12: B(5), c34: B(7), c13: B(4), dg: B(6), ok: B(0) || B(9), back: B(1), start: B(9), sel: B(8),
+      b1: B(2), b2: B(3), b3: B(0), b4: B(1), sp: B(10) || B(11), c12: B(5), c34: B(7), c13: B(4), dg: B(6), ra: B(6) && B(7), ok: B(0) || B(9), back: B(1), start: B(9), sel: B(8),
     };
     const pv = GP.prev[g.index] || {};
     const st = GPS[sl];
@@ -313,6 +313,8 @@ tcCSS.textContent = `
 #tc .b.sk.full{background:rgba(255,211,77,.35);border-color:#ffd34d;color:#ffd34d;box-shadow:0 0 14px rgba(255,211,77,.7)}
 #tc .b.cb{border-color:rgba(255,120,120,.5)}
 #tc .b.cb.cd{opacity:.45}
+#tc .b.ra{background:rgba(200,0,20,.55);border:3px solid #ff3b4a;color:#fff;font-size:12px;box-shadow:0 0 18px rgba(255,30,50,.9);animation:raP .6s ease-in-out infinite alternate}
+@keyframes raP{from{box-shadow:0 0 8px rgba(255,30,50,.6)}to{box-shadow:0 0 26px rgba(255,60,60,1)}}
 #tc .b.hide{display:none}
 #tc .b svg{width:52%;height:52%;overflow:visible}
 #tc .b.pill svg{width:15px;height:15px}
@@ -344,10 +346,11 @@ const TBTN = [
   { id: 'dg', html: '<b>L2</b><span style="font-size:11px">تفادي</span>', keys: ['dg'], kind: 'cb', fight: true },
   { id: 'c12', html: '<b>R1</b><span>' + SVG.sq + SVG.tri + '</span>', keys: ['c12'], kind: 'cb', fight: true },
   { id: 'c34', html: '<b>R2</b><span>' + SVG.x + SVG.o + '</span>', keys: ['c34'], kind: 'cb', fight: true },
+  { id: 'ra', html: '<span style="font-size:19px">💥</span><span>القاضية</span>', keys: ['ra'], kind: 'ra', fight: true },
   { id: 'pause', html: '<span style="font-size:17px;letter-spacing:-2px">❚❚</span>', kind: 'sys', fight: true },
   { id: 'fs', html: '<span style="font-size:19px">⛶</span>', kind: 'sys' },
 ];
-for (const b of TBTN) { b.el = document.createElement('div'); b.el.className = 'b' + (b.kind === 'cb' ? ' pill cb' : b.kind === 'sk' ? ' sk' : ''); b.el.innerHTML = b.html; tcRoot.appendChild(b.el); }
+for (const b of TBTN) { b.el = document.createElement('div'); b.el.className = 'b' + (b.kind === 'cb' ? ' pill cb' : b.kind === 'sk' ? ' sk' : b.kind === 'ra' ? ' ra' : ''); b.el.innerHTML = b.html; tcRoot.appendChild(b.el); }
 const STK = { base: document.createElement('div'), knob: document.createElement('div'), cx: 0, cy: 0, R: 60, ox: 0, oy: 0, id: null, dx: 0, dy: 0 };
 STK.base.className = 'stk'; STK.knob.className = 'knob'; tcRoot.appendChild(STK.base); tcRoot.appendChild(STK.knob);
 const fsOK = () => !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
@@ -358,7 +361,7 @@ function tcLayout() {
   const w = innerWidth, h = innerHeight, [st, sr, sb, sl] = tcSafe();
   const u = Math.min(h, w * 0.56), r = Math.max(24, Math.min(46, u * 0.098));
   const cx = w - sr - 2.9 * r, cy = h - sb - 2.85 * r, s = 1.5 * r;
-  const pos = { b1: [cx - s, cy, r], b2: [cx, cy - s, r], b3: [cx, cy + s, r], b4: [cx + s, cy, r], sp: [cx - s - 2.25 * r, cy + 0.35 * r, r * 0.88] };
+  const pos = { b1: [cx - s, cy, r], b2: [cx, cy - s, r], b3: [cx, cy + s, r], b4: [cx + s, cy, r], sp: [cx - s - 2.25 * r, cy + 0.35 * r, r * 0.88], ra: [cx - s - 2.25 * r, cy - 1.95 * r, r * 0.86] };
   ['c13', 'dg', 'c12', 'c34'].forEach((k, i) => { pos[k] = [cx + (i - 1.5) * 1.3 * r, cy - s - 1.9 * r, r * 0.58]; });
   const ty = OY / DPR + 122 * SC, pr = Math.max(17, r * 0.55);
   let inFight = false; try { inFight = G.scene === 'fight' && G.fight && !G.fight.paused && !G.fight.showList; } catch (e) { }
@@ -402,7 +405,7 @@ function tcUpdate() {
     if (m > STK.R * 0.32) { const c = dx / m, sn = dy / m; if (c > 0.4) h.right = true; if (c < -0.4) h.left = true; if (sn < -0.4) h.up = true; if (sn > 0.4) h.down = true; }
   }
   let fresh = false;
-  for (const k in h) if (!TOUCH.h[k]) { TOUCH.latch.add(k); if (k[0] === 'b' || k[0] === 'c' || k === 'sp') fresh = true; }
+  for (const k in h) if (!TOUCH.h[k]) { TOUCH.latch.add(k); if (k[0] === 'b' || k[0] === 'c' || k === 'sp' || k === 'ra') fresh = true; }
   TOUCH.h = h;
   if (fresh && SET.rumble) try { navigator.vibrate && navigator.vibrate(9); } catch (e) { }
   for (const b of TBTN) if (b.keys) b.el.classList.toggle('dn', b.keys.some(k => h[k]));
@@ -448,10 +451,10 @@ function tcFrame() {
   rotEl.classList.toggle('on', innerHeight > innerWidth * 1.05);
   const fight = G.scene === 'fight' && G.fight && !G.fight.paused && !G.fight.showList && !NET.menu;
   const f0 = fight ? G.fight.f[0] : null;
-  const key = [fight, G.scene === 'fight', fsOK(), f0 && f0.sk >= SKMAX, f0 && f0.cbCD > 0, f0 && f0.dgCD > 0].join();
+  const key = [fight, G.scene === 'fight', fsOK(), f0 && f0.sk >= SKMAX, f0 && f0.cbCD > 0, f0 && f0.dgCD > 0, f0 && f0.rage].join();
   if (key === tcVisKey) return; tcVisKey = key; tcLayout();
   for (const b of TBTN) {
-    let show = !b.fight || fight; if (b.id === 'fs' && !fsOK()) show = false;
+    let show = !b.fight || fight; if (b.id === 'fs' && !fsOK()) show = false; if (b.id === 'ra' && !(f0 && f0.rage)) show = false;
     b.el.classList.toggle('hide', !show);
     if (b.id === 'sp') b.el.classList.toggle('full', !!(f0 && f0.sk >= SKMAX));
     if (b.kind === 'cb') b.el.classList.toggle('cd', !!(f0 && (b.id === 'dg' ? f0.dgCD > 0 : f0.cbCD > 0)));
@@ -1226,7 +1229,7 @@ class Fighter {
   canAct() { return NEUTRAL.has(this.state) || this.state === 'land' && this.t > 2 || this.state === 'dash' && this.t > 4; }
   tryRage() {
     const h = this.in.h;
-    if (this.rage && h.b1 && h.b2) { this.rageUsed = true; this.startMove('rage'); G.fight.rageFlash(this); return true; }
+    if (this.rage && ((h.b1 && h.b2) || h.ra)) { this.rageUsed = true; this.startMove('rage'); G.fight.rageFlash(this); return true; }
     return false;
   }
   startMove(id) {
@@ -1242,6 +1245,11 @@ class Fighter {
     if (this.invuln > 0) this.invuln--;
     if (this.dgCD > 0) this.dgCD--;
     if (this.bubble && ++this.bubble.t > this.bubble.dur) this.bubble = null;
+    // L2+R2 / touch button = القاضية (cancels a dodge or R2 combo started a few frames earlier)
+    if (this.in.h.ra && this.rage && G.fight && G.fight.phase === 'fight' && (NEUTRAL.has(this.state) || ['block', 'land', 'dash', 'side'].includes(this.state) || (this.state === 'dodge' && this.t <= 6) || (this.state === 'attack' && this.mv && this.mv.combo && this.mt <= 4))) {
+      if (this.state === 'dodge') { this.dgCD = 0; this.invuln = 0; } else if (this.state === 'attack') this.cbCD = 0;
+      this.vx = 0; this.rageUsed = true; this.startMove('rage'); G.fight.rageFlash(this);
+    }
     if (this.in.p.dg && this.dgCD <= 0 && G.fight && G.fight.phase === 'fight' && (NEUTRAL.has(this.state) || this.state === 'block' || this.state === 'land' || this.state === 'dash' || this.state === 'side')) { this.dodge(); }
     if (this.comboT > 0) this.comboT--;
     if (this.cbCD > 0 && G.fight && G.fight.phase === 'fight') this.cbCD--;
@@ -2163,7 +2171,7 @@ class Fight {
   }
   msg(text, kind, dur, color, sub) { this.msgs = [{ text, kind, dur, t: 0, color, sub }]; }
   shake(n) { this.cam.sh = Math.max(this.cam.sh, n); }
-  rageFlash(f) { this.freeze = 0; this.dim = 50; this.zoomT = 70; this.zoomOn = f; SFX.rage(); this.banner = { text: 'RAGE ART', t: 0, dur: 60 }; rumble(f.slot, 0.4, 0.9, 500); }
+  rageFlash(f) { this.freeze = 0; this.dim = 50; this.zoomT = 70; this.zoomOn = f; SFX.rage(); this.banner = { text: 'القاضية!', t: 0, dur: 60, ar: 1 }; rumble(f.slot, 0.4, 0.9, 500); }
   update() {
     if (this.paused) { this.pauseInput(); return; }
     if (anyP('Escape', 'KeyP', 'GPStart')) { this.paused = true; this.pidx = 0; SFX.move(); return; }
@@ -2502,7 +2510,7 @@ class Fight {
         txt(dc > 0 ? `تفادي ${(f.dgCD / 60).toFixed(1)}` : 'تفادي ✓', rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by3 + 3, { size: 12, weight: 800, color: dc > 0 ? 'rgba(255,255,255,0.6)' : '#7fd6ff', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 }); }
       txt(label, rev ? sx0 - 10 : sx0 + sw2 + 10, sy + 4, { size: 15, weight: 800, color: full ? '#ffd34d' : 'rgba(255,255,255,0.75)', align: rev ? 'right' : 'left', stroke: '#000', sw: 3 });
     }
-    if (f.rage) txt('RAGE', rev ? x + 30 : x + w - 30, y + h + 20, { size: 26, font: FE, weight: 700, color: '#ff2a3a', italic: true, stroke: '#000', sw: 4, rtl: false, glow: '#ff0020' });
+    if (f.rage) txt('القاضية جاهزة 💥', rev ? x + 30 : x + w - 30, y + h + 20, { size: 20, weight: 900, color: '#ff2a3a', align: rev ? 'left' : 'right', stroke: '#000', sw: 4, glow: '#ff0020' });
     txt((this.mode === 'online' ? (f.slot === NET.slot ? 'YOU' : 'NET') : f.slot === 0 ? '1P' : (this.mode === 'cpu' ? 'CPU' : '2P')) + (gpSlotKind(f.slot) && !(this.mode === 'cpu' && f.slot === 1) ? ' 🎮' : (TOUCH_ON && f.slot === (this.mode === 'online' ? NET.slot : 0) ? ' 📱' : '')), rev ? px + 38 : px + 38, py + 92, { size: 22, font: FE, weight: 700, color: f.slot === 0 ? '#3ea0ff' : '#ff3b4a', rtl: false });
     ctx.restore();
   }
@@ -2521,7 +2529,7 @@ class Fight {
       const u = easeOut(Math.min(1, bn.t / 8)), out = Math.max(0, (bn.t - bn.dur + 10) / 10);
       ctx.save(); ctx.globalAlpha = 1 - out; ctx.translate(lerp(-VW, 0, u) + VW / 2, 190); ctx.rotate(-0.05);
       ctx.fillStyle = 'rgba(200,0,20,0.85)'; ctx.fillRect(-VW, -42, VW * 2, 84);
-      txt(bn.text, 0, 4, { size: 92, font: FE, weight: 700, color: '#fff', italic: true, stroke: '#000', sw: 8, rtl: false, glow: '#ff0020', glowBlur: 30 });
+      txt(bn.text, 0, 4, bn.ar ? { size: 82, weight: 900, color: '#fff', stroke: '#000', sw: 8, glow: '#ff0020', glowBlur: 30 } : { size: 92, font: FE, weight: 700, color: '#fff', italic: true, stroke: '#000', sw: 8, rtl: false, glow: '#ff0020', glowBlur: 30 });
       ctx.restore();
     }
     for (const m of this.msgs) {
@@ -2577,7 +2585,7 @@ function drawMoveList(F) {
     txt('L3/R3', cx + 205, y + 26, { size: 18, font: FE, weight: 700, color: '#7dffb0', rtl: false });
     txt(s === 0 ? 'E' : 'U', cx + 205, y - 6, { size: 24, font: FE, weight: 700, color: '#7dffb0', rtl: false });
     txt('المهارة: ' + SKILL_NAMES[f.ci] + ' (كل 10 ثواني)', cx + 70, y, { size: 22, weight: 800, color: '#7dffb0', align: 'right' });
-    txt(`تفادي: ${s === 0 ? 'Q' : 'Y'} أو L2 (كل ثانيتين)   ·   □+△ أو R1 مع الغضب = ضربة الغضب`, cx, y + 50, { size: 18, weight: 700, color: '#ff8080' });
+    txt(`تفادي: ${s === 0 ? 'Q' : 'Y'} أو L2 (كل ثانيتين)   ·   L2+R2 مع بعض (أو □+△) لما دمك يقل = القاضية`, cx, y + 50, { size: 18, weight: 700, color: '#ff8080' });
   });
   txt('اضغط أي زر للرجوع', VW / 2, 700, { size: 18, weight: 700, color: 'rgba(255,255,255,0.5)' });
 }
@@ -2662,7 +2670,7 @@ const NET_ICE = { iceServers: [
   { urls: 'stun:global.stun.twilio.com:3478' },
   { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' },
 ] };
-const NKEYS = ['up', 'down', 'left', 'right', 'b1', 'b2', 'b3', 'b4', 'sp', 'c12', 'c34', 'c13', 'c24', 'dg'];
+const NKEYS = ['up', 'down', 'left', 'right', 'b1', 'b2', 'b3', 'b4', 'sp', 'c12', 'c34', 'c13', 'c24', 'dg', 'ra'];
 const NKB = NKEYS.length, NMASK = (1 << NKB) - 1;
 function netEnc(pd) { let v = 0; NKEYS.forEach((k, i) => { if (pd.h[k]) v |= 1 << i; if (pd.p[k]) v |= 1 << (i + NKB); }); return v; }
 function netDec(v, pd) { NKEYS.forEach((k, i) => { pd.h[k] = !!(v & (1 << i)); pd.p[k] = !!(v & (1 << (i + NKB))); }); }
@@ -3411,7 +3419,7 @@ function touchPanel() {
   ctx.save(); ctx.fillStyle = 'rgba(5,7,14,0.78)'; ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.roundRect ? ctx.roundRect(240, 370, 800, 250, 16) : ctx.rect(240, 370, 800, 250); ctx.fill(); ctx.stroke(); ctx.restore();
   txt('التحكم باللمس', VW / 2, 402, { size: 26, weight: 900, color: '#ffd34d' });
-  const rows = [['العصا يسار', 'الحركة · فوق فوق / تحت تحت = خطوة جانبية'], ['○ ✕ △ □', 'لكمة يسار · لكمة يمين · ركلة يسار · ركلة يمين'], ['★', 'المهارة الخاصة (كل 10 ثواني)'], ['L1 R1 R2 · L2', 'حركات الزرين بلمسة · L2 = تفادي المهارات'], ['❚❚', 'إيقاف مؤقت وقائمة الحركات']];
+  const rows = [['العصا يسار', 'الحركة · فوق فوق / تحت تحت = خطوة جانبية'], ['○ ✕ △ □', 'لكمة يسار · لكمة يمين · ركلة يسار · ركلة يمين'], ['★', 'المهارة الخاصة (كل 10 ثواني)'], ['L1 R1 R2 · L2', 'حركات الزرين بلمسة · L2 = تفادي المهارات'], ['💥', 'زر القاضية — يطلع لما دمك يقل عن 30%'], ['❚❚', 'إيقاف مؤقت وقائمة الحركات']];
   rows.forEach(([a, b], i) => { const y = 446 + i * 36; txt(a, 820, y, { size: 20, weight: 800, color: '#7dffb0', align: 'right' }); txt(b, 600, y, { size: 19, weight: 700, color: '#fff', align: 'right' }); });
 }
 function drawBoot() {
