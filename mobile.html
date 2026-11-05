@@ -2910,6 +2910,59 @@ const FIN = [
     front(F, a, d, t) { if (a.finProp && a.finProp.k === 'gun') drawBlaster(a);
       if (t >= 76 && t < 104) { const u = finSeg(t, 76, 100), c = finChest(d); finReticle(c[0], c[1], lerp(200, 70, u), Math.min(1, u * 3)); }
       if (t >= 100 && t < 136) { const a2 = t < 128 ? Math.min(1, (t - 100) / 6) : 1 - (t - 128) / 8; finBeam(d.x, a2, 90 + Math.sin(t * 0.8) * 10, 'rgba(120,240,255,0.95)', 'rgba(255,60,240,0.5)'); } } },
+  // 14 النوخذة — point-blank waves, then a tsunami carrying his ship
+  { name: 'التسونامي', line: 'البحر… بياكلك!', col: '#3cb4ff',
+    run(F, a, d, t) {
+      const f = a.facing; if (t < 104) finHold(d, a.x + f * 230);
+      if (t < 18) { a.rageP = FPZ.point; if (t === 2) { SFX.whoosh(1); popText('🌊', a.x, -470, '#ffffff', 60); } finCam(F, (a.x + d.x) / 2, -260, 1.1); return; }
+      if (t < 60) { const k = (t - 18) % 14; a.rageP = k < 6 ? G2({ ua: 200, fa: 30, bua: 196, bfa: 34, lean: -14 }) : G2({ ua: 95, fa: 4, bua: 90, bfa: 8, lean: 26, dx: 14, th: 44, bth: -34 }); d.finP = FPZ.hurt({ lean: -18 });
+        if (k === 6) { const c = finChest(d); finThrow(F, a, d, { kind: 'seawave', from: [a.x + f * 110, -100], to: [c[0], -100], T: 8, g: 0, r: 100, dmg: 5, fx: xy => { finBurst(xy[0], -120, 24, ['#ffffff', '#7fd6ff', '#3cb4ff'], 11, 7); SFX.rock(); } }); SFX.whoosh(1); }
+        finCam(F, (a.x + d.x) / 2, -260, 1.1); return; }
+      if (t < 104) { a.rageP = FPZ.armsUp; d.finP = FPZ.hurt({ lean: -28, ua: 150, fa: 30, bua: 150, bfa: 30 }); if (t % 8 === 0) { F.shake(6); SFX.whoosh(0); } if (t % 2 === 0) finBurst(lerp(a.x - f * 500, d.x, finSeg(t, 60, 104)), -rnd(100, 500), 3, ['#ffffff', '#9fe0ff'], 6, 6); finCam(F, (a.x + d.x) / 2 - f * 80, -380, 0.86); return; }
+      if (t === 104) { finHit(F, a, d, 28, [d.x, -200], 18, true); finLaunch(d, f * 18, -16); F.shake(42); SFX.thud(); SFX.rock(); finBurst(d.x, -220, 90, ['#ffffff', '#7fd6ff', '#3cb4ff', '#0a3a7a'], 18, 10); for (let i = 0; i < 3; i++) finRing(d.x, -120, i ? '#3cb4ff' : '#ffffff', 300 + i * 140, 22 + i * 6); return; }
+      if (t < 145) { a.rageP = FPZ.point; finCam(F, lerp(a.x, d.x, 0.5), -240, 1.0); return; }
+      return true;
+    },
+    front(F, a, d, t) {
+      if (t >= 60 && t < 112) { const u = finSeg(t, 60, 104), x = lerp(a.x - a.facing * 520, d.x + a.facing * 40, u * u), al = t < 104 ? Math.min(1, (t - 60) / 6) : 1 - (t - 104) / 8;
+        ctx.save(); ctx.globalAlpha *= al; ctx.translate(x, 0); ctx.scale(2.7, 2.7); drawSeaWave({ x: 0, vx: a.facing, t }); ctx.restore();
+        ctx.save(); ctx.globalAlpha *= al; ctx.translate(x + a.facing * 40, -585 + Math.sin(t * 0.3) * 8); ctx.rotate(a.facing * -0.12); ctx.scale(0.85, 0.85); drawDhow(0, -60, a.facing, t); ctx.restore(); }
+    } },
+  // 15 الرئيس — ring punches, lifts you up, slams you into the floor
+  { name: 'أمر الرئيس', line: 'انحني… للرئيس!', col: '#d4a640',
+    run(F, a, d, t) {
+      const f = a.facing; if (t < 70) finHold(d, a.x + f * 140);
+      if (t < 16) { a.rageP = G2({ ua: 150, fa: 40, lean: -4 }); if (t === 4) { SFX.zap(); const w = a.toWorld(a.J.fH); finRing(w[0], w[1], '#d4a640', 140, 14); popText('💍', w[0], w[1] - 60, '#ffd34d', 50); } finCam(F, (a.x + d.x) / 2, -240, 1.3); return; }
+      if (t < 70) { const k = t - 16, i = (k / 9) | 0, u = finExt(k, 9); a.rageP = Object.assign(i % 2 ? FPZ.jab(u) : FPZ.str(u), { fsc: 1.5 }); d.finP = FPZ.hurt({ lean: -20 + Math.sin(t) * 8 });
+        if (k % 9 === 4) { const w = a.toWorld(i % 2 ? a.J.bH : a.J.fH); finHit(F, a, d, 4, w, 3); finRing(w[0], w[1], i % 2 ? '#ff2a3a' : '#d4a640', 110, 10); } finCam(F, (a.x + d.x) / 2, -240, 1.32); return; }
+      if (t < 96) { const u = finSeg(t, 70, 96); a.rageP = FPZ.armsUp; finHold(d, a.x + f * 70, -260 * ease(u)); d.finP = FPZ.hurt({ lean: -30, r: -10 }); if (t % 3 === 0) finBurst(d.x, d.y - 120, 3, ['#d4a640', '#ffd34d'], 5, 5); finCam(F, a.x + f * 40, -360, 1.0); return; }
+      if (t < 106) { const u = finSeg(t, 96, 106); a.rageP = FPZ.slam; finHold(d, a.x + f * 110, -260 * (1 - u * u)); return; }
+      if (t === 106) { finHold(d, a.x + f * 110, 0); finHit(F, a, d, 22, [d.x, -60], 18, true); finLaunch(d, f * 6, -8); F.shake(44); SFX.thud(); SFX.rock(); F.fin.crack = 1; F.fin.crackX = d.x; crumble({ x: d.x, y: -10, r: 90 });
+        for (let i = 0; i < 4; i++) finRing(d.x, -10, i % 2 ? '#d4a640' : '#ff2a3a', 260 + i * 130, 20 + i * 6); popText('ركعت للرئيس!', d.x, -420, '#ffd34d', 64); return; }
+      if (t < 145) { a.rageP = Object.assign({}, FPZ.slam, { lean: 14 }); finCam(F, lerp(a.x, d.x, 0.5), -220, 1.1); return; }
+      return true;
+    },
+    back(F, a, d, t) { if (F.fin.crack) finCracks(F.fin.crackX, 8, 380, 1); } },
+  // 16 الرئيس المتحوّل — rises on his wings, burns you with eye lasers and red blasts, then dives
+  { name: 'الجناح الأسود', line: 'هذي… نهايتك!', col: '#ff1030',
+    run(F, a, d, t) {
+      const f = a.facing; if (t < 100) finHold(d, a.x + f * 280);
+      if (t < 30) { const u = finSeg(t, 0, 30); a.y = -320 * ease(u); a.rageP = G2({ ua: 150, fa: 30, bua: 150, bfa: 30, lean: -10, th: 30, sh: 60, bth: 20, bsh: 60 }); if (t === 2) { SFX.rage(); SFX.whoosh(1); } if (t % 2 === 0) finBurst(a.x + rnd(-80, 80), a.y - rnd(0, 300), 3, ['#ff2030', '#1a0b0e'], 5, 6); finCam(F, (a.x + d.x) / 2, -380, 0.95); return; }
+      if (t < 82) { a.y = -320 + Math.sin(t * 0.15) * 12; a.rageP = G2({ ua: 100, fa: 10, lean: 14, th: 30, sh: 60, bth: 20, bsh: 60 }); d.finP = FPZ.hurt({ lean: Math.sin(t * 0.8) * 14 });
+        if (t % 6 === 0) { const c = finChest(d); finHit(F, a, d, 2, [c[0] + rnd(-20, 20), c[1] + rnd(-40, 30)], 1); finBurst(c[0], c[1], 8, ['#ff2030', '#ffffff'], 7, 5); }
+        if (t % 13 === 5) { const w = a.toWorld(a.J.fH), c = finChest(d); finThrow(F, a, d, { kind: 'redball', from: w, to: [c[0], c[1]], T: 8, g: 0, r: 34, dmg: 3, fx: xy => { finBurst(xy[0], xy[1], 18, ['#ff2030', '#ffd34d', '#ffffff'], 10, 7); finRing(xy[0], xy[1], '#ff2030', 120, 12); SFX.thud(); } }); SFX.zap(); }
+        finCam(F, (a.x + d.x) / 2, -360, 0.92); return; }
+      if (t < 100) { const u = finSeg(t, 82, 100); a.y = -320 * (1 - u * u); a.x = lerp(a.x, d.x - f * 60, 0.25); a.rageP = G2({ ua: 80, fa: 10, bua: 76, bfa: 10, lean: 34, th: 60, sh: 90, bth: 40, bsh: 80 }); return; }
+      if (t === 100) { a.y = 0; const c = finChest(d); finHit(F, a, d, 15, c, 20, true); finLaunch(d, f * 16, -22); F.shake(48); SFX.thud(); SFX.rock();
+        finBurst(c[0], c[1], 100, ['#ff2030', '#ff7040', '#1a0b0e', '#ffffff'], 20, 10); for (let i = 0; i < 4; i++) finRing(c[0], c[1], i % 2 ? '#ff2030' : '#ffffff', 280 + i * 150, 22 + i * 6); return; }
+      if (t < 145) { a.rageP = G2({ ua: 170, fa: 20, bua: 160, bfa: 30, lean: -8 }); finCam(F, lerp(a.x, d.x, 0.5), -240, 1.0); return; }
+      return true;
+    },
+    front(F, a, d, t) {
+      if (t >= 30 && t < 82) { const e = eyePos(a), c = finChest(d), w = 12 + Math.sin(t * 0.9) * 3; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        for (const [lw, col] of [[w * 3.2, 'rgba(255,20,30,0.25)'], [w * 1.6, 'rgba(255,40,40,0.7)'], [w * 0.55, 'rgba(255,240,240,0.95)']]) { ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(e[0], e[1]); ctx.lineTo(c[0], c[1]); ctx.stroke(); } ctx.restore(); }
+      if (t >= 82 && t < 101) finComet(a.x, a.y - 200, d.x - a.x, 320, 520, 90, 'rgba(255,30,40,0.8)', 'rgba(255,200,180,0.8)');
+    } },
 ];
 
 // ================= FIGHT =================
@@ -3862,7 +3915,8 @@ function storyScript(ch, phase) {
   if (role === 'rais') return [['O', 'مستحيل… أنا… الرئيس… أخسر؟!']];
   return [['N', 'الجناحين تكسّروا… والهالة الحمرا انطفت.'], ['O', 'الكأس… لك. أنت تستاهله.'], ['N', 'والكأس رجع للشلة! 🏆'], ['P', CHARS[S.pc].quote], ['N', 'والشلة رجعت تضحك… لين البطولة الجاية.'], ['N', 'النهاية 🎉 — شكراً إنك لعبت!']];
 }
-function storyChapter() { const S = G.story; S.step = 'card'; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; if (AC) Music.intensity = 0; }
+function storyMax() { try { return clamp(+localStorage.getItem('shilla_story_max') || 0, 0, NCHAP - 1); } catch (e) { return 0; } }
+function storyChapter() { const S = G.story; try { if (S.ch > storyMax()) localStorage.setItem('shilla_story_max', S.ch); } catch (e) { } S.step = 'card'; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; if (AC) Music.intensity = 0; }
 function storySpeak() { const S = G.story, L = S && S.lines[S.li]; if (!L || !SET.voice || muted) return; try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } const role = CH_ROLE[S.ch], oc = storyOpp(S.ch); const ci = L[0] === 'P' ? S.pc : oc; const T = L[0] === 'N' ? [0.95, 0.95] : ((window.VOICE_TTS && window.VOICE_TTS[ci]) || [1, 1]); speakAr(L[1], L[0] === 'O' && role === 'shadow' ? T[0] * 0.6 : T[0], T[1], L[0] === 'N' ? 99 : ci); }
 function storyTalk(phase) { const S = G.story; S.step = 'talk'; S.phase = phase; S.lines = storyScript(S.ch, phase); S.li = 0; S.ct = 0; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; storySpeak(); }
 function storyFight() {
@@ -3877,9 +3931,9 @@ function storySetupFight(F) {
   const reg = CH_REG[S.ch] || 0; F.pads[1].lvl = role === 'reg' ? 1 + reg * 0.5 : role === 'nokh' ? 2.2 : role === 'shadow' ? 2.6 : role === 'rais' ? 2.7 : 3;
   const hpx = (op, k) => { op.maxHp = Math.round(op.maxHp * k); op.hp = op.trailHp = op.maxHp; };
   if (role === 'shadow') { op.shadow = true; hpx(op, 1.5); op.dmgMul = 1.15; op.dispName = nmOf(op.ci, true); }
-  if (role === 'nokh') { op.bossAI = 1; op.bossCD = 90; op.rageUsed = true; hpx(op, 1.2); }
-  if (role === 'rais') { op.bossAI = 1; op.bossCD = 100; op.rageUsed = true; hpx(op, 1.25); }
-  if (role === 'rais2') { op.bossAI = 1; op.bossCD = 70; op.rageUsed = true; hpx(op, 1.22); op.dmgMul = 1.0; op.dispName = 'الرئيس — الجناح الأسود'; }
+  if (role === 'nokh') { op.bossAI = 1; op.bossCD = 90; hpx(op, 1.2); }
+  if (role === 'rais') { op.bossAI = 1; op.bossCD = 100; hpx(op, 1.25); }
+  if (role === 'rais2') { op.bossAI = 1; op.bossCD = 70; hpx(op, 1.22); op.dmgMul = 1.0; op.dispName = 'الرئيس — الجناح الأسود'; }
 }
 function storyResult(w) {
   const S = G.story;
@@ -3897,7 +3951,12 @@ function storyAdvance() {
 function updStory() {
   const S = G.story; if (!S) { G.toTitle(); return; } S.t++;
   const P0 = pads[0].p, P1 = pads[1].p, ok = P0.ok || P1.ok || anyP('Click') || !!G.tap, back = P0.back || P1.back || anyP('Escape');
-  if (S.step === 'card') { if (S.t > 170 || (ok && S.t > 20)) { SFX.move(); storyTalk(S.ch === 4 || S.phase !== 'post' ? 'pre' : 'pre'); } return; }
+  if (S.step === 'card') {
+    const mx = storyMax(), tapX = G.tap && G.tap[0];
+    const go = d => { const n = clamp(S.ch + d, 0, mx); if (n !== S.ch) { S.ch = n; S.t = 21; G.stageId = CH_STAGE[S.ch]; SFX.move(); } };
+    if (mx > 0) { if (P0.left || P1.left || (G.tap && tapX < 230)) { go(1); return; } if (P0.right || P1.right || (G.tap && tapX > VW - 230)) { go(-1); return; } }
+    if (mx > 0 && S.t > 150 && S.t < 160) S.t = 150; // wait for the player while chapter select is open
+    if (S.t > 170 || (ok && S.t > 20)) { SFX.move(); storyTalk(S.ch === 4 || S.phase !== 'post' ? 'pre' : 'pre'); } return; }
   if (S.step === 'talk') {
     const L = S.lines[S.li]; S.ct += 1.5;
     if (back && S.t > 10) { SFX.move(); storyAdvance(); return; }
@@ -3929,6 +3988,10 @@ function drawStory() {
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, VH / 2 - 130, VW, 260);
     txt(CH_NAMES[S.ch], VW / 2, VH / 2 - 40, { size: 92, weight: 900, color: '#fff', glow: CH_GLOW[CH_ROLE[S.ch]], glowBlur: 35 });
     txt(CH_TIME[S.ch], VW / 2, VH / 2 + 50, { size: 34, weight: 800, color: '#ffd34d' });
+    { const mx = storyMax(); if (mx > 0) { const bl = 0.6 + 0.4 * Math.sin(G.frame * 0.12);
+        if (S.ch < mx) { txt('◀', 120, VH / 2, { size: 70, weight: 900, color: `rgba(255,211,77,${bl})`, rtl: false }); txt('الفصل التالي', 120, VH / 2 + 56, { size: 20, weight: 800, color: '#ffd34d' }); }
+        if (S.ch > 0) { txt('▶', VW - 120, VH / 2, { size: 70, weight: 900, color: `rgba(255,211,77,${bl})`, rtl: false }); txt('الفصل السابق', VW - 120, VH / 2 + 56, { size: 20, weight: 800, color: '#ffd34d' }); }
+        txt('اختر الفصل بالأسهم ◀ ▶  ·  ✕ / Enter للبدء', VW / 2, VH / 2 + 150, { size: 20, weight: 800, color: 'rgba(255,255,255,0.7)' }); } }
     { const r = CH_ROLE[S.ch]; txt(r === 'shadow' || r === 'rais' ? 'الخصم: ؟؟؟' : r === 'rais2' ? 'الخصم: الرئيس… بجناحين' : 'الخصم: ' + nmOf(storyOpp(S.ch)), VW / 2, VH / 2 + 100, { size: 24, weight: 700, color: 'rgba(255,255,255,0.75)' }); }
     ctx.restore(); return;
   }
@@ -4322,6 +4385,7 @@ function tick() {
   }
 }
 function render() {
+  if (ctx.resetTransform) ctx.resetTransform(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none';
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cv.width, cv.height);
   ctx.setTransform(SC * DPR, 0, 0, SC * DPR, OX, OY);
   ctx.save(); ctx.beginPath(); ctx.rect(0, 0, VW, VH); ctx.clip();
@@ -4344,6 +4408,7 @@ function render() {
     txt('🎮 ' + TOAST.text, VW / 2, 142, { size: 24, weight: 800, color: '#fff' }); ctx.restore();
   }
   if (window.__overlay) window.__overlay(ctx, G);
+  drawErr();
   ctx.restore();
   tcFrame();
 }
@@ -4351,10 +4416,24 @@ function loop(ts) {
   if (!last) last = ts;
   acc += Math.min(100, ts - last); last = ts;
   let n = 0;
-  while (acc >= 1000 / 60 && n < 5) { if (!window.__hold) tick(); acc -= 1000 / 60; n++; }
-  render();
+  try {
+    while (acc >= 1000 / 60 && n < 5) { if (!window.__hold) tick(); acc -= 1000 / 60; n++; }
+    render();
+  } catch (er) { gameError(er); }
   requestAnimationFrame(loop);
 }
+// an error must never freeze the game: log it, close any half-finished finisher, keep running
+let ERR_SHOW = null;
+function gameError(er) {
+  try {
+    console.error(er); window.__errs = (window.__errs || []).concat(String(er && er.message || er)).slice(-10);
+    ERR_SHOW = { msg: String(er && er.message || er).slice(0, 80), t: 300 };
+    const F = G.fight;
+    if (F) { if (F.fin) { finEnd(F.fin.a, F.fin.d); F.fin = null; } F.cutin = null; F.zoomT = 0; F.freeze = 0;
+      for (const f of F.f) if (['rageSeq', 'rageVic', 'rushSeq'].includes(f.state)) { f.y = 0; f.mv = null; f.setState('idle'); } }
+  } catch (e2) { }
+}
+function drawErr() { if (!ERR_SHOW) return; if (--ERR_SHOW.t <= 0) { ERR_SHOW = null; return; } try { ctx.save(); ctx.globalAlpha = Math.min(1, ERR_SHOW.t / 30); ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(8, VH - 34, 700, 26); ctx.fillStyle = '#ffb04d'; ctx.font = '14px monospace'; ctx.textAlign = 'left'; ctx.direction = 'ltr'; ctx.fillText('⚠ ' + ERR_SHOW.msg, 16, VH - 16); ctx.restore(); } catch (e) { } }
 window.__step = (n = 1) => { for (let i = 0; i < n; i++) tick(); render(); };
 window.__tick = (n = 1) => { for (let i = 0; i < n; i++) tick(); };
 
