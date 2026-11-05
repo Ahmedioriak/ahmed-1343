@@ -1412,7 +1412,7 @@ class Fighter {
   rageSeq(opp) { // runs this character's finisher script (FIN)
     const F = G.fight, FN = FIN[this.ci] || FIN[0];
     if (!F || !F.fin || F.fin.a !== this) { finEnd(this, opp); this.y = 0; this.setState('idle'); return; }
-    F.fin.t = this.t; F.zoomT = Math.max(F.zoomT, 2);
+    F.fin.t = this.t; F.zoomT = Math.max(F.zoomT, 2); finQueue(F, this, opp);
     if (FN.run(F, this, opp, this.t)) { finEnd(this, opp); F.fin = null; F.zoomT = 0; this.y = 0; this.setState('idle'); if (opp.state === 'rageVic') opp.setState('idle'); }
   }
 }
@@ -2059,7 +2059,7 @@ function drawRuler(f) {
   ctx.restore();
 }
 function drawProj(p) {
-  if (p.kind === 'card') drawCard(p.x, p.y, p.rot * 0.3, Math.cos(p.t * 0.7), p.suit);
+  if (p.kind === 'card') drawCard(p.x, p.y, p.rot * 0.3, Math.cos(p.t * 0.7), p.suit, p.sc || 1);
   else if (p.kind === 'rock') drawRock(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'hball') { if (p.fire) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, p.r * 2); g.addColorStop(0, 'rgba(255,170,60,0.8)'); g.addColorStop(1, 'rgba(255,60,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2, 0, 7); ctx.fill(); ctx.restore(); } drawHandball(p.x, p.y, p.rot, p.r); }
   else if (p.kind === 'joker') drawCard(p.x, p.y, p.rot * 0.2, Math.cos(p.t * 0.3), 'J', 2.6);
@@ -2137,6 +2137,16 @@ function finLaunch(d, vx, vy) { d.finP = null; if (d.ko || d.state === 'rageVic'
 function finRing(x, y, c, r1 = 160, life = 18) { FX.push({ t: 'ring', x, y, life, max: life, c, r0: 10, r1 }); }
 function finBurst(x, y, n, cols, sp = 9, sz = 6) { for (let i = 0; i < n; i++) { const an = rnd(0, Math.PI * 2), s = rnd(2, sp); FX.push({ t: 'p', x, y, vx: Math.cos(an) * s, vy: Math.sin(an) * s - 2, life: rnd(18, 34), max: 34, c: cols[i % cols.length], sz: rnd(2, sz) }); } }
 function finCam(F, x, y, z) { if (F.fin) F.fin.cam = { x, y, z }; }
+// throw a visible prop (card, egg, chicken, pen…) that reaches the target after T frames — the hit lands on arrival
+function finThrow(F, a, d, o) {
+  const g = o.g === undefined ? 0.5 : o.g, T = o.T, [x, y] = o.from, [tx, ty] = o.to;
+  const p = Object.assign({ kind: o.kind, noHit: true, owner: a, x, y, vx: (tx - x) / T, vy: (ty - y - g * T * (T - 1) / 2) / T, g, r: o.r, vr: o.vr || 0, life: T + 2, dir: Math.sign(tx - x) || a.facing }, o.extra || {});
+  spawnProj(p); (F.fin.q = F.fin.q || []).push({ at: F.fin.t + T, p, dmg: o.dmg, fx: o.fx, fr: o.fr || 2 }); return p;
+}
+function finQueue(F, a, d) {
+  const q = F.fin && F.fin.q; if (!q) return;
+  for (let i = 0; i < q.length; i++) { const e = q[i]; if (F.fin.t < e.at) continue; q.splice(i--, 1); e.p.dead = true; const xy = [e.p.x, e.p.y]; if (e.dmg) finHit(F, a, d, e.dmg, xy, e.fr); if (e.fx) e.fx(xy); if (!F.fin) return; }
+}
 function finEnd(a, d) { a.finBall = false; a.finTrail = false; a.finProp = null; if (d) d.finP = null; }
 // glowing ball (handball / energy)
 function finOrb(x, y, r, c1, c2, rot = 0) {
@@ -2228,32 +2238,38 @@ const FIN = [
     back(F, a, d, t) { if (t < 66) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(160,230,255,0.75)'; ctx.lineWidth = 6; const k = t % 11; if (k < 4) { ctx.globalAlpha = 1 - k / 4; ctx.beginPath(); ctx.moveTo(a.x - a.facing * 260, -200); ctx.lineTo(a.x, -200); ctx.moveTo(a.x - a.facing * 220, -120); ctx.lineTo(a.x, -120); ctx.moveTo(a.x - a.facing * 240, -280); ctx.lineTo(a.x, -280); ctx.stroke(); } ctx.restore(); } },
     front(F, a, d, t) { const P = a.finProp; if (P && P.k === 'ball') { if (t >= 86) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(P.x, P.y, 4, P.x, P.y, 70); g.addColorStop(0, 'rgba(255,220,90,0.8)'); g.addColorStop(1, 'rgba(255,200,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(P.x, P.y, 70, 0, 7); ctx.fill(); ctx.restore(); } drawFootball(P.x, P.y, P.rot || 0, 30); } },
   },
-  // 3 الدكتور — orbiting cards, giant joker
+  // 3 الدكتور — orbiting cards slice in one by one, giant joker
   { name: 'الخدعة الكبرى', line: 'ورقتك الأخيرة!', col: '#e6c37a',
     run(F, a, d, t) {
-      const f = a.facing; if (t < 104) finHold(d, a.x + f * 210, -Math.min(60, t * 1.5));
-      if (t < 20) { a.rageP = FPZ.point; if (t === 2) SFX.skill(); finCam(F, (a.x + d.x) / 2, -260, 1.2); return; }
+      const f = a.facing; if (t < 104) finHold(d, a.x + f * 230, -Math.min(60, t * 1.5));
+      if (t < 20) { a.rageP = FPZ.point; if (t === 2) SFX.skill(); finCam(F, (a.x + d.x) / 2, -260, 1.15); return; }
       if (t < 84) { a.rageP = G2({ ua: 120, fa: 70, lean: -2 }); d.finP = FPZ.hurt({ lean: Math.sin(t * 0.4) * 14, r: -6 });
-        if (t % 10 === 4) { const c = finChest(d); finHit(F, a, d, 4, [c[0] + rnd(-30, 30), c[1] + rnd(-60, 40)], 2); SFX.throw(); } finCam(F, d.x - f * 60, -280, 1.25); return; }
-      if (t < 104) { a.rageP = G2({ ua: 176, fa: 6, lean: -10 }); if (t === 90) SFX.skill(); finCam(F, d.x, -330, 1.1); return; }
-      if (t === 104) { const c = finChest(d); finHit(F, a, d, 22, c, 16, true); finLaunch(d, f * 12, -15); F.shake(30); SFX.thud(); finBurst(c[0], c[1], 50, ['#ff3b4a', '#ffffff', '#222222', '#e6c37a'], 13, 6); finRing(c[0], c[1], '#e6c37a', 320, 24); for (const s of '♠♥♦♣') popText(s, c[0] + rnd(-140, 140), c[1] + rnd(-120, 40), s === '♥' || s === '♦' ? '#ff3b4a' : '#ffffff', 60); return; }
+        if (t % 8 === 0 && t <= 76) { const c = finChest(d), an = t * 0.16, R = 240, from = [c[0] + Math.cos(an) * R, c[1] + Math.sin(an) * R * 0.45];
+          finThrow(F, a, d, { kind: 'card', from, to: [c[0] + rnd(-25, 25), c[1] + rnd(-70, 50)], T: 6, g: 0, r: 20, vr: 0.9, dmg: 3.5, extra: { suit: '♠♥♦♣'[(t / 8) % 4], sc: 2.1 },
+            fx: xy => { finBurst(xy[0], xy[1], 14, ['#ffffff', '#d0102a', '#111111'], 9, 5); finRing(xy[0], xy[1], '#e6c37a', 90, 10); SFX.throw(); } }); }
+        finCam(F, d.x - f * 60, -280, 1.2); return; }
+      if (t < 104) { a.rageP = G2({ ua: 176, fa: 6, lean: -10 }); if (t === 90) SFX.skill(); finCam(F, d.x, -330, 1.05); return; }
+      if (t === 104) { const c = finChest(d); finHit(F, a, d, 20, c, 16, true); finLaunch(d, f * 12, -15); F.shake(30); SFX.thud();
+        for (let i = 0; i < 16; i++) spawnProj({ kind: 'card', noHit: true, owner: a, x: c[0], y: c[1], vx: rnd(-13, 13), vy: rnd(-16, -4), g: 0.5, r: 20, vr: rnd(-0.6, 0.6), life: 60, suit: '♠♥♦♣'[i % 4], sc: 1.7 });
+        finBurst(c[0], c[1], 40, ['#ff3b4a', '#ffffff', '#222222', '#e6c37a'], 13, 6); finRing(c[0], c[1], '#e6c37a', 320, 24); return; }
       if (t < 145) { a.rageP = G2({ ua: 30, fa: 140, bua: 26, bfa: 140, lean: -4, r: 2 }); finCam(F, lerp(a.x, d.x, 0.5), -220, 1.05); return; }
       return true;
     },
     front(F, a, d, t) {
-      if (t >= 12 && t < 104) { const c = finChest(d), n = 12, conv = finSeg(t, 84, 102);
-        for (let i = 0; i < n; i++) { const an = t * 0.16 + i * Math.PI * 2 / n, R = lerp(lerp(280, 150, finSeg(t, 12, 84)), 0, conv), x = c[0] + Math.cos(an) * R, y = c[1] - conv * 260 + Math.sin(an) * R * 0.45;
-          if (conv < 0.95) drawCard(x, y, an, Math.cos(an * 2), '♠♥♦♣'[i % 4], 1.1); } }
-      if (t >= 88 && t <= 104) { const c = finChest(d), u = finSeg(t, 88, 104); drawCard(c[0], lerp(c[1] - 300, c[1], u * u), Math.sin(t * 0.3) * 0.2, 1, 'J', 4.2); }
+      if (t >= 12 && t < 104) { const c = finChest(d), conv = finSeg(t, 84, 102), left = t < 84 ? 14 - Math.floor((t - 12) / 8) : 6;
+        for (let i = 0; i < Math.max(5, left); i++) { const an = t * 0.16 + i * Math.PI * 2 / 14, R = lerp(260, 0, conv), x = c[0] + Math.cos(an) * R, y = c[1] - conv * 260 + Math.sin(an) * R * 0.45;
+          if (conv < 0.95) drawCard(x, y, an, Math.cos(an * 2), '♠♥♦♣'[i % 4], 1.8); } }
+      if (t >= 88 && t <= 104) { const c = finChest(d), u = finSeg(t, 88, 104); drawCard(c[0], lerp(c[1] - 320, c[1], u * u), Math.sin(t * 0.3) * 0.2, 1, 'J', 5.2); }
     } },
-  // 4 الحارس — point-blank fireballs, flaming goal kick
+  // 4 الحارس — fireballs straight into the body, flaming goal kick
   { name: 'ركلة المرمى النارية', line: 'ولا شي يعدّي!', col: '#ffd21f',
     run(F, a, d, t) {
-      const f = a.facing; if (t < 90) finHold(d, a.x + f * 170);
+      const f = a.facing; if (t < 90) finHold(d, a.x + f * 190);
       if (t < 50) { const k = t % 10, L = ((t / 10) | 0) % 2; a.rageP = L ? FPZ.jab(k < 4 ? k / 4 : 1 - (k - 4) / 6) : FPZ.str(k < 4 ? k / 4 : 1 - (k - 4) / 6); d.finP = FPZ.hurt();
-        if (k === 3) { const w = a.toWorld(L ? a.J.bH : a.J.fH); spawnProj({ kind: 'hball', fire: true, noHit: true, owner: a, x: w[0], y: w[1], vx: f * 30, vy: 0, g: 0, r: 19, life: 5 }); SFX.throw(); }
-        if (k === 7) { const c = finChest(d); finHit(F, a, d, 4, c, 2); finBurst(c[0], c[1], 12, ['#ff8a2a', '#ffd34d'], 8, 6); } finCam(F, (a.x + d.x) / 2, -230, 1.3); return; }
-      if (t < 78) { const u = finSeg(t, 50, 78); a.finProp = { k: 'orb', x: a.x + f * 30, y: lerp(-220, -470, ease(u)), r: lerp(20, 56, u) }; a.rageP = FPZ.armsUp; if (t % 2 === 0) finBurst(a.finProp.x, a.finProp.y, 3, ['#ff8a2a', '#ffd34d'], 4, 6); finCam(F, (a.x + d.x) / 2, -300, 1.1); return; }
+        if (k === 3) { const w = a.toWorld(L ? a.J.bH : a.J.fH), c = finChest(d);
+          finThrow(F, a, d, { kind: 'hball', from: w, to: [c[0], c[1] + rnd(-40, 30)], T: 5, g: 0, r: 28, vr: f * 0.5, dmg: 4, extra: { fire: true }, fx: xy => { finBurst(xy[0], xy[1], 16, ['#ff8a2a', '#ffd34d', '#ff3b30'], 9, 7); finRing(xy[0], xy[1], '#ff8a2a', 100, 10); } }); SFX.throw(); }
+        finCam(F, (a.x + d.x) / 2, -230, 1.25); return; }
+      if (t < 78) { const u = finSeg(t, 50, 78); a.finProp = { k: 'orb', x: a.x + f * 30, y: lerp(-220, -470, ease(u)), r: lerp(26, 62, u) }; a.rageP = FPZ.armsUp; if (t % 2 === 0) finBurst(a.finProp.x, a.finProp.y, 3, ['#ff8a2a', '#ffd34d'], 4, 6); finCam(F, (a.x + d.x) / 2, -300, 1.05); return; }
       if (t < 86) { const u = finSeg(t, 78, 86), P = a.finProp; P.y = lerp(-470, -120, u * u); P.x = a.x + f * lerp(30, 70, u); a.rageP = G2({ th: lerp(-20, 120, ease(finSeg(t, 82, 86))), sh: 4, ffl: 0, lean: -16, r: -8, bth: 6, bsh: 0, ua: 60, fa: 40 }); return; }
       if (t < 90) { const u = finSeg(t, 86, 90), P = a.finProp, c = finChest(d); P.x = lerp(a.x + f * 70, c[0], u); P.y = lerp(-120, c[1], u); if (t === 86) { SFX.kick(2); F.shake(12); } return; }
       if (t === 90) { const c = finChest(d); a.finProp = null; finHit(F, a, d, 26, c, 18, true); finLaunch(d, f * 18, -14); F.shake(36); SFX.thud(); SFX.rock();
@@ -2291,62 +2307,76 @@ const FIN = [
       if (t < 165) { a.finBall = false; a.rageP = FPZ.point; finCam(F, a.x, -220, 1.1); return; }
       return true;
     } },
-  // 7 التنين — sale-day rain of cans & apples, cart ram
+  // 7 التنين — sale-day rain: every can and apple that lands on his head counts, then the cart ram
   { name: 'تخفيضات نهاية الموسم', line: 'كل شي عليك… ببلاش!', col: '#ff3b4a',
     run(F, a, d, t) {
       const f = a.facing; if (t < 100) finHold(d, a.x + f * 260);
-      if (t < 14) { a.rageP = FPZ.point; if (t === 1) popText('٪ تخفيضات ٪', d.x, -560, '#ffd34d', 54); finCam(F, (a.x + d.x) / 2, -320, 1.05); return; }
+      if (t < 14) { a.rageP = FPZ.point; if (t === 1) popText('٪ تخفيضات ٪', d.x, -560, '#ffd34d', 58); finCam(F, (a.x + d.x) / 2, -320, 1.05); return; }
       if (t < 76) { a.rageP = G2({ ua: 150, fa: 30, bua: 140, bfa: 40, lean: -6 }); d.finP = FPZ.hurt({ lean: 24 + Math.sin(t) * 6, ua: 150, fa: 40, bua: 150, bfa: 40 });
-        if (t % 3 === 0) spawnProj({ kind: t % 2 ? 'can' : 'apple', noHit: true, owner: a, x: d.x + rnd(-110, 110), y: -900 - rnd(0, 200), vx: rnd(-1, 1), vy: 14, g: 0.6, r: 17, vr: rnd(-0.3, 0.3), life: 70, bounce: 0.35 });
-        if (t % 8 === 4 && t > 24) { const h = finHead(d); finHit(F, a, d, 3, [h[0] + rnd(-25, 25), h[1]], 2); SFX.rattle(); } finCam(F, d.x - f * 80, -300, 1.05); return; }
+        if (t % 3 === 0) spawnProj({ kind: t % 6 ? 'can' : 'apple', noHit: true, owner: a, x: d.x + rnd(-230, 230), y: -760 - rnd(0, 80), vx: rnd(-1, 1), vy: 10, g: 0.6, r: 24, vr: rnd(-0.3, 0.3), life: 70, bounce: 0.35 });
+        if (t % 7 === 0 && t >= 14 && t <= 63) { const h = finHead(d);
+          finThrow(F, a, d, { kind: (t / 7) % 2 ? 'can' : 'apple', from: [h[0] + rnd(-40, 40), -800], to: [h[0] + rnd(-20, 20), h[1] - 10], T: 11, g: 0.6, r: 28, vr: rnd(-0.4, 0.4), dmg: 3,
+            fx: xy => { SFX.rattle(); finBurst(xy[0], xy[1], 10, ['#ffd34d', '#ff3b4a', '#ffffff'], 8, 5); spawnProj({ kind: (t / 7) % 2 ? 'can' : 'apple', noHit: true, owner: a, x: xy[0], y: xy[1], vx: rnd(-6, 6), vy: -8, g: 0.6, r: 28, vr: rnd(-0.4, 0.4), life: 50, bounce: 0.35 }); } }); }
+        finCam(F, d.x - f * 80, -300, 1.05); return; }
       if (t < 100) { const u = finSeg(t, 76, 100); if (t === 76) { a.x = d.x - f * 420; SFX.whoosh(1); } a.x = lerp(d.x - f * 420, d.x - f * 190, u * u); a.rageP = G2({ ua: 80, fa: 30, bua: 76, bfa: 34, lean: 28, th: 40 * Math.sin(t * 0.8), bth: -40 * Math.sin(t * 0.8) }); a.finProp = { k: 'cart' }; if (t % 3 === 0) dust(a.x, 2, -f); finCam(F, lerp(a.x, d.x, 0.5), -200, 1.1); return; }
-      if (t === 100) { a.finProp = null; const c = finChest(d); finHit(F, a, d, 24, c, 16, true); finLaunch(d, f * 22, -14); F.shake(34); SFX.thud(); SFX.rattle();
+      if (t === 100) { a.finProp = null; const c = finChest(d); finHit(F, a, d, 22, c, 16, true); finLaunch(d, f * 22, -14); F.shake(34); SFX.thud(); SFX.rattle();
         spawnProj({ kind: 'cartwreck', owner: a, x: a.x + f * 100, y: 0, vx: f * 9, vy: -13, g: 0.6, vr: f * 0.2, life: 80, noHit: true, dir: f });
-        for (let i = 0; i < 10; i++) spawnProj({ kind: i % 2 ? 'can' : 'apple', noHit: true, owner: a, x: c[0], y: c[1], vx: rnd(-9, 9), vy: rnd(-16, -6), g: 0.6, r: 17, vr: rnd(-0.4, 0.4), life: 70, bounce: 0.35 });
+        for (let i = 0; i < 14; i++) spawnProj({ kind: i % 2 ? 'can' : 'apple', noHit: true, owner: a, x: c[0], y: c[1], vx: rnd(-11, 11), vy: rnd(-18, -6), g: 0.6, r: 26, vr: rnd(-0.4, 0.4), life: 70, bounce: 0.35 });
         finRing(c[0], c[1], '#ff3b4a', 300, 22); finBurst(c[0], c[1], 30, ['#ffd34d', '#ff3b4a', '#ffffff'], 12, 6); return; }
       if (t < 140) { a.rageP = G2({ ua: 170, fa: 20, lean: -4 }); finCam(F, lerp(a.x, d.x, 0.5), -220, 1.05); return; }
       return true;
     },
     front(F, a, d, t) { if (a.finProp && a.finProp.k === 'cart') drawCart(a.x + a.facing * 110, 0, a.facing, 0, 1); } },
-  // 8 أبو الدجاج — chicken stampede, egg rain, giant golden egg
+  // 8 أبو الدجاج — chickens leap onto him, eggs smash on his head, the golden egg
   { name: 'غضب الدجاج', line: 'يا دجاج… هجوم كامل!', col: '#ffc21a',
     run(F, a, d, t) {
-      const f = a.facing; if (t < 118) finHold(d, a.x + f * 220);
-      if (t < 12) { a.rageP = G2({ ua: 120 + Math.sin(t * 1.2) * 30, bua: 120 - Math.sin(t * 1.2) * 30, fa: 30, bfa: 30, lean: -6 }); if (t === 2) SFX.cluck(); finCam(F, (a.x + d.x) / 2, -240, 1.1); return; }
-      if (t < 70) { a.rageP = G2({ ua: 120 + Math.sin(t * 1.2) * 34, bua: 120 - Math.sin(t * 1.2) * 34, fa: 30, bfa: 30, lean: -6 }); d.finP = FPZ.hurt({ lean: Math.sin(t * 0.6) * 22 });
-        if (t % 3 === 0) { const s = (t / 3) % 2 ? 1 : -1; spawnProj({ kind: 'chicken', noHit: true, owner: a, x: d.x - s * 640, y: -24, vx: s * rnd(13, 17), vy: 0, g: 0, r: 24, life: 90, ground: true, dir: s }); }
-        if (t % 6 === 3 && t > 18) { const c = finChest(d); finHit(F, a, d, 2.5, [c[0] + rnd(-40, 40), c[1] + rnd(0, 120)], 1); featherPuff(c[0], c[1] + 60, 8); if (t % 12 === 3) SFX.cluck(); } finCam(F, d.x, -220, 1.05); return; }
-      if (t < 96) { a.rageP = FPZ.point; if (t % 3 === 0) spawnProj({ kind: 'egg', noHit: true, owner: a, x: d.x + rnd(-120, 120), y: -800 - rnd(0, 150), vx: 0, vy: 12, g: 0.6, r: 14, vr: rnd(-0.2, 0.2), life: 80 });
-        if (t % 8 === 0) { finHit(F, a, d, 2.5, finHead(d), 1); } d.finP = FPZ.hurt({ lean: 20, ua: 160, bua: 160, fa: 30, bfa: 30 }); finCam(F, d.x, -300, 1.0); return; }
+      const f = a.facing; if (t < 118) finHold(d, a.x + f * 230);
+      const flap = () => G2({ ua: 120 + Math.sin(t * 1.2) * 34, bua: 120 - Math.sin(t * 1.2) * 34, fa: 30, bfa: 30, lean: -6 });
+      if (t < 12) { a.rageP = flap(); if (t === 2) SFX.cluck(); finCam(F, (a.x + d.x) / 2, -240, 1.1); return; }
+      if (t < 70) { a.rageP = flap(); d.finP = FPZ.hurt({ lean: Math.sin(t * 0.6) * 22 });
+        if (t % 4 === 0) { const s = (t / 4) % 2 ? 1 : -1; spawnProj({ kind: 'chicken', noHit: true, owner: a, x: d.x - s * 660, y: -34, vx: s * rnd(13, 17), vy: 0, g: 0, r: 34, life: 90, ground: true, dir: s }); }
+        if (t % 6 === 0 && t >= 12 && t <= 60) { const s = (t / 6) % 2 ? 1 : -1, c = finChest(d);
+          finThrow(F, a, d, { kind: 'chicken', from: [d.x - s * 360, -40], to: [c[0] - s * 10, c[1] + rnd(-40, 30)], T: 12, g: 0.9, r: 40, dmg: 2.5, extra: { dir: s },
+            fx: xy => { featherPuff(xy[0], xy[1], 16); SFX.cluck(); finRing(xy[0], xy[1], '#ffffff', 80, 10); spawnProj({ kind: 'chicken', noHit: true, owner: a, x: xy[0], y: xy[1], vx: -s * rnd(4, 7), vy: -9, g: 0.7, r: 36, life: 40, dir: -s }); } }); }
+        finCam(F, d.x, -230, 1.05); return; }
+      if (t < 96) { a.rageP = FPZ.point; d.finP = FPZ.hurt({ lean: 20, ua: 160, bua: 160, fa: 30, bfa: 30 });
+        if (t % 3 === 0) { const h = finHead(d);
+          for (let k = 0; k < 2; k++) spawnProj({ kind: 'egg', noHit: true, owner: a, x: d.x + rnd(-240, 240), y: -760 - rnd(0, 120), vx: rnd(-1, 1), vy: 9, g: 0.6, r: 28, vr: rnd(-0.2, 0.2), life: 60 });
+          finThrow(F, a, d, { kind: 'egg', from: [h[0] + rnd(-60, 60), -780], to: [h[0] + rnd(-25, 25), h[1] - 6], T: 10, g: 0.6, r: 26, vr: rnd(-0.2, 0.2), dmg: 1.5, fx: xy => eggSplat({ x: xy[0], y: xy[1], r: 30 }) }); }
+        finCam(F, d.x, -300, 1.0); return; }
       if (t < 118) { a.rageP = FPZ.armsUp; finCam(F, d.x, -360, 0.95); return; }
-      if (t === 118) { finHit(F, a, d, 26, [d.x, -150], 18, true); finLaunch(d, f * 10, -13); F.shake(36); SFX.thud(); SFX.splat(); eggSplat({ x: d.x, y: -120, r: 60 }); eggSplat({ x: d.x, y: -60, r: 60 }); finBurst(d.x, -150, 50, ['#ffd34d', '#ffffff', '#ffb000'], 14, 8); featherPuff(d.x, -150, 30); finRing(d.x, -100, '#ffd34d', 340, 24); return; }
-      if (t < 160) { a.rageP = G2({ ua: 120 + Math.sin(t * 1.2) * 30, bua: 120 - Math.sin(t * 1.2) * 30, fa: 30, bfa: 30, lean: -6 }); if (t % 20 === 0) SFX.cluck(); finCam(F, lerp(a.x, d.x, 0.5), -220, 1.05); return; }
+      if (t === 118) { finHit(F, a, d, 20, [d.x, -150], 18, true); finLaunch(d, f * 10, -13); F.shake(36); SFX.thud(); SFX.splat(); eggSplat({ x: d.x, y: -120, r: 60 }); eggSplat({ x: d.x, y: -60, r: 60 }); finBurst(d.x, -150, 50, ['#ffd34d', '#ffffff', '#ffb000'], 14, 8); featherPuff(d.x, -150, 30); finRing(d.x, -100, '#ffd34d', 340, 24);
+        for (let i = 0; i < 6; i++) spawnProj({ kind: 'chicken', noHit: true, owner: a, x: d.x, y: -120, vx: rnd(-9, 9), vy: rnd(-16, -8), g: 0.7, r: 34, life: 60, dir: i % 2 ? 1 : -1 }); return; }
+      if (t < 160) { a.rageP = flap(); if (t % 20 === 0) SFX.cluck(); finCam(F, lerp(a.x, d.x, 0.5), -220, 1.05); return; }
       return true;
     },
-    front(F, a, d, t) { if (t >= 96 && t <= 118) { const u = finSeg(t, 96, 118); finGoldEgg(d.x, lerp(-1100, -170, u * u), 95); } } },
-  // 9 أبو الأسود — flying bikes, bouncing tires, giant tire run-over
+    front(F, a, d, t) { if (t >= 96 && t <= 118) { const u = finSeg(t, 96, 118); finGoldEgg(d.x, lerp(-1100, -170, u * u), 100); } } },
+  // 9 أبو الأسود — bikes and tires slam into him one after another, giant tire run-over
   { name: 'سباق الموت', line: 'جاهز تطير؟', col: '#e9e9ee',
     run(F, a, d, t) {
-      const f = a.facing; if (t < 118) finHold(d, a.x + f * 240);
+      const f = a.facing; if (t < 118) finHold(d, a.x + f * 260);
       if (t < 12) { a.rageP = FPZ.point; if (t === 2) SFX.zap(); finCam(F, (a.x + d.x) / 2, -240, 1.1); return; }
       if (t < 64) { a.rageP = G2({ ua: 150, fa: 20, lean: -4 }); d.finP = FPZ.hurt();
-        if (t % 13 === 0) { spawnProj({ kind: 'bike', noHit: true, owner: a, x: a.x - f * 120, y: -420, vx: f * 26, vy: -2, g: 0.35, r: 46, vr: f * 0.25, life: 18, dir: f }); SFX.throw(); }
-        if (t % 13 === 12) { const c = finChest(d); finHit(F, a, d, 5, c, 4); bikeCrash({ x: c[0], y: c[1], vx: f * 8, r: 46, dir: f, owner: a }); } finCam(F, (a.x + d.x) / 2, -260, 1.05); return; }
-      if (t < 90) { a.rageP = FPZ.jab(finExt(t, 13)); if (t % 13 === 2) spawnProj({ kind: 'tire', noHit: true, owner: a, x: a.x + f * 60, y: -200, vx: f * 18, vy: -6, g: 0.7, r: 26, vr: f * 0.4, life: 14, bounce: 0.6 }); if (t % 13 === 11) finHit(F, a, d, 4, finHead(d), 3); finCam(F, (a.x + d.x) / 2, -240, 1.1); return; }
-      if (t < 118) { const u = finSeg(t, 90, 118); a.rageP = G2({ ua: 90, fa: 0, bua: 86, bfa: 6, lean: 26, dx: 14 }); a.finProp = { k: 'tire', x: lerp(a.x - f * 200, d.x, u * u), y: -110, rot: (a.finProp && a.finProp.rot || 0) + f * 0.35 }; if (t % 3 === 0) dust(a.finProp.x, 4, -f); if (t === 90) SFX.roll(); finCam(F, lerp(a.x, d.x, 0.5), -240, 1.0); return; }
-      if (t === 118) { a.finProp = null; finHit(F, a, d, 22, finChest(d), 18, true); finLaunch(d, f * 15, -16); F.shake(36); SFX.thud(); SFX.boing(); spawnProj({ kind: 'tire', noHit: true, owner: a, x: d.x, y: -110, vx: f * 11, vy: -14, g: 0.6, r: 110, vr: f * 0.3, life: 60, bounce: 0.5 }); finRing(d.x, -110, '#ffffff', 320, 22); finBurst(d.x, -110, 40, ['#e9e9ee', '#555b6a', '#ffd34d'], 12, 7); return; }
+        if (t % 12 === 0 && t <= 48) { const c = finChest(d);
+          finThrow(F, a, d, { kind: 'bike', from: [a.x - f * 320, -620], to: [c[0], c[1]], T: 15, g: 0.6, r: 64, vr: f * 0.25, dmg: 5, extra: { dir: f }, fx: xy => bikeCrash({ x: xy[0], y: xy[1], vx: f * 8, r: 64, dir: f, owner: a }) }); SFX.throw(); }
+        finCam(F, (a.x + d.x) / 2, -280, 1.0); return; }
+      if (t < 90) { a.rageP = FPZ.jab(finExt(t, 13));
+        if (t % 13 === 2) { const w = a.toWorld(a.J.fH), h = finHead(d); finThrow(F, a, d, { kind: 'tire', from: w, to: h, T: 9, g: 0.7, r: 38, vr: f * 0.4, dmg: 4, fx: xy => { SFX.boing(); finBurst(xy[0], xy[1], 10, ['#555b6a', '#ffffff'], 8, 5); spawnProj({ kind: 'tire', noHit: true, owner: a, x: xy[0], y: xy[1], vx: -f * 5, vy: -10, g: 0.7, r: 38, vr: -f * 0.3, life: 50, bounce: 0.55 }); } }); }
+        finCam(F, (a.x + d.x) / 2, -240, 1.1); return; }
+      if (t < 118) { const u = finSeg(t, 90, 118); a.rageP = G2({ ua: 90, fa: 0, bua: 86, bfa: 6, lean: 26, dx: 14 }); a.finProp = { k: 'tire', x: lerp(a.x - f * 200, d.x, u * u), y: -120, rot: (a.finProp && a.finProp.rot || 0) + f * 0.35 }; if (t % 3 === 0) dust(a.finProp.x, 4, -f); if (t === 90) SFX.roll(); finCam(F, lerp(a.x, d.x, 0.5), -240, 1.0); return; }
+      if (t === 118) { a.finProp = null; finHit(F, a, d, 22, finChest(d), 18, true); finLaunch(d, f * 15, -16); F.shake(36); SFX.thud(); SFX.boing(); spawnProj({ kind: 'tire', noHit: true, owner: a, x: d.x, y: -120, vx: f * 11, vy: -14, g: 0.6, r: 120, vr: f * 0.3, life: 60, bounce: 0.5 }); finRing(d.x, -110, '#ffffff', 320, 22); finBurst(d.x, -110, 40, ['#e9e9ee', '#555b6a', '#ffd34d'], 12, 7); return; }
       if (t < 155) { a.rageP = G2({ ua: 170, fa: 20, bua: 30, bfa: 130 }); finCam(F, lerp(a.x, d.x, 0.5), -220, 1.05); return; }
       return true;
     },
-    front(F, a, d, t) { const P = a.finProp; if (P && P.k === 'tire') { ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(P.x, 4, 110, 16, 0, 0, 7); ctx.fill(); ctx.restore(); drawTire(P.x, P.y, P.rot, 110); } } },
-  // 10 البوب — rapid shots, then a giant charged rocket ball
+    front(F, a, d, t) { const P = a.finProp; if (P && P.k === 'tire') { ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(P.x, 4, 120, 16, 0, 0, 7); ctx.fill(); ctx.restore(); drawTire(P.x, P.y, P.rot, 120); } } },
+  // 10 البوب — fireball volley into the body, then the giant charged rocket ball
   { name: 'صاروخ البوب العملاق', line: 'كورة وحدة… تكفي!', col: '#ff8a2a',
     run(F, a, d, t) {
       const f = a.facing; if (t < 104) finHold(d, a.x + f * 300);
       if (t < 40) { const k = t % 10, L = ((t / 10) | 0) % 2; a.rageP = L ? FPZ.jab(k < 4 ? k / 4 : 1 - (k - 4) / 6) : FPZ.str(k < 4 ? k / 4 : 1 - (k - 4) / 6);
-        if (k === 3) { const w = a.toWorld(L ? a.J.bH : a.J.fH); spawnProj({ kind: 'hball', fire: true, noHit: true, owner: a, x: w[0], y: w[1], vx: f * 36, vy: 0, g: 0, r: 19, life: 7 }); SFX.throw(); }
-        if (k === 9) { finHit(F, a, d, 4, finChest(d), 2); } d.finP = FPZ.hurt(); finCam(F, (a.x + d.x) / 2, -230, 1.15); return; }
-      if (t < 92) { const u = finSeg(t, 40, 92); a.rageP = FPZ.armsUp; a.finProp = { k: 'orb', x: a.x - f * 10, y: lerp(-470, -560, u), r: lerp(22, 95, ease(u)) };
+        if (k === 3) { const w = a.toWorld(L ? a.J.bH : a.J.fH), c = finChest(d); finThrow(F, a, d, { kind: 'hball', from: w, to: [c[0], c[1] + rnd(-40, 30)], T: 6, g: 0, r: 28, vr: f * 0.5, dmg: 4, extra: { fire: true }, fx: xy => { finBurst(xy[0], xy[1], 16, ['#ff8a2a', '#ffd34d', '#ff3b30'], 9, 7); finRing(xy[0], xy[1], '#ff8a2a', 100, 10); } }); SFX.throw(); }
+        d.finP = FPZ.hurt(); finCam(F, (a.x + d.x) / 2, -230, 1.1); return; }
+      if (t < 92) { const u = finSeg(t, 40, 92); a.rageP = FPZ.armsUp; a.finProp = { k: 'orb', x: a.x - f * 10, y: lerp(-470, -560, u), r: lerp(22, 100, ease(u)) };
         if (t % 2 === 0) { const an = rnd(0, 7), R = 260; FX.push({ t: 'p', x: a.finProp.x + Math.cos(an) * R, y: a.finProp.y + Math.sin(an) * R, vx: -Math.cos(an) * 12, vy: -Math.sin(an) * 12, life: 20, max: 20, c: '#ffd34d', sz: rnd(3, 6) }); }
         if (t % 10 === 0) { F.shake(6); SFX.zap(); } finCam(F, (a.x + d.x) / 2, -380, 0.92); return; }
       if (t < 104) { const u = finSeg(t, 92, 104), P = a.finProp, c = finChest(d); a.rageP = FPZ.slam; P.x = lerp(a.x - f * 10, c[0], ease(u)); P.y = lerp(-560, c[1], u); if (t === 92) { SFX.throw(); SFX.whoosh(1); } if (t % 2 === 0) finBurst(P.x, P.y, 5, ['#ff8a2a', '#ffd34d'], 5, 8); return; }
@@ -2356,20 +2386,24 @@ const FIN = [
       return true;
     },
     front(F, a, d, t) { const P = a.finProp; if (P && P.k === 'orb') finOrb(P.x, P.y, P.r, 'rgba(255,150,40,0.85)', 'rgba(255,90,20,0.55)', t * 0.25); } },
-  // 11 الطالب — pen arrows, flying books, the giant book closes
+  // 11 الطالب — pens stab in like arrows, notebooks slam, the giant book closes
   { name: 'الاختبار النهائي', line: 'سؤال أخير… وصفر!', col: '#3a56c8',
     run(F, a, d, t) {
-      const f = a.facing; if (t < 120) finHold(d, a.x + f * 240);
+      const f = a.facing; if (t < 120) finHold(d, a.x + f * 250);
       if (t < 14) { a.rageP = FPZ.point; if (t === 2) SFX.zap(); finCam(F, (a.x + d.x) / 2, -240, 1.1); return; }
       if (t < 66) { a.rageP = G2({ ua: 160, fa: 30, bua: 150, bfa: 40, lean: -4 }); d.finP = FPZ.hurt({ lean: 18 + Math.sin(t) * 6 });
-        if (t % 2 === 0) spawnProj({ kind: 'pen', noHit: true, owner: a, x: d.x - f * rnd(120, 300), y: -900, vx: f * rnd(5, 9), vy: 26, g: 0, r: 16, life: 34, col: pick(['#3a56c8', '#e01b30', '#2fbf62', '#111111']) });
-        if (t % 6 === 0 && t > 20) { const c = finChest(d); finHit(F, a, d, 2.5, [c[0] + rnd(-30, 30), c[1] + rnd(-60, 40)], 1); } finCam(F, d.x - f * 60, -300, 1.0); return; }
+        if (t % 2 === 0) spawnProj({ kind: 'pen', noHit: true, owner: a, x: d.x - f * rnd(60, 380), y: -760, vx: f * rnd(4, 8), vy: 24, g: 0, r: 28, life: 40, col: pick(['#3a56c8', '#e01b30', '#2fbf62', '#111111']) });
+        if (t % 5 === 0 && t <= 60) { const c = finChest(d); finThrow(F, a, d, { kind: 'pen', from: [c[0] - f * rnd(200, 320), -760], to: [c[0] + rnd(-30, 30), c[1] + rnd(-80, 60)], T: 8, g: 0, r: 30, dmg: 2.2, extra: { col: pick(['#3a56c8', '#e01b30', '#2fbf62', '#111111']) },
+          fx: xy => { finBurst(xy[0], xy[1], 8, ['#3a56c8', '#ffffff'], 7, 4); FX.push({ t: 'ring', x: xy[0], y: xy[1], life: 8, max: 8, c: '#ffffff', r0: 4, r1: 40 }); } }); }
+        finCam(F, d.x - f * 60, -300, 1.0); return; }
       if (t < 96) { const k = t - 66, u = finExt(k, 10); a.rageP = k % 20 < 10 ? FPZ.str(u) : FPZ.jab(u);
-        if (k % 10 === 4) { const w = a.toWorld(a.J.fH); spawnProj({ kind: 'book', noHit: true, owner: a, x: w[0], y: w[1], vx: f * 28, vy: -1, g: 0, r: 26, vr: f * 0.5, life: 7, col: pick(['#3a56c8', '#e01b30', '#2fbf62']) }); SFX.throw(); }
-        if (k % 10 === 9) finHit(F, a, d, 4, finChest(d), 3); finCam(F, (a.x + d.x) / 2, -240, 1.15); return; }
+        if (k % 10 === 4) { const w = a.toWorld(a.J.fH), c = finChest(d); finThrow(F, a, d, { kind: 'book', from: w, to: [c[0], c[1] + rnd(-40, 20)], T: 7, g: 0, r: 40, vr: f * 0.5, dmg: 4, extra: { col: pick(['#3a56c8', '#e01b30', '#2fbf62']) },
+          fx: xy => { SFX.hit(1.2); for (let i = 0; i < 12; i++) FX.push({ t: 'p', x: xy[0], y: xy[1], vx: rnd(-7, 7), vy: rnd(-8, 2), life: 30, max: 30, c: '#f5f5f0', sz: rnd(3, 6) }); } }); SFX.throw(); }
+        finCam(F, (a.x + d.x) / 2, -240, 1.1); return; }
       if (t < 120) { a.rageP = FPZ.armsUp; d.finP = FPZ.hurt({ lean: -20 }); finCam(F, d.x, -330, 1.0); return; }
-      if (t === 120) { finHit(F, a, d, 18, [d.x, -200], 18, true); finLaunch(d, f * 8, -18); F.shake(36); SFX.thud(); F.fin.zero = 1;
+      if (t === 120) { finHit(F, a, d, 18, [d.x, -200], 18, true); finLaunch(d, f * 8, -18); F.shake(36); SFX.thud();
         for (let i = 0; i < 40; i++) FX.push({ t: 'p', x: d.x + rnd(-100, 100), y: -200 + rnd(-80, 80), vx: rnd(-8, 8), vy: rnd(-10, 2), life: 40, max: 40, c: '#f5f5f0', sz: rnd(3, 7) });
+        for (let i = 0; i < 8; i++) spawnProj({ kind: 'pen', noHit: true, owner: a, x: d.x, y: -220, vx: rnd(-12, 12), vy: rnd(-16, -6), g: 0.6, r: 28, life: 50, col: pick(['#3a56c8', '#e01b30', '#2fbf62']) });
         popText('صفر ✗', d.x, -520, '#ff2a3a', 110); finRing(d.x, -200, '#3a56c8', 320, 24); return; }
       if (t < 158) { a.rageP = G2({ ua: 170, fa: 20, lean: -4 }); finCam(F, lerp(a.x, d.x, 0.5), -240, 1.0); return; }
       return true;
@@ -2399,8 +2433,8 @@ const FIN = [
       const f = a.facing; if (t < 128) finHold(d, a.x + f * 300);
       if (t < 14) { a.rageP = FPZ.aim; a.finProp = { k: 'gun' }; if (t === 2) { SFX.zap(); popText('الألتيمت جاهز ⚡', a.x, -470, '#3cf2ff', 40); } finCam(F, (a.x + d.x) / 2, -240, 1.15); return; }
       if (t < 74) { a.rageP = Object.assign({}, FPZ.aim, { lean: 6 + (t % 4 < 2 ? -3 : 0), dx: t % 4 < 2 ? -4 : 0 }); d.finP = FPZ.hurt({ lean: Math.sin(t * 0.9) * 16 });
-        if (t % 3 === 0) { const w = a.toWorld(a.J.fH); spawnProj({ kind: 'laser', noHit: true, owner: a, x: w[0] + f * 60, y: w[1] - 12, vx: f * 40, vy: rnd(-1.5, 1.5), r: 10, life: 7, col: t % 6 ? '#3cf2ff' : '#ff3cf0' }); SFX.zap(); }
-        if (t % 6 === 5) finHit(F, a, d, 2.5, finChest(d), 1); finCam(F, (a.x + d.x) / 2, -230, 1.12); return; }
+        if (t % 3 === 0) { const w = a.toWorld(a.J.fH), c = finChest(d), hit = t % 6 === 0; const o = { kind: 'laser', from: [w[0] + f * 60, w[1] - 12], to: [c[0], c[1] + rnd(-60, 40)], T: 5, g: 0, r: 12, extra: { col: hit ? '#3cf2ff' : '#ff3cf0' } };
+          if (hit) { o.dmg = 2.5; o.fx = xy => { finBurst(xy[0], xy[1], 8, ['#3cf2ff', '#ffffff'], 7, 4); FX.push({ t: 'ring', x: xy[0], y: xy[1], life: 8, max: 8, c: '#3cf2ff', r0: 4, r1: 46 }); }; } finThrow(F, a, d, o); SFX.zap(); } finCam(F, (a.x + d.x) / 2, -230, 1.12); return; }
       if (t < 100) { a.rageP = FPZ.point; a.finProp = null; d.finP = FPZ.hurt({ lean: -10 }); finCam(F, d.x, -260, 1.1); return; }
       if (t < 128) { a.rageP = FPZ.point; if (t === 100) { SFX.zap(); F.shake(10); } if (t % 7 === 2) { finHit(F, a, d, 2.5, finChest(d), 2); } if (t % 2 === 0) finBurst(d.x + rnd(-60, 60), -rnd(0, 300), 3, ['#3cf2ff', '#ff3cf0', '#ffffff'], 6, 5); F.shake(6); finCam(F, d.x, -360, 0.95); return; }
       if (t === 128) { finHit(F, a, d, 13, finChest(d), 18, true); finLaunch(d, f * 9, -20); F.shake(40); SFX.thud(); SFX.rock(); finBurst(d.x, -150, 80, ['#3cf2ff', '#ff3cf0', '#ffffff', '#7a3cff'], 18, 9); for (let i = 0; i < 3; i++) finRing(d.x, -150, i ? '#ff3cf0' : '#3cf2ff', 260 + i * 130, 20 + i * 6); popText('تم الإقصاء', d.x, -560, '#ff3cf0', 74); return; }
