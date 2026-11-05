@@ -2163,6 +2163,25 @@ function finCracks(x, n, len, a) {
   for (let i = 0; i < n; i++) { const dir = i % 2 ? 1 : -1, L = len * (0.6 + 0.4 * ((i * 37) % 10) / 10); ctx.beginPath(); ctx.moveTo(x, 2); ctx.lineTo(x + dir * L * 0.4, 2 + ((i * 13) % 9) - 4); ctx.lineTo(x + dir * L, 2 + ((i * 29) % 11) - 5); ctx.stroke(); }
   ctx.restore();
 }
+function finComet(x, y, dx, dy, len, w, c1, c2) {
+  const L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, px = -uy, py = ux;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (const [cw, cl, c] of [[w, len, c1], [w * 0.5, len * 0.75, c2]]) {
+    const g = ctx.createLinearGradient(x, y, x - ux * cl, y - uy * cl); g.addColorStop(0, c); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x + px * cw, y + py * cw); ctx.quadraticCurveTo(x - ux * cl * 0.4 + px * cw * 0.8, y - uy * cl * 0.4 + py * cw * 0.8, x - ux * cl, y - uy * cl);
+    ctx.quadraticCurveTo(x - ux * cl * 0.4 - px * cw * 0.8, y - uy * cl * 0.4 - py * cw * 0.8, x - px * cw, y - py * cw); ctx.closePath(); ctx.fill(); }
+  ctx.restore();
+}
+function finGoal(gx, dir, bulge, a) {
+  ctx.save(); ctx.globalAlpha *= a; ctx.lineCap = 'round';
+  const H = 270, top = 70, back = 170, b = bulge * 60;
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2;
+  for (let i = 1; i < 9; i++) { const u = i / 9; ctx.beginPath(); ctx.moveTo(gx + dir * top * u, -H); ctx.quadraticCurveTo(gx + dir * (top * u + (back - top) * u * 0.5 + b), -H * (1 - u) * 0.5 - H * 0.25, gx + dir * back * u + dir * b * 0.4, 0); ctx.stroke(); }
+  for (let j = 1; j < 7; j++) { const v = j / 7; ctx.beginPath(); ctx.moveTo(gx, -H * (1 - v)); ctx.quadraticCurveTo(gx + dir * (top + (back - top) * v) * 0.6 + dir * b, -H * (1 - v), gx + dir * (top + (back - top) * v) + dir * b * 0.6, -H * (1 - v)); ctx.stroke(); }
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, -H); ctx.lineTo(gx + dir * top, -H); ctx.stroke();
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.moveTo(gx + dir * top, -H); ctx.lineTo(gx + dir * back + dir * b * 0.4, 0); ctx.stroke();
+  ctx.restore();
+}
 function finGoldEgg(x, y, r) {
   ctx.save(); ctx.translate(x, y);
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gl = ctx.createRadialGradient(0, 0, r * 0.3, 0, 0, r * 2); gl.addColorStop(0, 'rgba(255,220,90,0.6)'); gl.addColorStop(1, 'rgba(255,200,0,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, r * 2, 0, 7); ctx.fill(); ctx.restore();
@@ -2200,6 +2219,13 @@ const FIN = [
       if (t < 150) { a.rageP = Object.assign({}, CROUCH, { lean: 30, ua: 60, fa: 10 }); finCam(F, d.x, -200, 1.15); return; }
       return true;
     },
+    front(F, a, d, t) {
+      if (t >= 40 && t < 66) { const u = finSeg(t, 40, 62), cx = a.x, cy = a.hipY - 60; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        const g = ctx.createRadialGradient(cx, cy, 20, cx, cy, 260 * u + 40); g.addColorStop(0, 'rgba(255,170,60,0.55)'); g.addColorStop(1, 'rgba(255,40,20,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 260 * u + 40, 0, 7); ctx.fill(); ctx.restore();
+        for (let i = 0; i < 6; i++) finComet(cx + (i - 2.5) * 34, cy + 120, 0, 1, 160 + 60 * Math.sin(t * 0.7 + i), 26, 'rgba(255,120,30,0.7)', 'rgba(255,230,120,0.7)'); }
+      if (t >= 62 && t < 92) finComet(a.x, a.hipY + 60, 0, -1, 420, 60, 'rgba(255,110,30,0.6)', 'rgba(255,230,140,0.6)');
+      if (t >= 92 && t < 113) finComet(a.x, a.hipY + 100, 0, 1, 900, 110, 'rgba(255,90,20,0.85)', 'rgba(255,240,170,0.9)');
+    },
     back(F, a, d, t) { if (t >= 62 && t < 112) { const u = finSeg(t, 62, 112); ctx.save(); ctx.strokeStyle = `rgba(255,40,40,${0.4 + 0.5 * u})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(d.x, 2, 140 - 60 * u, 18 - 6 * u, 0, 0, 7); ctx.stroke(); ctx.restore(); }
       if (F.fin.crack) finCracks(F.fin.crackX, 8, 380, 1); },
   },
@@ -2224,19 +2250,21 @@ const FIN = [
     run(F, a, d, t) {
       const F0 = F.fin; if (F0.f0 === undefined) { F0.f0 = a.facing; F0.dx0 = d.x; } const f = F0.f0; finHold(d, F0.dx0);
       if (t < 66) { const i = (t / 11) | 0, side = i % 2 ? -1 : 1, k = t % 11;
-        if (k === 0) { a.x = clamp(d.x - f * side * 125, -STAGE, STAGE); a.facing = f * side; SFX.whoosh(1); a.finTrail = true; finBurst(a.x, -200, 8, ['#ffffff', '#7fd6ff'], 6, 4); }
+        if (k === 0) { F0.px = a.x; a.x = clamp(d.x - f * side * 125, -STAGE, STAGE); a.facing = f * side; SFX.whoosh(1); SFX.zap(); a.finTrail = true; finBurst(a.x, -200, 8, ['#ffffff', '#7fd6ff'], 6, 4); }
         a.rageP = k < 5 ? FPZ.kick(ease(k / 5)) : FPZ.str(1 - (k - 5) / 6); d.finP = FPZ.hurt({ lean: side * 18 });
         if (k === 4) finHit(F, a, d, 4, finChest(d), 2); finCam(F, d.x, -220, 1.3); return; }
-      if (t === 66) { a.facing = f; a.x = clamp(d.x - f * 230, -STAGE, STAGE); a.finTrail = false; a.finProp = { k: 'ball', x: a.x + f * 70, y: -22 }; SFX.whoosh(0); }
+      if (t === 66) { a.facing = f; a.x = clamp(d.x - f * 230, -STAGE, STAGE); a.finTrail = false; a.finProp = { k: 'ball', x: a.x + f * 70, y: -26 }; F0.gx = clamp(F0.dx0 + f * 300, -STAGE + 30, STAGE - 30); SFX.whoosh(0); popText('⚽', F0.gx, -330, '#ffffff', 40); }
       if (t < 86) { const u = finSeg(t, 66, 86); a.rageP = G2({ th: lerp(18, -30, u), sh: lerp(22, 70, u), bth: 10, lean: -6 * u, ua: 60, fa: 60 }); d.finP = FPZ.hurt({ lean: -20 }); finCam(F, (a.x + d.x) / 2, -200, 1.2); return; }
       if (t < 92) { const u = finSeg(t, 86, 92); a.rageP = G2({ th: lerp(-30, 112, ease(u)), sh: 4, ffl: 0, lean: -16, r: -8, bth: 6, bsh: 0, ua: 80, fa: 40 }); if (t === 88) { SFX.kick(1.8); F.shake(10); } const P = a.finProp; if (t >= 88) { const v = finSeg(t, 88, 92), c = finChest(d); P.x = lerp(a.x + f * 70, c[0], v); P.y = lerp(-22, c[1], v); P.rot = (P.rot || 0) + 0.8; } return; }
       if (t === 92) { const c = finChest(d); finHit(F, a, d, 24, c, 18, true); finLaunch(d, f * 20, -11); a.finProp = null; F.shake(30); SFX.thud();
         finBurst(c[0], c[1], 60, ['#ffd34d', '#ffffff', '#7fd6ff', '#ff3b4a'], 15, 7); finRing(c[0], c[1], '#ffd34d', 360, 26); popText('قوووول!', c[0], c[1] - 120, '#ffd34d', 96); return; }
-      if (t < 140) { a.rageP = G2({ ua: 170, fa: 20, bua: 160, bfa: 30, lean: -6 }); finCam(F, lerp(a.x, d.x, 0.5), -220, 1.05); return; }
+      if (t < 140) { a.rageP = G2({ ua: 170, fa: 20, bua: 160, bfa: 30, lean: -6 }); if (F0.gx !== undefined && (d.x - F0.gx) * f > 70 && d.state === 'juggle') { d.vx = f * 0.6; F0.net = Math.min(1, (F0.net || 0) + 0.25); if (!F0.netHit) { F0.netHit = 1; SFX.thud(); finBurst(d.x, -150, 30, ['#ffffff', '#ffd34d'], 10, 6); } } else if (F0.net) F0.net *= 0.93; finCam(F, lerp(a.x, F0.gx === undefined ? d.x : F0.gx, 0.5), -220, 0.98); return; }
       return true;
     },
-    back(F, a, d, t) { if (t < 66) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(160,230,255,0.75)'; ctx.lineWidth = 6; const k = t % 11; if (k < 4) { ctx.globalAlpha = 1 - k / 4; ctx.beginPath(); ctx.moveTo(a.x - a.facing * 260, -200); ctx.lineTo(a.x, -200); ctx.moveTo(a.x - a.facing * 220, -120); ctx.lineTo(a.x, -120); ctx.moveTo(a.x - a.facing * 240, -280); ctx.lineTo(a.x, -280); ctx.stroke(); } ctx.restore(); } },
-    front(F, a, d, t) { const P = a.finProp; if (P && P.k === 'ball') { if (t >= 86) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(P.x, P.y, 4, P.x, P.y, 70); g.addColorStop(0, 'rgba(255,220,90,0.8)'); g.addColorStop(1, 'rgba(255,200,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(P.x, P.y, 70, 0, 7); ctx.fill(); ctx.restore(); } drawFootball(P.x, P.y, P.rot || 0, 30); } },
+    back(F, a, d, t) { const F0 = F.fin; if (t >= 66 && F0.gx !== undefined) finGoal(F0.gx, F0.f0, F0.net || 0, Math.min(1, (t - 66) / 8));
+      if (t < 66 && F0.px !== undefined && t % 11 < 5) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(170,235,255,0.95)'; ctx.lineWidth = 5; ctx.beginPath(); const y0 = -230; ctx.moveTo(F0.px, y0); for (let i = 1; i <= 7; i++) { const x = lerp(F0.px, a.x, i / 7), y = y0 + (i < 7 ? Math.sin(t * 3.1 + i * 2.3) * 48 : 0); ctx.lineTo(x, y); } ctx.stroke(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke(); ctx.restore(); }
+      if (t < 66) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(160,230,255,0.75)'; ctx.lineWidth = 6; const k = t % 11; if (k < 4) { ctx.globalAlpha = 1 - k / 4; ctx.beginPath(); ctx.moveTo(a.x - a.facing * 260, -200); ctx.lineTo(a.x, -200); ctx.moveTo(a.x - a.facing * 220, -120); ctx.lineTo(a.x, -120); ctx.moveTo(a.x - a.facing * 240, -280); ctx.lineTo(a.x, -280); ctx.stroke(); } ctx.restore(); } },
+    front(F, a, d, t) { const P = a.finProp; if (P && P.k === 'ball') { if (t >= 86) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(P.x, P.y, 4, P.x, P.y, 70); g.addColorStop(0, 'rgba(255,220,90,0.8)'); g.addColorStop(1, 'rgba(255,200,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(P.x, P.y, 70, 0, 7); ctx.fill(); ctx.restore(); } if (t >= 88) finComet(P.x, P.y, a.facing, -0.25, 380, 40, 'rgba(255,170,40,0.85)', 'rgba(255,250,200,0.9)'); drawFootball(P.x, P.y, P.rot || 0, 36); } },
   },
   // 3 الدكتور — orbiting cards slice in one by one, giant joker
   { name: 'الخدعة الكبرى', line: 'ورقتك الأخيرة!', col: '#e6c37a',
@@ -2265,11 +2293,11 @@ const FIN = [
   { name: 'ركلة المرمى النارية', line: 'ولا شي يعدّي!', col: '#ffd21f',
     run(F, a, d, t) {
       const f = a.facing; if (t < 90) finHold(d, a.x + f * 190);
-      if (t < 50) { const k = t % 10, L = ((t / 10) | 0) % 2; a.rageP = L ? FPZ.jab(k < 4 ? k / 4 : 1 - (k - 4) / 6) : FPZ.str(k < 4 ? k / 4 : 1 - (k - 4) / 6); d.finP = FPZ.hurt();
+      if (t < 50) { const k = t % 10, L = ((t / 10) | 0) % 2; a.rageP = Object.assign(L ? FPZ.jab(k < 4 ? k / 4 : 1 - (k - 4) / 6) : FPZ.str(k < 4 ? k / 4 : 1 - (k - 4) / 6), { fsc: 1 + Math.min(1, t / 10) * 1.1 }); d.finP = FPZ.hurt(); if (t % 2 === 0) finBurst(...a.toWorld(a.J.fH), 2, ['#ff8a2a', '#ffd34d'], 4, 5);
         if (k === 3) { const w = a.toWorld(L ? a.J.bH : a.J.fH), c = finChest(d);
           finThrow(F, a, d, { kind: 'hball', from: w, to: [c[0], c[1] + rnd(-40, 30)], T: 5, g: 0, r: 28, vr: f * 0.5, dmg: 4, extra: { fire: true }, fx: xy => { finBurst(xy[0], xy[1], 16, ['#ff8a2a', '#ffd34d', '#ff3b30'], 9, 7); finRing(xy[0], xy[1], '#ff8a2a', 100, 10); } }); SFX.throw(); }
         finCam(F, (a.x + d.x) / 2, -230, 1.25); return; }
-      if (t < 78) { const u = finSeg(t, 50, 78); a.finProp = { k: 'orb', x: a.x + f * 30, y: lerp(-220, -470, ease(u)), r: lerp(26, 62, u) }; a.rageP = FPZ.armsUp; if (t % 2 === 0) finBurst(a.finProp.x, a.finProp.y, 3, ['#ff8a2a', '#ffd34d'], 4, 6); finCam(F, (a.x + d.x) / 2, -300, 1.05); return; }
+      if (t < 78) { const u = finSeg(t, 50, 78); a.finProp = { k: 'orb', x: a.x + f * 30, y: lerp(-220, -470, ease(u)), r: lerp(26, 80, u) }; a.rageP = Object.assign({}, FPZ.armsUp, { fsc: 2.1 }); if (t % 2 === 0) finBurst(a.finProp.x, a.finProp.y, 3, ['#ff8a2a', '#ffd34d'], 4, 6); finCam(F, (a.x + d.x) / 2, -300, 1.05); return; }
       if (t < 86) { const u = finSeg(t, 78, 86), P = a.finProp; P.y = lerp(-470, -120, u * u); P.x = a.x + f * lerp(30, 70, u); a.rageP = G2({ th: lerp(-20, 120, ease(finSeg(t, 82, 86))), sh: 4, ffl: 0, lean: -16, r: -8, bth: 6, bsh: 0, ua: 60, fa: 40 }); return; }
       if (t < 90) { const u = finSeg(t, 86, 90), P = a.finProp, c = finChest(d); P.x = lerp(a.x + f * 70, c[0], u); P.y = lerp(-120, c[1], u); if (t === 86) { SFX.kick(2); F.shake(12); } return; }
       if (t === 90) { const c = finChest(d); a.finProp = null; finHit(F, a, d, 26, c, 18, true); finLaunch(d, f * 18, -14); F.shake(36); SFX.thud(); SFX.rock();
@@ -2277,7 +2305,7 @@ const FIN = [
       if (t < 135) { a.rageP = G2({ ua: 30, fa: -40, bua: 26, bfa: -50, lean: 4 }); finCam(F, lerp(a.x, d.x, 0.5), -220, 1.05); return; }
       return true;
     },
-    front(F, a, d, t) { const P = a.finProp; if (P && P.k === 'orb') finOrb(P.x, P.y, P.r, 'rgba(255,140,40,0.75)', 'rgba(255,90,20,0.6)', t * 0.3); } },
+    front(F, a, d, t) { const P = a.finProp; if (P && P.k === 'orb') { if (t >= 86) finComet(P.x, P.y, a.facing, 0.6, 520, P.r * 1.1, 'rgba(255,110,30,0.9)', 'rgba(255,230,140,0.9)'); finOrb(P.x, P.y, P.r, 'rgba(255,140,40,0.75)', 'rgba(255,90,20,0.6)', t * 0.3); } } },
   // 5 البلدوزر — lifts a giant boulder and buries the rival
   { name: 'الانهيار الصخري', line: 'وخّر… أو تنسحق!', col: '#c9ccd6',
     run(F, a, d, t) {
@@ -2318,15 +2346,17 @@ const FIN = [
           finThrow(F, a, d, { kind: (t / 7) % 2 ? 'can' : 'apple', from: [h[0] + rnd(-40, 40), -800], to: [h[0] + rnd(-20, 20), h[1] - 10], T: 11, g: 0.6, r: 28, vr: rnd(-0.4, 0.4), dmg: 3,
             fx: xy => { SFX.rattle(); finBurst(xy[0], xy[1], 10, ['#ffd34d', '#ff3b4a', '#ffffff'], 8, 5); spawnProj({ kind: (t / 7) % 2 ? 'can' : 'apple', noHit: true, owner: a, x: xy[0], y: xy[1], vx: rnd(-6, 6), vy: -8, g: 0.6, r: 28, vr: rnd(-0.4, 0.4), life: 50, bounce: 0.35 }); } }); }
         finCam(F, d.x - f * 80, -300, 1.05); return; }
-      if (t < 100) { const u = finSeg(t, 76, 100); if (t === 76) { a.x = d.x - f * 420; SFX.whoosh(1); } a.x = lerp(d.x - f * 420, d.x - f * 190, u * u); a.rageP = G2({ ua: 80, fa: 30, bua: 76, bfa: 34, lean: 28, th: 40 * Math.sin(t * 0.8), bth: -40 * Math.sin(t * 0.8) }); a.finProp = { k: 'cart' }; if (t % 3 === 0) dust(a.x, 2, -f); finCam(F, lerp(a.x, d.x, 0.5), -200, 1.1); return; }
-      if (t === 100) { a.finProp = null; const c = finChest(d); finHit(F, a, d, 22, c, 16, true); finLaunch(d, f * 22, -14); F.shake(34); SFX.thud(); SFX.rattle();
+      if (t < 100) { const u = finSeg(t, 76, 100); if (t === 76) { a.x = d.x - f * 460; SFX.whoosh(1); } a.x = lerp(d.x - f * 460, d.x - f * 230, u * u); a.rageP = G2({ ua: 80, fa: 30, bua: 76, bfa: 34, lean: 28, th: 40 * Math.sin(t * 0.8), bth: -40 * Math.sin(t * 0.8) }); a.finProp = { k: 'cart' }; if (t % 3 === 0) dust(a.x, 2, -f); finCam(F, lerp(a.x, d.x, 0.5), -200, 1.1); return; }
+      if (t === 100) { a.finProp = null; const c = finChest(d); finHit(F, a, d, 22, c, 16, true); finLaunch(d, f * 24, -16); F.shake(34); SFX.thud(); SFX.rattle();
         spawnProj({ kind: 'cartwreck', owner: a, x: a.x + f * 100, y: 0, vx: f * 9, vy: -13, g: 0.6, vr: f * 0.2, life: 80, noHit: true, dir: f });
         for (let i = 0; i < 14; i++) spawnProj({ kind: i % 2 ? 'can' : 'apple', noHit: true, owner: a, x: c[0], y: c[1], vx: rnd(-11, 11), vy: rnd(-18, -6), g: 0.6, r: 26, vr: rnd(-0.4, 0.4), life: 70, bounce: 0.35 });
         finRing(c[0], c[1], '#ff3b4a', 300, 22); finBurst(c[0], c[1], 30, ['#ffd34d', '#ff3b4a', '#ffffff'], 12, 6); return; }
       if (t < 140) { a.rageP = G2({ ua: 170, fa: 20, lean: -4 }); finCam(F, lerp(a.x, d.x, 0.5), -220, 1.05); return; }
       return true;
     },
-    front(F, a, d, t) { if (a.finProp && a.finProp.k === 'cart') drawCart(a.x + a.facing * 110, 0, a.facing, 0, 1); } },
+    front(F, a, d, t) { if (a.finProp && a.finProp.k === 'cart') { const f = a.facing, x = a.x + f * 150; ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 4; for (let i = 0; i < 6; i++) { const y = -40 - i * 38, L = 140 + ((i * 53 + t * 17) % 120); ctx.beginPath(); ctx.moveTo(x - f * 120, y); ctx.lineTo(x - f * (120 + L), y); ctx.stroke(); } ctx.restore();
+      ctx.save(); ctx.translate(x, 0); ctx.scale(1.65, 1.65); drawCart(0, 0, f, 0, 1); ctx.restore(); finBurst(x - f * 40, -6, 2, ['#ffd34d', '#ffffff'], 4, 3);
+      txt('٪ تخفيضات', x + f * 30, -330, { size: 46, weight: 900, color: '#ffd34d', stroke: '#000', sw: 6 }); } } },
   // 8 أبو الدجاج — chickens leap onto him, eggs smash on his head, the golden egg
   { name: 'غضب الدجاج', line: 'يا دجاج… هجوم كامل!', col: '#ffc21a',
     run(F, a, d, t) {
@@ -2363,12 +2393,14 @@ const FIN = [
       if (t < 90) { a.rageP = FPZ.jab(finExt(t, 13));
         if (t % 13 === 2) { const w = a.toWorld(a.J.fH), h = finHead(d); finThrow(F, a, d, { kind: 'tire', from: w, to: h, T: 9, g: 0.7, r: 38, vr: f * 0.4, dmg: 4, fx: xy => { SFX.boing(); finBurst(xy[0], xy[1], 10, ['#555b6a', '#ffffff'], 8, 5); spawnProj({ kind: 'tire', noHit: true, owner: a, x: xy[0], y: xy[1], vx: -f * 5, vy: -10, g: 0.7, r: 38, vr: -f * 0.3, life: 50, bounce: 0.55 }); } }); }
         finCam(F, (a.x + d.x) / 2, -240, 1.1); return; }
-      if (t < 118) { const u = finSeg(t, 90, 118); a.rageP = G2({ ua: 90, fa: 0, bua: 86, bfa: 6, lean: 26, dx: 14 }); a.finProp = { k: 'tire', x: lerp(a.x - f * 200, d.x, u * u), y: -120, rot: (a.finProp && a.finProp.rot || 0) + f * 0.35 }; if (t % 3 === 0) dust(a.finProp.x, 4, -f); if (t === 90) SFX.roll(); finCam(F, lerp(a.x, d.x, 0.5), -240, 1.0); return; }
+      if (t < 118) { const u = finSeg(t, 90, 118); a.rageP = G2({ ua: 90, fa: 0, bua: 86, bfa: 6, lean: 26, dx: 14 }); a.finProp = { k: 'tire', x: lerp(a.x - f * 200, d.x, u * u), y: -120, rot: (a.finProp && a.finProp.rot || 0) + f * 0.35 }; if (t % 3 === 0) dust(a.finProp.x, 4, -f); if (t % 2 === 0) finBurst(a.finProp.x - f * 90, -20, 3, ['#ff8a2a', '#ffd34d'], 5, 5); if (t === 90) SFX.roll(); finCam(F, lerp(a.x, d.x, 0.5), -240, 1.0); return; }
       if (t === 118) { a.finProp = null; finHit(F, a, d, 22, finChest(d), 18, true); finLaunch(d, f * 15, -16); F.shake(36); SFX.thud(); SFX.boing(); spawnProj({ kind: 'tire', noHit: true, owner: a, x: d.x, y: -120, vx: f * 11, vy: -14, g: 0.6, r: 120, vr: f * 0.3, life: 60, bounce: 0.5 }); finRing(d.x, -110, '#ffffff', 320, 22); finBurst(d.x, -110, 40, ['#e9e9ee', '#555b6a', '#ffd34d'], 12, 7); return; }
       if (t < 155) { a.rageP = G2({ ua: 170, fa: 20, bua: 30, bfa: 130 }); finCam(F, lerp(a.x, d.x, 0.5), -220, 1.05); return; }
       return true;
     },
-    front(F, a, d, t) { const P = a.finProp; if (P && P.k === 'tire') { ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(P.x, 4, 120, 16, 0, 0, 7); ctx.fill(); ctx.restore(); drawTire(P.x, P.y, P.rot, 120); } } },
+    front(F, a, d, t) { const P = a.finProp; if (P && P.k === 'tire') { ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(P.x, 4, 120, 16, 0, 0, 7); ctx.fill(); ctx.restore();
+      finComet(P.x - a.facing * 30, P.y, a.facing, 0, 560, 110, 'rgba(255,100,30,0.7)', 'rgba(255,220,120,0.8)'); drawTire(P.x, P.y, P.rot, 120);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,150,40,0.8)'; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(P.x, P.y, 122, 0, 7); ctx.stroke(); ctx.restore(); } } },
   // 10 البوب — fireball volley into the body, then the giant charged rocket ball
   { name: 'صاروخ البوب العملاق', line: 'كورة وحدة… تكفي!', col: '#ff8a2a',
     run(F, a, d, t) {
@@ -2385,7 +2417,7 @@ const FIN = [
       if (t < 145) { a.rageP = Object.assign({}, FPZ.slam, { lean: 16 }); finCam(F, lerp(a.x, d.x, 0.5), -220, 1.0); return; }
       return true;
     },
-    front(F, a, d, t) { const P = a.finProp; if (P && P.k === 'orb') finOrb(P.x, P.y, P.r, 'rgba(255,150,40,0.85)', 'rgba(255,90,20,0.55)', t * 0.25); } },
+    front(F, a, d, t) { const P = a.finProp; if (P && P.k === 'orb') { if (t >= 92) { const c = finChest(d); finComet(P.x, P.y, c[0] - (a.x - a.facing * 10), c[1] + 560, 700, P.r * 1.2, 'rgba(255,110,30,0.85)', 'rgba(255,235,150,0.9)'); } finOrb(P.x, P.y, P.r, 'rgba(255,150,40,0.85)', 'rgba(255,90,20,0.55)', t * 0.25); } } },
   // 11 الطالب — pens stab in like arrows, notebooks slam, the giant book closes
   { name: 'الاختبار النهائي', line: 'سؤال أخير… وصفر!', col: '#3a56c8',
     run(F, a, d, t) {
