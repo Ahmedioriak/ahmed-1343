@@ -2366,11 +2366,11 @@ const FIN = [
       if (t < 82) { const k = t - 22, i = (k / 6) | 0, u = finExt(k, 6), L = i % 2 === 0;
         a.rageP = G2(Object.assign(L ? { bua: lerp(26, 92, u), bfa: lerp(142, 0, u) } : { ua: lerp(34, 94, u), fa: lerp(128, 0, u) }, { lean: 12 + u * 10, dx: u * 10, th: 30, bth: -24, fsc: 2.6 }));
         d.finP = FPZ.hurt({ lean: -26 + Math.sin(t) * 8 });
-        if (k % 6 === 3) { const w = a.toWorld(L ? a.J.bH : a.J.fH); finHit(F, a, d, 3, w, 1); finRing(w[0], w[1], '#ff2a55', 90, 10); }
+        if (k % 6 === 3) { const w = a.toWorld(L ? a.J.bH : a.J.fH); finHit(F, a, d, 3.2, w, 1); finRing(w[0], w[1], '#ff2a55', 90, 10); }
         finCam(F, (a.x + d.x) / 2 + Math.sin(t * 0.9) * 6, -230, 1.32); return; }
       if (t < 102) { const u = finSeg(t, 82, 102); a.rageP = G2({ ua: 20, fa: 120, bua: 40, bfa: 120, lean: -22, dx: -10, fsc: 2.6 + 0.8 * u, th: 10, bth: -10 }); if (t % 2 === 0) finBurst(...a.toWorld(a.J.fH), 3, ['#ff2a55', '#ffffff'], 5, 5); finCam(F, (a.x + d.x) / 2, -230, 1.45); return; }
       if (t === 102) { a.rageP = G2({ ua: 94, fa: 0, lean: 32, dx: 34, th: 46, bth: -40, bsh: 10, fsc: 3.4 }); return; }
-      if (t === 104) { const w = finChest(d); finHit(F, a, d, 20, w, 16, true); finLaunch(d, f * 19, -13); F.shake(34); SFX.thud(); for (let i = 0; i < 4; i++) finRing(w[0], w[1], i % 2 ? '#ff2a55' : '#ffffff', 200 + i * 110, 16 + i * 5); finBurst(w[0], w[1], 40, ['#ff2a55', '#ffd34d', '#ffffff'], 14, 7); return; }
+      if (t === 104) { const w = finChest(d); finHit(F, a, d, 24, w, 16, true); finLaunch(d, f * 19, -13); F.shake(34); SFX.thud(); for (let i = 0; i < 4; i++) finRing(w[0], w[1], i % 2 ? '#ff2a55' : '#ffffff', 200 + i * 110, 16 + i * 5); finBurst(w[0], w[1], 40, ['#ff2a55', '#ffd34d', '#ffffff'], 14, 7); return; }
       if (t < 140) { a.rageP = G2({ ua: 94, fa: 0, lean: 26, dx: 26, th: 40, bth: -34, fsc: lerp(3.4, 1, finSeg(t, 110, 140)) }); finCam(F, lerp(a.x, d.x, 0.6), -220, 1.05); return; }
       return true;
     } },
