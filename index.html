@@ -2386,7 +2386,7 @@ class Fight {
     const stunned = ['hit', 'juggle', 'rageVic'].includes(d.state);
     if (stunned && a.comboT > 0) { a.combo++; } else { a.combo = 1; a.comboDmg = 0; }
     const scale = fixed ? 1 : Math.max(0.45, 1 - (a.combo - 1) * 0.12);
-    dmg = Math.round(dmg * a.C.dmg * scale * (a.rage ? 1.1 : 1) * (a.dmgMul || 1));
+    dmg = Math.round(dmg * a.C.dmg * scale * (a.rage ? 1.1 : 1) * (a.dmgMul || 1) * (d.defMul || 1));
     d.hp = Math.max(0, d.hp - dmg); d.trailT = 40;
     rumble(d.slot, Math.min(1, 0.35 + dmg / 30), 0.5, 110 + dmg * 4); rumble(a.slot, 0, 0.35, 70); a.comboDmg += dmg; a.comboT = 90;
     d.flash = 4; d.shakeT = 8;
@@ -2550,6 +2550,7 @@ class Fight {
     // name
     const nx = rev ? x + w - 6 : x + 6;
     txt(f.dispName || f.C.name, nx, y + h + 22, { size: 24, weight: 800, color: '#fff', align: rev ? 'right' : 'left', stroke: '#000', sw: 4 });
+    if (f.storyBuff) { ctx.font = '800 24px ' + FA; const nw = ctx.measureText(f.dispName || f.C.name).width; txt('💪 ضرب أقوى وتحمّل أكثر', rev ? nx - nw - 12 : nx + nw + 12, y + h + 23, { size: 15, weight: 800, color: '#ffd34d', align: rev ? 'right' : 'left', stroke: '#000', sw: 3 }); }
     { // skill meter
       const sw2 = 210, sy = y + h + 46, sx0 = rev ? x + w - sw2 - 6 : x + 6, fr = Math.min(1, f.sk / SKMAX), full = fr >= 1;
       ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(sx0 - 2, sy - 2, sw2 + 4, 12);
@@ -3083,7 +3084,9 @@ function storyFight() {
   G.toVS();
 }
 function storySetupFight(F) {
-  const S = G.story; if (!S) return; const op = F.f[1];
+  const S = G.story; if (!S) return; const op = F.f[1], me = F.f[0];
+  // story hero is stronger: hits harder and takes a bit less damage
+  me.dmgMul = 1.35; me.defMul = 0.85; me.storyBuff = true;
   F.pads[1].lvl = S.ch === 4 ? 3 : 1 + S.ch * 0.45;
   if (S.ch === 4) { op.shadow = true; op.maxHp = Math.round(op.maxHp * 1.6); op.hp = op.trailHp = op.maxHp; op.dmgMul = 1.2; op.dispName = nmOf(op.ci, true); }
 }
