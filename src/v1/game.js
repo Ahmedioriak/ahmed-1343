@@ -3672,18 +3672,19 @@ function drawNetOverlay() {
 }
 
 // ================= STORY MODE =================
-const CH_ROLE = ['reg', 'reg', 'nokh', 'reg', 'shadow', 'rais', 'rais2'];
+const CH_ROLE = ['reg', 'reg', 'nokh', 'reg', 'reg', 'rais', 'rais2'];
+const CH_REG = { 0: 0, 1: 1, 3: 2, 4: 3 };
 const NCHAP = CH_ROLE.length;
 const CH_NAMES = ['الفصل الأول', 'الفصل الثاني', 'الفصل الثالث', 'الفصل الرابع', 'الفصل الخامس', 'الفصل السادس', 'الفصل الأخير'];
 const CH_STAGE = ['arena', 'hosh', 'port', 'pitch', 'roof', 'palace', 'palace2'];
 const CH_TIME = ['الليل… في الحلبة', 'العصر… في حوش البيت القديم', 'الفجر… في الميناء، والبحر هايج', 'المغرب… في ملعب الكورة', 'نص الليل… فوق السطح', 'قصر الرئيس… الذهب في كل مكان', 'السما صارت حمرا… والقصر يحترق'];
 const CH_GLOW = { reg: '#ff1030', nokh: '#3cb4ff', shadow: '#b030ff', rais: '#d4a640', rais2: '#ff1030' };
 function nmOf(ci, shadow) { return (shadow ? 'ظل ' : '') + CHARS[ci].name; }
-function storyOpp(ch) { const S = G.story, r = CH_ROLE[ch]; return r === 'nokh' ? NOKH : r === 'rais' ? RAIS : r === 'rais2' ? RAIS2 : r === 'shadow' ? S.pc : S.opps[ch < 2 ? ch : 2]; }
+function storyOpp(ch) { const S = G.story, r = CH_ROLE[ch]; return r === 'nokh' ? NOKH : r === 'rais' ? RAIS : r === 'rais2' ? RAIS2 : r === 'shadow' ? S.pc : S.opps[CH_REG[ch]]; }
 function storyStart(pc) {
   const pool = []; for (let i = 0; i < NCH; i++) if (i !== pc) pool.push(i);
   for (let i = pool.length - 1; i > 0; i--) { const j = (RR() * (i + 1)) | 0; [pool[i], pool[j]] = [pool[j], pool[i]]; }
-  G.story = { pc, opps: pool.slice(0, 3), ch: 0, step: 'card', t: 0, lines: [], li: 0, ct: 0, phase: 'pre', final: false };
+  G.story = { pc, opps: pool.slice(0, 4), ch: 0, step: 'card', t: 0, lines: [], li: 0, ct: 0, phase: 'pre', final: false };
   storyChapter();
 }
 function storyScript(ch, phase) {
@@ -3693,15 +3694,15 @@ function storyScript(ch, phase) {
     if (ch === 1) return [['N', 'العصر… الشمس تغيب ورا حوش البيت القديم.'], ['P', `أدري إنك هنا يا ${O}!`], ['O', `${ol}… ما بتاخذ مني شي إلا بالقوة!`]];
     if (role === 'nokh') return [['N', 'الفجر… ريحة البحر، والسفن راسية في الميناء.'], ['N', 'وعلى ظهر سفينة كبيرة… واقف رجل بلبس أبيض. النوخذة!'], ['O', 'هذا بحري يا ولد. والكأس؟ أمانة عندي لين يجي الرئيس.'], ['P', 'الرئيس؟! منو هذا الرئيس؟'], ['O', 'لو غلبتني… يمكن أقولك. بس البحر ما يرحم!']];
     if (ch === 3) return [['N', 'المغرب… أنوار الملعب تولّعت والجمهور يصارخ.'], ['O', `هذا ملعبي يا ${P}. هنا محد يفوز علي!`], ['P', 'نشوف… الكأس أهم من كل شي.']];
-    if (role === 'shadow') return [['N', 'نص الليل… فوق السطح، والقمر طالع.'], ['N', 'ومن الظلام طلع واحد… يشبهك بالضبط!'], ['O', `أنا ظلّك يا ${P}… الرئيس صنعني عشان أوقفك!`], ['P', 'ما في أحد يوقفني… حتى ظلي!']];
-    if (role === 'rais') return [['N', 'قصر كبير… ذهب وثريات، وفي آخر القاعة كرسي ضخم.'], ['N', 'وعلى الكرسي قاعد… الرئيس. وجنبه كأس الشلة! 🏆'], ['O', 'وصلت لين هنا؟ النوخذة وظلّك ما قدروا عليك؟'], ['O', 'أنا اللي جمعتكم… وأنا اللي أخذت الكأس. كلكم شغالين عندي!'], ['P', 'الكأس للشلة… وبتعطيني إياه غصب!']];
+    if (ch === 4) return [['N', 'نص الليل… فوق السطح، والقمر طالع.'], ['O', `وصلت لين هنا؟ ما توقعتها منك يا ${P}!`], ['P', 'وين الرئيس؟ قول!'], ['O', 'إذا غلبتني… أقولك.']];
+    if (role === 'rais') return [['N', 'قصر كبير… ذهب وثريات، وفي آخر القاعة كرسي ضخم.'], ['N', 'وعلى الكرسي قاعد… الرئيس. وجنبه كأس الشلة! 🏆'], ['O', 'وصلت لين هنا؟ النوخذة وجماعتي ما قدروا عليك؟'], ['O', 'أنا اللي جمعتكم… وأنا اللي أخذت الكأس. كلكم شغالين عندي!'], ['P', 'الكأس للشلة… وبتعطيني إياه غصب!']];
     return [['N', 'الرئيس طاح… بس فجأة بدأ يضحك.'], ['O', 'هههه… تحسب إنها خلصت؟'], ['N', 'السما صارت حمرا… وطلع له جناحين سود من ظهره، وعيونه ولّعت أحمر!'], ['O', 'الحين… تشوف قوتي الحقيقية!'], ['P', 'ولو صار لك ألف جناح… الكأس راجع للشلة!']];
   }
   if (ch === 0) return [['O', 'خلاص خلاص! مو أنا… بس شفت واحد طالع صوب الحوش.'], ['P', 'يلا… على الحوش!']];
   if (ch === 1) return [['O', 'الكأس؟ سمعتهم يقولون إنه انشحن على سفينة في الميناء!'], ['P', 'الميناء… جاي.']];
   if (role === 'nokh') return [['O', 'آخ… والله إنك قوي. البحر ما شاف مثلك.'], ['O', 'الكأس مو عندي… الرئيس أخذه. وجماعته في الملعب.'], ['P', 'الرئيس… أنا جايك!']];
-  if (ch === 3) return [['O', 'اللي طلبوني قالوا: روح السطح… هناك بتلقى نفسك!'], ['P', 'ألقى نفسي؟ شو قصدهم؟']];
-  if (role === 'shadow') return [['O', 'انتهيت… بس الرئيس… أقوى مني بمليون مرة…'], ['N', 'واختفى الظل… وطاحت منه ورقة مكتوب فيها: قصر الرئيس.'], ['P', 'خلاص… المواجهة الأخيرة.']];
+  if (ch === 3) return [['O', 'جماعة الرئيس يتجمعون الليلة… فوق السطح!'], ['P', 'السطح… يلا.']];
+  if (ch === 4) return [['O', 'خلاص… الرئيس في قصره. بس محد راح له… ورجع!'], ['N', 'وطاحت من جيبه ورقة مكتوب فيها: قصر الرئيس.'], ['P', 'خلاص… المواجهة الأخيرة.']];
   if (role === 'rais') return [['O', 'مستحيل… أنا… الرئيس… أخسر؟!']];
   return [['N', 'الجناحين تكسّروا… والهالة الحمرا انطفت.'], ['O', 'الكأس… لك. أنت تستاهله.'], ['N', 'والكأس رجع للشلة! 🏆'], ['P', CHARS[S.pc].quote], ['N', 'والشلة رجعت تضحك… لين البطولة الجاية.'], ['N', 'النهاية 🎉 — شكراً إنك لعبت!']];
 }
@@ -3717,7 +3718,7 @@ function storySetupFight(F) {
   const S = G.story; if (!S) return; const op = F.f[1], me = F.f[0], role = CH_ROLE[S.ch];
   // story hero is stronger: hits harder and takes a bit less damage
   me.dmgMul = 1.35; me.defMul = 0.85; me.storyBuff = true;
-  const reg = [0, 1, -1, 2][S.ch]; F.pads[1].lvl = role === 'reg' ? 1 + reg * 0.55 : role === 'nokh' ? 2.2 : role === 'shadow' ? 2.6 : role === 'rais' ? 2.7 : 3;
+  const reg = CH_REG[S.ch] || 0; F.pads[1].lvl = role === 'reg' ? 1 + reg * 0.5 : role === 'nokh' ? 2.2 : role === 'shadow' ? 2.6 : role === 'rais' ? 2.7 : 3;
   const hpx = (op, k) => { op.maxHp = Math.round(op.maxHp * k); op.hp = op.trailHp = op.maxHp; };
   if (role === 'shadow') { op.shadow = true; hpx(op, 1.5); op.dmgMul = 1.15; op.dispName = nmOf(op.ci, true); }
   if (role === 'nokh') { op.bossAI = 1; op.bossCD = 90; op.rageUsed = true; hpx(op, 1.2); }
