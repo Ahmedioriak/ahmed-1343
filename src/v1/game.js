@@ -61,7 +61,7 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => { keys.delete(e.code); });
 addEventListener('blur', () => keys.clear());
 let started = false;
-cv.addEventListener('pointerdown', () => { cv.focus(); audioInit(); started = true; pressQ.add('Click'); });
+cv.addEventListener('pointerdown', e => { cv.focus(); audioInit(); started = true; pressQ.add('Click'); if (e.pointerType === 'mouse' && G.scene === 'story') { const r = cv.getBoundingClientRect(); window.__mtap = [(e.clientX - r.left) / r.width * VW, (e.clientY - r.top) / r.height * VH]; } });
 
 const MAPS = [
   { up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'], b1: ['KeyR'], b2: ['KeyT'], b3: ['KeyF'], b4: ['KeyG'], sp: ['KeyE'], dg: ['KeyQ'], ok: ['KeyR', 'Space', 'KeyF'], back: ['KeyT', 'Escape'] },
@@ -3737,8 +3737,8 @@ function storyOpp(ch) { const S = G.story, r = CH_ROLE[ch]; return r === 'nokh' 
 function storyStart(pc) {
   const pool = []; for (let i = 0; i < NCH; i++) if (i !== pc) pool.push(i);
   for (let i = pool.length - 1; i > 0; i--) { const j = (RR() * (i + 1)) | 0; [pool[i], pool[j]] = [pool[j], pool[i]]; }
-  G.story = { pc, opps: pool.slice(0, 4), ch: 0, step: 'card', t: 0, lines: [], li: 0, ct: 0, phase: 'pre', final: false };
-  storyChapter();
+  G.story = { pc, opps: pool.slice(0, 4), ch: 0, step: 'card', t: 0, lines: [], li: 0, ct: 0, phase: 'pre', final: false, sel: storyMax() };
+  if (storyMax() > 0) storySelect(); else storyChapter();
 }
 function storyScript(ch, phase) {
   const S = G.story, role = CH_ROLE[ch], P = nmOf(S.pc), oc = storyOpp(ch), O = nmOf(oc, role === 'shadow'), ol = ((PERSONA[oc] && PERSONA[oc].intro[0]) || '').replace(/[!.؟?…]+$/, '');
@@ -3760,7 +3760,12 @@ function storyScript(ch, phase) {
   return [['N', 'الجناحين تكسّروا… والهالة الحمرا انطفت.'], ['O', 'الكأس… لك. أنت تستاهله.'], ['N', 'والكأس رجع للشلة! 🏆'], ['P', CHARS[S.pc].quote], ['N', 'والشلة رجعت تضحك… لين البطولة الجاية.'], ['N', 'النهاية 🎉 — شكراً إنك لعبت!']];
 }
 function storyMax() { try { return clamp(+localStorage.getItem('shilla_story_max') || 0, 0, NCHAP - 1); } catch (e) { return 0; } }
-function storyChapter() { const S = G.story; try { if (S.ch > storyMax()) localStorage.setItem('shilla_story_max', S.ch); } catch (e) { } S.step = 'card'; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; if (AC) Music.intensity = 0; }
+function storySave(ch) { try { if (ch > storyMax()) localStorage.setItem('shilla_story_max', ch); } catch (e) { } }
+function storySelect() { const S = G.story; S.step = 'select'; S.t = 0; S.sel = clamp(S.sel == null ? S.ch : S.sel, 0, storyMax()); G.scene = 'story'; G.stageId = CH_STAGE[S.sel]; try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } }
+const CH_PLACE = ['الحلبة', 'حوش البيت', 'الميناء', 'الملعب', 'السطح', 'القصر', 'القصر المحترق'];
+const SEL_W = 160, SEL_H = 330, SEL_GAP = 14, SEL_Y = 190;
+function selCardX(i) { return VW / 2 + ((NCHAP - 1) / 2 - i) * (SEL_W + SEL_GAP) - SEL_W / 2; }
+function storyChapter() { const S = G.story; storySave(S.ch); S.step = 'card'; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; if (AC) Music.intensity = 0; }
 function storySpeak() { const S = G.story, L = S && S.lines[S.li]; if (!L || !SET.voice || muted) return; try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } const role = CH_ROLE[S.ch], oc = storyOpp(S.ch); const ci = L[0] === 'P' ? S.pc : oc; const T = L[0] === 'N' ? [0.95, 0.95] : ((window.VOICE_TTS && window.VOICE_TTS[ci]) || [1, 1]); speakAr(L[1], L[0] === 'O' && role === 'shadow' ? T[0] * 0.6 : T[0], T[1], L[0] === 'N' ? 99 : ci); }
 function storyTalk(phase) { const S = G.story; S.step = 'talk'; S.phase = phase; S.lines = storyScript(S.ch, phase); S.li = 0; S.ct = 0; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; storySpeak(); }
 function storyFight() {
@@ -3788,18 +3793,32 @@ function storyAdvance() {
   const S = G.story;
   if (S.phase === 'pre') { storyFight(); return; }
   if (S.final || S.ch >= NCHAP - 1) { G.story = null; G.toTitle(); return; }
-  S.ch++;
+  S.ch++; storySave(S.ch);
   if (CH_ROLE[S.ch] === 'rais2') { G.stageId = CH_STAGE[S.ch]; storyTalk('pre'); SFX.rage(); return; } // transformation follows straight on
   storyChapter();
 }
 function updStory() {
   const S = G.story; if (!S) { G.toTitle(); return; } S.t++;
   const P0 = pads[0].p, P1 = pads[1].p, ok = P0.ok || P1.ok || anyP('Click') || !!G.tap, back = P0.back || P1.back || anyP('Escape');
+  if (S.step === 'select') {
+    const mx = storyMax(), tp = G.tap || window.__mtap; window.__mtap = null;
+    const go = n => { n = clamp(n, 0, NCHAP - 1); if (n === S.sel) return; if (n > mx) { SFX.move(); S.lockT = 20; return; } S.sel = n; G.stageId = CH_STAGE[n]; SFX.move(); };
+    const start = () => { SFX.ok(); S.ch = S.sel; S.phase = 'pre'; S.final = false; storyChapter(); };
+    if (S.t < 8) return;
+    if (tp) {
+      if (tp[0] < 200 && tp[1] < 90) { SFX.move(); G.story = null; G.toTitle(); return; }
+      for (let i = 0; i < NCHAP; i++) { const x = selCardX(i); if (tp[0] >= x && tp[0] <= x + SEL_W && tp[1] >= SEL_Y && tp[1] <= SEL_Y + SEL_H) { if (i > mx) { S.lockT = 20; SFX.move(); return; } if (i === S.sel) { start(); return; } go(i); return; } }
+      if (tp[1] > SEL_Y + SEL_H + 30 && tp[1] < SEL_Y + SEL_H + 130 && Math.abs(tp[0] - VW / 2) < 220) { start(); return; }
+      return;
+    }
+    if (P0.left || P1.left) { go(S.sel + 1); return; }
+    if (P0.right || P1.right) { go(S.sel - 1); return; }
+    if (back) { SFX.move(); G.story = null; G.toTitle(); return; }
+    if (ok) { start(); return; }
+    return;
+  }
   if (S.step === 'card') {
-    const mx = storyMax(), tapX = G.tap && G.tap[0];
-    const go = d => { const n = clamp(S.ch + d, 0, mx); if (n !== S.ch) { S.ch = n; S.t = 21; G.stageId = CH_STAGE[S.ch]; SFX.move(); } };
-    if (mx > 0) { if (P0.left || P1.left || (G.tap && tapX < 230)) { go(1); return; } if (P0.right || P1.right || (G.tap && tapX > VW - 230)) { go(-1); return; } }
-    if (mx > 0 && S.t > 150 && S.t < 160) S.t = 150; // wait for the player while chapter select is open
+    if (back && storyMax() > 0) { SFX.move(); S.sel = S.ch; storySelect(); return; }
     if (S.t > 170 || (ok && S.t > 20)) { SFX.move(); storyTalk(S.ch === 4 || S.phase !== 'post' ? 'pre' : 'pre'); } return; }
   if (S.step === 'talk') {
     const L = S.lines[S.li]; S.ct += 1.5;
@@ -3807,7 +3826,7 @@ function updStory() {
     if (ok && S.t > 6) { if (S.ct < L[1].length) S.ct = 999; else { S.li++; S.ct = 0; SFX.move(); if (S.li >= S.lines.length) { try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } storyAdvance(); } else storySpeak(); } }
     return;
   }
-  if (S.step === 'lost') { if (S.t > 30) { if (ok) { SFX.ok(); storyFight(); } else if (back) { SFX.move(); G.story = null; G.toTitle(); } } }
+  if (S.step === 'lost') { if (S.t > 30) { if (ok) { SFX.ok(); storyFight(); } else if (back) { SFX.move(); if (storyMax() > 0) { S.sel = S.ch; storySelect(); } else { G.story = null; G.toTitle(); } } } }
 }
 function shadowOf(img) {
   if (img._sh) return img._sh;
@@ -3820,10 +3839,46 @@ function wrapLines(str, maxW) {
   for (const w of words) { const t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width > maxW && cur) { out.push(cur); cur = w; } else cur = t; }
   if (cur) out.push(cur); return out;
 }
+function drawStorySelect(S) {
+  const mx = storyMax(), a = Math.min(1, S.t / 15);
+  ctx.save(); ctx.globalAlpha = a;
+  txt('اختر المرحلة', VW / 2, 80, { size: 64, weight: 900, color: '#fff', glow: '#ff1030', glowBlur: 30 });
+  txt('تقدر تلعب أي مرحلة وصلت لها', VW / 2, 140, { size: 24, weight: 800, color: '#ffd34d' });
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; rrect(16, 16, 170, 60, 14); ctx.fill();
+  txt('→ رجوع', 101, 47, { size: 24, weight: 800, color: '#fff' });
+  for (let i = 0; i < NCHAP; i++) {
+    const x = selCardX(i), y = SEL_Y, on = i === S.sel, open = i <= mx, role = CH_ROLE[i], col = CH_GLOW[role];
+    const lift = on ? -12 - Math.sin(G.frame * 0.1) * 4 : 0;
+    ctx.save(); ctx.translate(0, lift);
+    if (on) { ctx.shadowColor = col; ctx.shadowBlur = 30; }
+    ctx.fillStyle = open ? 'rgba(10,12,22,0.9)' : 'rgba(10,10,14,0.75)'; rrect(x, y, SEL_W, SEL_H, 16); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.lineWidth = on ? 5 : 2; ctx.strokeStyle = on ? col : open ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)'; rrect(x, y, SEL_W, SEL_H, 16); ctx.stroke();
+    txt(String(i + 1), x + SEL_W / 2, y + 36, { size: 40, weight: 900, color: open ? (role === 'reg' ? '#fff' : col) : 'rgba(255,255,255,0.3)', rtl: false });
+    const oc = storyOpp(i), im = IMG['face' + (oc + 1)], fs = 124, fx = x + (SEL_W - fs) / 2, fy = y + 70;
+    ctx.save(); rrect(fx, fy, fs, fs, 12); ctx.clip();
+    ctx.fillStyle = role === 'reg' ? '#1a1d2b' : col + '55'; ctx.fillRect(fx, fy, fs, fs);
+    if (im) { if (!open) ctx.filter = 'brightness(0.12)'; ctx.drawImage(im, fx, fy, fs, fs); ctx.filter = 'none'; }
+    if (role === 'rais2' && open) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,16,48,0.25)'; ctx.fillRect(fx, fy, fs, fs); }
+    ctx.restore();
+    if (!open) txt('🔒', x + SEL_W / 2, fy + fs / 2, { size: 52, rtl: false });
+    const nm = !open ? '؟؟؟' : role === 'rais2' ? 'الرئيس المتحوّل' : nmOf(oc);
+    txt(nm, x + SEL_W / 2, y + 222, { size: nm.length > 11 ? 17 : 21, weight: 900, color: open ? '#fff' : 'rgba(255,255,255,0.35)' });
+    txt(open ? CH_PLACE[i] : 'مقفلة', x + SEL_W / 2, y + 256, { size: 18, weight: 800, color: open ? '#ffd34d' : 'rgba(255,255,255,0.3)' });
+    if (role !== 'reg') txt(role === 'nokh' ? 'زعيم' : 'الزعيم الأخير', x + SEL_W / 2, y + 296, { size: 17, weight: 900, color: open ? col : 'rgba(255,255,255,0.25)' });
+    ctx.restore();
+  }
+  if (S.lockT > 0) { S.lockT--; txt('🔒 لازم تغلب المرحلة اللي قبلها أول', VW / 2, SEL_Y + SEL_H + 34, { size: 24, weight: 800, color: '#ff6b6b' }); }
+  const bx = VW / 2 - 200, by = SEL_Y + SEL_H + 58, pulse = 0.85 + 0.15 * Math.sin(G.frame * 0.12);
+  ctx.fillStyle = `rgba(255,42,58,${pulse})`; rrect(bx, by, 400, 70, 18); ctx.fill();
+  txt('العب ' + CH_NAMES[S.sel], VW / 2, by + 36, { size: 32, weight: 900, color: '#fff' });
+  txt(TOUCH_ON ? 'المس مرحلة لاختيارها · المسها مرة ثانية أو الزر الأحمر للبدء' : '◀ ▶ لاختيار المرحلة   ·   ✕ / Enter للبدء   ·   ○ / Esc رجوع', VW / 2, VH - 22, { size: 18, weight: 700, color: 'rgba(255,255,255,0.6)' });
+  ctx.restore();
+}
 function drawStory() {
   const S = G.story; if (!S) return;
   drawStage({ x: Math.sin(G.frame * 0.004) * 120, z: 1, yaw: Math.sin(G.frame * 0.003) * 0.35 }, G.frame, CH_STAGE[S.ch]);
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, VW, VH);
+  if (S.step === 'select') { drawStorySelect(S); return; }
   // chapter progress
   for (let i = 0; i < NCHAP; i++) { const x = VW / 2 + ((NCHAP - 1) / 2 - i) * 40; ctx.fillStyle = i < S.ch ? '#ffd34d' : i === S.ch ? '#ff2a3a' : 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.arc(x, 34, i === S.ch ? 11 : 8, 0, 7); ctx.fill(); }
   if (S.step === 'card') {
@@ -3832,10 +3887,6 @@ function drawStory() {
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, VH / 2 - 130, VW, 260);
     txt(CH_NAMES[S.ch], VW / 2, VH / 2 - 40, { size: 92, weight: 900, color: '#fff', glow: CH_GLOW[CH_ROLE[S.ch]], glowBlur: 35 });
     txt(CH_TIME[S.ch], VW / 2, VH / 2 + 50, { size: 34, weight: 800, color: '#ffd34d' });
-    { const mx = storyMax(); if (mx > 0) { const bl = 0.6 + 0.4 * Math.sin(G.frame * 0.12);
-        if (S.ch < mx) { txt('◀', 120, VH / 2, { size: 70, weight: 900, color: `rgba(255,211,77,${bl})`, rtl: false }); txt('الفصل التالي', 120, VH / 2 + 56, { size: 20, weight: 800, color: '#ffd34d' }); }
-        if (S.ch > 0) { txt('▶', VW - 120, VH / 2, { size: 70, weight: 900, color: `rgba(255,211,77,${bl})`, rtl: false }); txt('الفصل السابق', VW - 120, VH / 2 + 56, { size: 20, weight: 800, color: '#ffd34d' }); }
-        txt('اختر الفصل بالأسهم ◀ ▶  ·  ✕ / Enter للبدء', VW / 2, VH / 2 + 150, { size: 20, weight: 800, color: 'rgba(255,255,255,0.7)' }); } }
     { const r = CH_ROLE[S.ch]; txt(r === 'shadow' || r === 'rais' ? 'الخصم: ؟؟؟' : r === 'rais2' ? 'الخصم: الرئيس… بجناحين' : 'الخصم: ' + nmOf(storyOpp(S.ch)), VW / 2, VH / 2 + 100, { size: 24, weight: 700, color: 'rgba(255,255,255,0.75)' }); }
     ctx.restore(); return;
   }
@@ -3843,7 +3894,7 @@ function drawStory() {
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, VW, VH);
     txt('خسرت… 😵', VW / 2, 280, { size: 90, weight: 900, color: '#ff4d5a', glow: '#ff1030' });
     txt('الكأس للحين مفقود!', VW / 2, 370, { size: 30, weight: 800, color: '#fff' });
-    if (S.t > 30 && G.frame % 60 < 42) txt(TOUCH_ON ? 'المس الشاشة لإعادة الفصل  ·  ○ للقائمة' : '✕ / Enter = إعادة الفصل   ·   ○ / Esc = القائمة الرئيسية', VW / 2, 470, { size: 24, weight: 800, color: '#ffd34d' });
+    if (S.t > 30 && G.frame % 60 < 42) txt(TOUCH_ON ? 'المس الشاشة لإعادة الفصل  ·  ○ ' + (storyMax() > 0 ? 'اختيار المرحلة' : 'للقائمة') : '✕ / Enter = إعادة الفصل   ·   ○ / Esc = ' + (storyMax() > 0 ? 'اختيار المرحلة' : 'القائمة الرئيسية'), VW / 2, 470, { size: 24, weight: 800, color: '#ffd34d' });
     return;
   }
   // dialogue
