@@ -550,8 +550,8 @@ const MV = {
     kf: [[0, {}], [6, { bth: 10, bsh: 70, lean: 2, bfl: 0.5 }], [11, { bth: 52, bsh: 4, lean: -10, bfl: 0, bft: 10, th: 10, sh: 14 }], [14, {}], [22, { bth: 10, bsh: 40, lean: 2, bfl: 1 }], [30, null]],
     cancel: { rk: 1 } },
   rk: { name: 'highkick', limb: 'fT', lvl: 'high', st: 15, ac: 4, rc: 20, dmg: 18, hs: 24, bs: 16, push: 34, stop: 9, r: 34, p: 1.4, kick: 1, kdCH: 1,
-    kf: [[0, {}], [7, { th: 70, sh: 95, lean: -4, ffl: 0.5, bth: -6 }], [15, { r: -14, th: 128, sh: 4, lean: -16, ffl: 0, bth: 6, bsh: 0, dx: 6 }], [19, {}], [28, { r: 0, th: 55, sh: 70, lean: 0, ffl: 1, dx: 0 }], [39, null]] },
-  hook: { name: 'hook', limb: 'fH', lvl: 'mid', st: 12, ac: 3, rc: 18, dmg: 14, hs: 20, bs: 14, push: 26, stop: 8, r: 30, p: 1.3, mvx: [[2, 12, 6]],
+    kf: [[0, {}], [7, { th: 70, sh: 95, lean: -4, ffl: 0.5, bth: -6 }], [15, { r: -10, th: 112, sh: 4, lean: -14, ffl: 0, bth: 6, bsh: 0, dx: 8 }], [19, {}], [28, { r: 0, th: 55, sh: 70, lean: 0, ffl: 1, dx: 0 }], [39, null]] },
+  hook: { name: 'hook', limb: 'fH', lvl: 'mid', st: 12, ac: 3, rc: 18, dmg: 14, hs: 20, bs: 14, push: 26, stop: 8, r: 30, p: 1.3, mvx: [[2, 12, 4.5]],
     kf: [[0, {}], [6, { ua: 20, fa: 90, lean: -6, dx: -6 }], [12, { ua: 85, fa: 55, lean: 26, dx: 18, th: 40, bth: -30 }], [15, {}], [23, { ua: 50, fa: 100, lean: 10, dx: 6 }], [33, null]],
     cancel: { rk: 1 } },
   upper: { name: 'uppercut', limb: 'fH', lvl: 'mid', st: 14, ac: 4, rc: 18, dmg: 16, hs: 0, bs: 14, push: 10, stop: 9, r: 32, p: 1.4, launch: 1, base: 'CROUCH',
@@ -565,16 +565,55 @@ const MV = {
   fkick: { name: 'frontkick', limb: 'fT', lvl: 'mid', st: 13, ac: 3, rc: 19, dmg: 13, hs: 22, bs: 14, push: 50, stop: 8, r: 32, p: 1.2, kick: 1, mvx: [[3, 13, 3]],
     kf: [[0, {}], [7, { th: 80, sh: 100, ffl: 0.4, lean: 0 }], [13, { th: 98, sh: 4, ffl: 0, ft: -10, lean: -14, dx: 8 }], [16, {}], [24, { th: 60, sh: 80, ffl: 1, lean: 0, dx: 0 }], [35, null]] },
   spin: { name: 'roundhouse', limb: 'fT', lvl: 'high', st: 19, ac: 4, rc: 24, dmg: 22, hs: 0, bs: 18, push: 30, stop: 11, r: 38, p: 1.7, kick: 1, kd: 1, mvx: [[4, 16, 5]],
-    kf: [[0, {}], [10, { th: 90, sh: 120, ffl: 0.3, lean: -8, r: -6 }], [19, { r: -20, th: 122, sh: 2, lean: -18, ffl: 0, dx: 12, bth: 8, bsh: 0 }], [23, {}], [34, { r: 0, th: 60, sh: 70, lean: 0, ffl: 1, dx: 0 }], [47, null]] },
+    kf: [[0, {}], [10, { th: 90, sh: 120, ffl: 0.3, lean: -8, r: -6 }], [19, { r: -14, th: 108, sh: 2, lean: -16, ffl: 0, dx: 14, bth: 8, bsh: 0 }], [23, {}], [34, { r: 0, th: 60, sh: 70, lean: 0, ffl: 1, dx: 0 }], [47, null]] },
   jp: { name: 'airpunch', limb: 'fH', lvl: 'mid', st: 5, ac: 9, rc: 6, dmg: 10, hs: 18, bs: 12, push: 16, stop: 6, r: 30, p: 1.0, air: 1, base: 'JUMP',
     kf: [[0, {}], [5, { ua: 70, fa: 0, lean: 14 }], [14, {}], [20, { ua: 40, fa: 120, lean: 8 }]] },
   jk: { name: 'airkick', limb: 'fT', lvl: 'mid', st: 6, ac: 12, rc: 6, dmg: 14, hs: 22, bs: 14, push: 24, stop: 8, r: 34, p: 1.3, air: 1, kick: 1, base: 'JUMP',
     kf: [[0, {}], [6, { th: 80, sh: 4, ffl: 0, ft: -10, lean: -12, r: -8, bth: 10, bsh: 110 }], [18, {}], [24, { th: 70, sh: 110, r: 0, lean: 8 }]] },
+  // ---- direction + button set (16 grounded + 4 air) ----
+  // forward + □ : step-in elbow
+  f1: { name: 'elbow', limb: 'fE', lvl: 'mid', st: 10, ac: 3, rc: 17, dmg: 13, hs: 20, bs: 13, push: 22, stop: 7, r: 30, p: 1.2, mvx: [[1, 11, 5]],
+    kf: [[0, {}], [5, { ua: 70, fa: 150, lean: 0, dx: 0 }], [10, { ua: 96, fa: 162, lean: 22, dx: 18, th: 38, sh: 30, bth: -30 }], [13, {}], [21, { ua: 50, fa: 120, lean: 8, dx: 6 }], [30, null]] },
+  // back + □ : backfist (fast, high, pushes away)
+  k1: { name: 'backfist', limb: 'fH', lvl: 'high', st: 8, ac: 3, rc: 14, dmg: 9, hs: 16, bs: 11, push: 30, stop: 5, r: 26, p: 0.9,
+    kf: [[0, {}], [4, { ua: 70, fa: 160, lean: -8, dx: -6, r: 4 }], [8, { ua: 100, fa: 6, lean: 12, dx: 10, r: 0, th: 26, bth: -22 }], [11, {}], [18, { ua: 50, fa: 110, lean: 4, dx: 0 }], [25, null]] },
+  // back + △ : two-hand palm push (big push, makes space)
+  k2: { name: 'palm', limb: 'fH', lvl: 'mid', st: 13, ac: 3, rc: 22, dmg: 11, hs: 18, bs: 18, push: 80, stop: 8, r: 34, p: 1.3, mvx: [[5, 13, 2.5]],
+    kf: [[0, {}], [7, { ua: 40, fa: 140, bua: 40, bfa: 140, lean: -10, dx: -10 }], [13, { ua: 92, fa: 2, bua: 90, bfa: 4, lean: 24, dx: 18, th: 42, sh: 26, bth: -34, bsh: 10 }], [16, {}], [26, { ua: 50, fa: 100, bua: 40, bfa: 110, lean: 6, dx: 4 }], [38, null]] },
+  // back + ✕ : knee to the stomach (close, fast, big stun)
+  k3: { name: 'knee', limb: 'fK', lvl: 'mid', st: 9, ac: 4, rc: 16, dmg: 13, hs: 24, bs: 13, push: 14, stop: 7, r: 30, p: 1.2, kick: 1,
+    kf: [[0, {}], [5, { th: 60, sh: 110, lean: 6, ffl: 0.5 }], [9, { th: 112, sh: 150, lean: -8, ffl: 0.3, dx: 10, ua: 70, fa: 70, bua: 60, bfa: 80 }], [13, {}], [20, { th: 50, sh: 70, lean: 2, dx: 0, ffl: 1 }], [29, null]] },
+  // back + ○ : turning back kick (long, knocks down)
+  k4: { name: 'backkick', limb: 'fT', lvl: 'mid', st: 18, ac: 4, rc: 26, dmg: 20, hs: 0, bs: 18, push: 40, stop: 10, r: 36, p: 1.7, kick: 1, kd: 1, mvx: [[4, 18, 4]],
+    kf: [[0, {}], [9, { r: 6, lean: 32, th: 30, sh: 70, bth: -10, bsh: 20, ua: 10, fa: 70, dx: -6 }], [18, { r: 2, lean: 46, th: 102, sh: 0, ffl: 0, ft: -20, bth: -6, bsh: 0, dx: 14 }], [22, {}], [34, { r: 0, lean: 6, th: 40, sh: 50, ffl: 1, dx: 0 }], [48, null]] },
+  // up + □ : rising anti-air punch (beats jumps)
+  u1: { name: 'risingpunch', limb: 'fH', lvl: 'high', st: 9, ac: 5, rc: 18, dmg: 12, hs: 18, bs: 12, push: 12, stop: 7, r: 30, p: 1.1, aa: 1,
+    kf: [[0, {}], [5, { ua: 50, fa: 120, lean: 8, th: 40, sh: 60, bth: 24, bsh: 50, dy: 6 }], [9, { ua: 122, fa: 22, lean: 4, th: 12, sh: 10, bth: -10, bsh: 6, dy: -16, dx: 14 }], [14, { ua: 160, fa: 8, lean: -6, dy: -26 }], [22, { ua: 90, fa: 90, lean: 4, dy: 0 }], [32, null]] },
+  // up + △ : jumping hammer fist (slow, heavy, mid)
+  u2: { name: 'hammer', limb: 'fH', lvl: 'mid', st: 18, ac: 4, rc: 22, dmg: 18, hs: 22, bs: 18, push: 20, stop: 10, r: 34, p: 1.6, kdCH: 1, mvx: [[4, 18, 2.5]],
+    kf: [[0, {}], [8, { ua: 176, fa: 20, bua: 174, bfa: 20, lean: -12, dy: -28, th: 40, sh: 60, bth: 30, bsh: 60 }], [18, { ua: 82, fa: 8, bua: 76, bfa: 14, lean: 32, dy: 0, dx: 14, th: 40, sh: 40, bth: -30, bsh: 20 }], [22, {}], [32, { ua: 50, fa: 90, bua: 40, bfa: 100, lean: 16 }], [44, null]] },
+  // up + ✕ : flying knee (hops forward)
+  u3: { name: 'flyknee', limb: 'fK', lvl: 'mid', st: 12, ac: 5, rc: 20, dmg: 15, hs: 22, bs: 14, push: 24, stop: 8, r: 32, p: 1.4, kick: 1, mvx: [[2, 17, 7]],
+    kf: [[0, {}], [5, { th: 40, sh: 80, bth: 30, bsh: 70, lean: 10, dy: 6 }], [12, { th: 118, sh: 150, bth: 10, bsh: 110, lean: -6, dy: -42, dx: 10, ua: 80, fa: 60, bua: 70, bfa: 70, ffl: 0.3, bfl: 0.3 }], [17, {}], [25, { th: 50, sh: 60, bth: 20, bsh: 40, dy: 0, lean: 6, dx: 0, ffl: 1, bfl: 1 }], [37, null]] },
+  // up + ○ : somersault kick (launches)
+  u4: { name: 'flipkick', limb: 'fT', lvl: 'mid', st: 13, ac: 5, rc: 26, dmg: 16, hs: 0, bs: 16, push: 12, stop: 9, r: 36, p: 1.6, kick: 1, launch: 1,
+    kf: [[0, {}], [6, { th: 20, sh: 80, bth: 30, bsh: 90, lean: 6, dy: 8 }], [13, { r: -18, th: 112, sh: 4, ffl: 0, lean: -16, dy: -30, bth: 20, bsh: 60, dx: 6 }], [18, { r: -48, th: 158, sh: 10, lean: -26, dy: -52, dx: -2 }], [28, { r: -10, th: 60, sh: 90, dy: -12, lean: 0 }], [44, null]] },
+  // air △ : downward hammer · air ○ : flying side kick
+  jp2: { name: 'airhammer', limb: 'fH', lvl: 'mid', st: 7, ac: 8, rc: 8, dmg: 13, hs: 20, bs: 14, push: 18, stop: 7, r: 32, p: 1.2, air: 1, base: 'JUMP',
+    kf: [[0, {}], [4, { ua: 176, fa: 20, bua: 170, bfa: 20, lean: -8 }], [8, { ua: 60, fa: 8, bua: 56, bfa: 12, lean: 26 }], [16, {}], [24, { ua: 40, fa: 120, lean: 8 }]] },
+  jk2: { name: 'flykick', limb: 'fT', lvl: 'mid', st: 8, ac: 10, rc: 8, dmg: 17, hs: 24, bs: 16, push: 34, stop: 9, r: 36, p: 1.5, air: 1, kick: 1, base: 'JUMP',
+    kf: [[0, {}], [8, { th: 96, sh: 0, ffl: 0, ft: -20, lean: -22, r: -12, bth: 60, bsh: 120, ua: 20, fa: 120 }], [18, {}], [26, { th: 70, sh: 110, r: 0, lean: 8 }]] },
   rage: { name: 'rage', limb: 'fH', lvl: 'mid', st: 26, ac: 16, rc: 34, dmg: 0, hs: 0, bs: 22, push: 30, stop: 4, r: 56, p: 1.5, rage: 1, mvx: [[26, 42, 15]],
     kf: [[0, {}], [10, { ...RAGEC }], [24, { ...RAGEC, lean: -18 }], [26, { ua: 80, fa: 50, lean: 28, dx: 10, th: 50, sh: 30, bth: -40, bsh: 30 }], [42, {}], [52, { ua: 50, fa: 100, lean: 10 }], [76, null]] },
 };
 // ================= SPECIAL SKILLS (charge every 10 s) =================
 const SKMAX = 600;
+const MOVESET = {
+  n: { b1: 'lp', b2: 'rp', b3: 'lk', b4: 'rk' }, fwd: { b1: 'f1', b2: 'hook', b3: 'fkick', b4: 'spin' }, back: { b1: 'k1', b2: 'k2', b3: 'k3', b4: 'k4' },
+  down: { b1: 'dp', b2: 'upper', b3: 'dk', b4: 'sweep' }, up: { b1: 'u1', b2: 'u2', b3: 'u3', b4: 'u4' }, air: { b1: 'jp', b2: 'jp2', b3: 'jk', b4: 'jk2' } };
+const MOVE_AR = { lp: 'جاب سريع', rp: 'لكمة مستقيمة', lk: 'ركلة واطية', rk: 'ركلة عالية', f1: 'ضربة كوع', hook: 'هوك', fkick: 'ركلة دفع', spin: 'ركلة دائرية',
+  k1: 'ظهر اليد', k2: 'دفعة الكفين', k3: 'ركبة', k4: 'ركلة خلفية', dp: 'لكمة واطية', upper: 'أبركت', dk: 'ركلة الساق', sweep: 'كسحة',
+  u1: 'لكمة صاعدة', u2: 'المطرقة', u3: 'ركبة طايرة', u4: 'ركلة الشقلبة', jp: 'لكمة جوية', jp2: 'مطرقة جوية', jk: 'ركلة جوية', jk2: 'ركلة طايرة' };
 const SKILL_IDS = ['sk_rush', 'sk_barrage', 'sk_slide', 'sk_cards', 'sk_hball', 'sk_rock', 'sk_roll', 'sk_cart', 'sk_chicken', 'sk_bike', 'sk_bob', 'sk_school', 'sk_karate', 'sk_blaster'];
 const SKILL_NAMES = ['نطة الزعيم', 'القبضات العملاقة', 'السلايد', 'أوراق اللعب', 'كرة اليد', 'رمية الحجر', 'الكرة المتدحرجة', 'عربة السوبرماركت', 'جيش الدجاج', 'رمية السيكل', 'صاروخ البوب', 'هجوم الأدوات', 'إعصار الكاراتيه', 'سلاح القيمر'];
 const PZ_SUMMON = { ua: 178, fa: 10, bua: 176, bfa: 10, lean: -12 };
@@ -923,7 +962,7 @@ const COMBOS = [
 ];
 const COMBO_NAME = {};
 COMBOS.forEach((set, ci) => { for (const k of COMBO_KEYS) { const [name, mv] = set[k]; const id = `cb${ci}_${k}`; MV[id] = mv; mv.cname = name; COMBO_NAME[id] = name; set[k] = id; } });
-for (const id of ['spin', 'sweep', 'hook', 'rage', 'sk_rush', 'sk_cart', 'sk_roll', 'sk_barrage']) MV[id].track = 1;
+for (const id of ['spin', 'k4', 'sweep', 'hook', 'rage', 'sk_rush', 'sk_cart', 'sk_roll', 'sk_barrage']) MV[id].track = 1;
 for (const id in MV) {
   const m = MV[id]; m.id = id; m.total = m.st + m.ac + m.rc;
   const base = m.base === 'CROUCH' ? CROUCH : m.base === 'JUMP' ? JUMP : GUARD; m.B = base;
@@ -941,6 +980,14 @@ function kfPose(m, t) {
 }
 
 // ================= SOLVER =================
+const lerpPt = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+function segPt(px, py, ax, ay, bx, by) { const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy; let t = L ? ((px - ax) * dx + (py - ay) * dy) / L : 0; t = t < 0 ? 0 : t > 1 ? 1 : t; return Math.hypot(px - ax - dx * t, py - ay - dy * t); }
+function segSeg(ax, ay, bx, by, cx, cy, dx, dy) { // min distance between segments AB and CD
+  const o = (px, py, qx, qy, rx, ry) => (qx - px) * (ry - py) - (qy - py) * (rx - px);
+  const d1 = o(ax, ay, bx, by, cx, cy), d2 = o(ax, ay, bx, by, dx, dy), d3 = o(cx, cy, dx, dy, ax, ay), d4 = o(cx, cy, dx, dy, bx, by);
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return 0;
+  return Math.min(segPt(ax, ay, cx, cy, dx, dy), segPt(bx, by, cx, cy, dx, dy), segPt(cx, cy, ax, ay, bx, by), segPt(dx, dy, ax, ay, bx, by));
+}
 const rot = (x, y, a) => { const c = Math.cos(a), s = Math.sin(a); return [x * c - y * s, x * s + y * c]; };
 const BACK_ARM_DX = 10, BACK_LEG_DX = -8;
 function solve(R, p) {
@@ -955,7 +1002,7 @@ function solve(R, p) {
     const el = [sh[0] + R.L.ua * Math.cos(pu), sh[1] + R.L.ua * Math.sin(pu)];
     const pf = pu - fa * D2R;
     const hd = [el[0] + R.L.fa * fsc * Math.cos(pf), el[1] + R.L.fa * fsc * Math.sin(pf)];
-    J[pre + 'H'] = hd;
+    J[pre + 'H'] = hd; J[pre + 'E'] = el;
     J[pre + 'arm'] = [['uarm', sh, pu - R.a0.ua, m.S], ['farm', el, pf - R.a0.fa, m.E, fsc]];
   };
   const leg = (pre, th, sh_, ft, fl, ox) => {
@@ -966,13 +1013,15 @@ function solve(R, p) {
     const an = [kn[0] + R.L.sh * Math.cos(ps), kn[1] + R.L.sh * Math.sin(ps)];
     const rS = ps - R.a0.sh;
     const rF = lerp(rS + ft * D2R, 0, fl);
-    J[pre + 'leg'] = [['thigh', hp, pt - R.a0.th, m.hip], ['shin', kn, rS, m.K], ['foot', an, rF, m.A]];
+    J[pre + 'leg'] = [['thigh', hp, pt - R.a0.th, m.hip], ['shin', kn, rS, m.K], ['foot', an, rF, m.A]]; J[pre + 'K'] = kn;
     const to = rot(R.toe[0] - m.A[0], R.toe[1] - m.A[1], rF);
     J[pre + 'T'] = [an[0] + to[0], an[1] + to[1]];
   };
   arm('f', p.ua, p.fa, 0); arm('b', p.bua, p.bfa, BACK_ARM_DX);
   leg('f', p.th, p.sh, p.ft, p.ffl, 0); leg('b', p.bth, p.bsh, p.bft, p.bfl, BACK_LEG_DX);
   J.torso = ['torso', [0, 0], tr, m.hip];
+  // body landmarks for hit detection: neck + head centre/radius (sprite units)
+  J.nk = rot(m.S[0] - hx, m.S[1] - hy, tr); J.hd = rot(m.S[0] - hx, (m.bbox[1] + m.S[1]) / 2 - hy, tr); J.hr = (m.S[1] - m.bbox[1]) * 0.44; J.tw = (hy - m.S[1]) * 0.31;
   if (R.P.skirt) J.skirt = ['skirt', [0, 0], r + p.lean * 0.25 * D2R - D2R * (0.45 * Math.max(0, p.th, p.bth) + 0.1 * Math.min(0, p.th, p.bth)), m.hip];
   // hull: lowest/highest points & body box
   let maxY = -1e9, minY = 1e9, minX = 1e9, maxX = -1e9;
@@ -1111,11 +1160,9 @@ class Fighter {
     for (let i = 0; i < 14; i++) FX.push({ t: 'p', x: this.x + rnd(-50, 50), y: this.hipY + rnd(-120, 60), vx: rnd(-1, 1), vy: -rnd(1, 4), life: 30, max: 30, c: '#ffd34d', sz: rnd(2, 4) });
   }
   btn(p) { return p.b1 ? 'b1' : p.b2 ? 'b2' : p.b3 ? 'b3' : p.b4 ? 'b4' : null; }
-  resolve(b, h, air) {
-    if (air) return (b === 'b1' || b === 'b2') ? 'jp' : 'jk';
-    if (h.down) return { b1: 'dp', b2: 'upper', b3: 'dk', b4: 'sweep' }[b];
-    if (h.fwd) return { b1: 'lp', b2: 'hook', b3: 'fkick', b4: 'spin' }[b];
-    return { b1: 'lp', b2: 'rp', b3: 'lk', b4: 'rk' }[b];
+  resolve(b, h, air) { // direction + button → move (□=b1 △=b2 ✕=b3 ○=b4)
+    if (air) return MOVESET.air[b];
+    return MOVESET[h.down ? 'down' : h.up ? 'up' : h.fwd ? 'fwd' : h.back ? 'back' : 'n'][b];
   }
   canAct() { return NEUTRAL.has(this.state) || this.state === 'land' && this.t > 2 || this.state === 'dash' && this.t > 4; }
   tryRage() {
@@ -1125,7 +1172,7 @@ class Fighter {
   }
   startMove(id) {
     if (this.C.eat) { if (MV[id].eatAfter) this.eatPend = true; else if (!MV[id].eat && !MV[id].skill) { this.eatN = (this.eatN || 0) + 1; if (this.eatN >= 9) this.eatPend = true; } }
-    this.mv = MV[id]; this.state = 'attack'; this.mt = 0; this.hitThis = false; this.connected = false; this.buf = null; this.bufT = 0;
+    this.mv = MV[id]; this.state = 'attack'; this.mt = 0; { const op = G.fight && G.fight.f && G.fight.f[1 - this.slot]; this.aimD = op && this.mv.lvl === 'high' && !this.mv.skill ? clamp(((this.C.h || 1) - (op.C.h || 1)) * 150, -24, 24) : 0; } this.hitThis = false; this.connected = false; this.buf = null; this.bufT = 0;
     if (this.mv.air) this.airUsed = true;
     if (!this.mv.air && !this.mv.mvx) this.vx = 0;
   }
@@ -1206,6 +1253,9 @@ class Fighter {
   }
   attackStep() {
     const m = this.mv; this.mt++;
+    if (m.lunge === undefined) m.lunge = !m.skill && !m.air && !m.rage && !m.poseFn && !m.hitboxFn && !!m.limb;
+    if (m.lunge && this.mt <= m.st) { const L = this.R.L, k = this.R.k, mine = m.limb[1] === 'H' || m.limb[1] === 'E' ? (L.ua + L.fa) * k : (L.th + L.sh) * k, ref = m.limb[1] === 'H' || m.limb[1] === 'E' ? 115 : 178;
+      if (mine < ref) this.x += this.facing * (ref - mine) * 0.75 / m.st; }
     // rage conversion
     if ((m.id === 'lp' || m.id === 'rp') && this.mt <= 3 && this.rage && this.in.h.b1 && this.in.h.b2) { this.tryRage(); return; }
     if (this.mt <= 4 && !m.combo && !m.skill && !m.rage && !m.air && this.tryCombo()) return;
@@ -1234,8 +1284,12 @@ class Fighter {
   hitbox() {
     if (this.state === 'attack' && this.mv && this.mv.hitboxFn) return this.mv.hitboxFn(this);
     if (!this.active() || !this.mv.limb) return null;
-    const m = this.mv, J = this.J; const lp = m.limb[0] === 'f' ? (m.limb[1] === 'H' ? J.fH : J.fT) : (m.limb[1] === 'H' ? J.bH : J.bT);
-    const w = this.toWorld(lp); return { x: w[0], y: w[1], r: m.r };
+    const m = this.mv, J = this.J, side = m.limb[0], part = m.limb[1], lp = J[side + part] || J[side + 'H'];
+    // the striking segment: forearm (fist), shin+foot (kick), thigh end (knee), upper arm end (elbow)
+    const from = part === 'H' ? J[side + 'E'] : part === 'T' ? J[side + 'K'] : part === 'K' ? lerpPt(J[side + 'leg'][0][1], J[side + 'K'], 0.55) : lerpPt(J[side + 'arm'][0][1], J[side + 'E'], 0.6);
+    const w = this.toWorld(lp), w2 = this.toWorld(from), k = this.R.k;
+    const ar = m.ar ? m.ar * k : (part === 'T' ? 20 : part === 'K' ? 24 : part === 'E' ? 22 : 18) * k + Math.max(0, (m.r || 0) - 34) * 0.8;
+    return { x: w[0], y: w[1], r: m.r, x2: w2[0], y2: w2[1], ar };
   }
   toWorld(l) { const k = this.R.k; return [this.x + this.facing * (l[0] + this.pose.dx) * k, this.hipY + (l[1] + this.pose.dy) * k]; }
   airborne() { return this.state === 'air' || this.state === 'juggle' || (this.state === 'attack' && this.mv && (this.mv.air || (this.mv.jump && this.jumping))); }
@@ -1289,7 +1343,12 @@ class Fighter {
       case 'jsq': o = LANDP; break;
       case 'land': o = LANDP; break;
       case 'air': o = JUMP; break;
-      case 'attack': o = this.mv.poseFn ? this.mv.poseFn(this, this.mt) : kfPose(this.mv, this.mt); break;
+      case 'attack': o = this.mv.poseFn ? this.mv.poseFn(this, this.mt) : kfPose(this.mv, this.mt);
+        if (this.aimD && this.mv.limb && !this.mv.poseFn) { // aim high strikes at the opponent's head height (taller/shorter rivals)
+          o = Object.assign({}, o); const L = this.mv.limb, u = clamp(this.mt / Math.max(1, this.mv.st), 0, 1);
+          if (L[1] === 'T') o[L[0] === 'f' ? 'th' : 'bth'] -= this.aimD * u; else if (L[1] === 'H') o[L[0] === 'f' ? 'ua' : 'bua'] -= this.aimD * 0.6 * u;
+        }
+        break;
       case 'hit': {
         o = Object.assign({}, this.lowProfileHit ? CHIT : this.lowHit ? HITLO : HITHI);
         const j = this.stun > 4 ? Math.sin(this.t * 1.7) * 3 : 0; o.lean += j; break;
@@ -1326,6 +1385,12 @@ class Fighter {
     const b = this.J.box; const xs = [this.x + this.facing * (b[0] + this.pose.dx) * k, this.x + this.facing * (b[2] + this.pose.dx) * k];
     this.hurt = { x0: Math.min(...xs) + 8, x1: Math.max(...xs) - 8, y0: this.hipY + b[1] * k, y1: this.hipY + b[3] * k };
     const mv = this.mv; if (this.state === 'attack' && mv && mv.ball && this.mt >= mv.st && this.mt < mv.st + mv.ac) this.hurt = { x0: this.x - 70, x1: this.x + 70, y0: this.y - 160, y1: this.y };
+    // body-shaped hurt capsules (head, torso, arms, legs) so hits land where they look like they land
+    { const J = this.J, T = l => this.toWorld(l), caps = this.caps = [];
+      const cap = (p, q, r) => { const A = T(p), B = T(q); caps.push([A[0], A[1], B[0], B[1], r * k]); };
+      cap([0, 0], J.nk, J.tw); cap(J.hd, J.hd, J.hr);
+      for (const pre of ['f', 'b']) { const a = J[pre + 'arm'], l = J[pre + 'leg']; cap(a[0][1], a[1][1], 15); cap(a[1][1], J[pre + 'H'], 13); cap(l[0][1], l[1][1], 20); cap(l[1][1], l[2][1], 15); cap(l[2][1], J[pre + 'T'], 11); }
+      if (mv && mv.ball && this.state === 'attack' && this.mt >= mv.st && this.mt < mv.st + mv.ac) this.caps = [[this.x - 40, this.y - 80, this.x + 40, this.y - 80, 80]]; }
   }
   rushSeq(opp) {
     if (opp.ko) { this.setState('idle'); return; }
@@ -1388,6 +1453,7 @@ class CPUPad {
     if (!NEUTRAL.has(me.state)) return;
     if (this.holdT > 0) { this.holdT--; for (const k of this.hold) h[k === 'F' ? fK : k === 'B' ? bK : k] = true; return; }
     if (['down', 'getup', 'ko'].includes(op.state)) { if (dist > 200) h[fK] = true; return; }
+    if (op.state === 'air' && dist < 260 && op.y < -60 && op.vy > -6 && Math.random() < 0.05 + this.lvl * 0.03) { h.up = true; press('b1'); return; } // anti-air
     if (op.state === 'juggle' && dist < 190) { if (Math.random() < 0.5) press('b1'); else press('b2'); return; }
     this.cd--;
     if (me.rage && dist < 230 && Math.random() < 0.03) { press('b1', 'b2'); return; }
@@ -1406,7 +1472,7 @@ class CPUPad {
       const r = Math.random();
       const opts = [[22, () => press('b1')], [15, () => press('b2')], [13, () => press('b3')], [10, () => press('b4')], [7, () => { h[fK] = true; press('b2'); }],
         [6, () => { h.down = true; press('b2'); }], [6, () => { h.down = true; press('b4'); }], [7, () => { h.down = true; press('b3'); }], [6, () => { h[fK] = true; press('b3'); }],
-        [4, () => { h[fK] = true; press('b4'); }], [10, () => { this.hold = ['B']; this.holdT = 18; }], [6, () => { this.hold = ['down', 'B']; this.holdT = 20; }], [3, () => { this.hold = ['up']; this.holdT = 10; }], [6, () => { me.sidestep(Math.random() < 0.5 ? 1 : -1); }], [14, () => { const pr = pick([['b1', 'b2'], ['b2', 'b3'], ['b2', 'b4'], ['b1', 'b3'], ['b1', 'b4'], ['b3', 'b4']]); press(pr[0], pr[1]); }]];
+        [4, () => { h[fK] = true; press('b4'); }], [5, () => { h[fK] = true; press('b1'); }], [4, () => { h[bK] = true; press('b1'); }], [3, () => { h[bK] = true; press('b2'); }], [dist < 170 ? 6 : 1, () => { h[bK] = true; press('b3'); }], [3, () => { h[bK] = true; press('b4'); }], [3, () => { h.up = true; press('b2'); }], [4, () => { h.up = true; press('b3'); }], [dist < 200 ? 4 : 1, () => { h.up = true; press('b4'); }], [10, () => { this.hold = ['B']; this.holdT = 18; }], [6, () => { this.hold = ['down', 'B']; this.holdT = 20; }], [3, () => { this.hold = ['up']; this.holdT = 10; }], [6, () => { me.sidestep(Math.random() < 0.5 ? 1 : -1); }], [14, () => { const pr = pick([['b1', 'b2'], ['b2', 'b3'], ['b2', 'b4'], ['b1', 'b3'], ['b1', 'b4'], ['b3', 'b4']]); press(pr[0], pr[1]); }]];
       let tot = opts.reduce((a, o) => a + o[0], 0), x = r * tot;
       for (const [w, f] of opts) { x -= w; if (x <= 0) { f(); break; } }
     } else if (dist < 120 && Math.random() < 0.03) { this.hold = ['B']; this.holdT = 12; }
@@ -1709,6 +1775,12 @@ function withDepth(f, camz, fn) {
 }
 
 // ================= DRAW FIGHTER =================
+function drawCaps(f) { // debug view of hit shapes
+  ctx.save(); ctx.lineWidth = 2;
+  for (const c of f.caps || []) { ctx.strokeStyle = 'rgba(60,255,120,0.9)'; ctx.beginPath(); const a = Math.atan2(c[3] - c[1], c[2] - c[0]); ctx.arc(c[0], c[1], c[4], a + Math.PI / 2, a - Math.PI / 2); ctx.arc(c[2], c[3], c[4], a - Math.PI / 2, a + Math.PI / 2); ctx.closePath(); ctx.stroke(); }
+  const hb = f.state === 'attack' && f.hitbox(); if (hb && hb.ar !== undefined) { ctx.strokeStyle = '#ff3040'; ctx.lineWidth = hb.ar * 2; ctx.lineCap = 'round'; ctx.globalAlpha = 0.6; ctx.beginPath(); ctx.moveTo(hb.x2, hb.y2); ctx.lineTo(hb.x, hb.y); ctx.stroke(); }
+  ctx.restore();
+}
 function drawFighter(f, opts = {}) {
   const R = f.R, J = f.J, k = R.k, p = f.pose;
   const mv = f.mv;
@@ -2123,7 +2195,7 @@ class Fight {
   pauseInput() {
     const up = pads[0].p.up || pads[1].p.up, dn = pads[0].p.down || pads[1].p.down;
     if (this.showSet) { if (updSettings()) this.showSet = false; return; }
-    if (this.showList) { if (G.tap || pads[0].p.ok || pads[1].p.ok || pads[0].p.back || pads[1].p.back || anyP('Escape', 'KeyP', 'GPStart')) { this.showList = false; SFX.move(); } return; }
+    if (this.showList) { const P0 = pads[0].p, P1 = pads[1].p; if (P0.left || P0.right || P1.left || P1.right || (G.tap && G.tap[1] < 118)) { this.listPage = 1 - (this.listPage || 0); SFX.move(); return; } if (G.tap || pads[0].p.ok || pads[1].p.ok || pads[0].p.back || pads[1].p.back || anyP('Escape', 'KeyP', 'GPStart')) { this.showList = false; SFX.move(); } return; }
     if (up) { this.pidx = (this.pidx + 4) % 5; SFX.move(); }
     if (dn) { this.pidx = (this.pidx + 1) % 5; SFX.move(); }
     if (anyP('Escape', 'KeyP', 'GPStart')) { this.paused = false; return; }
@@ -2171,8 +2243,13 @@ class Fight {
     const m = a.mv;
     if (Math.abs((a.z || 0) - (d.z || 0)) > 60 && !m.track) return null;
     if (m.lvl === 'high' && d.lowProfile() && d.state !== 'juggle') return null;
-    const r = d.hurt; const cx = clamp(hb.x, r.x0, r.x1), cy = clamp(hb.y, r.y0, r.y1);
-    if (Math.hypot(hb.x - cx, hb.y - cy) > hb.r) return null;
+    if (hb.ar !== undefined && d.caps) { // limb strike: striking segment vs body capsules
+      let ok = false; for (const c of d.caps) if (segSeg(hb.x2, hb.y2, hb.x, hb.y, c[0], c[1], c[2], c[3]) <= hb.ar + c[4]) { ok = true; break; }
+      if (!ok) return null;
+    } else {
+      const r = d.hurt; const cx = clamp(hb.x, r.x0, r.x1), cy = clamp(hb.y, r.y0, r.y1);
+      if (Math.hypot(hb.x - cx, hb.y - cy) > hb.r) return null;
+    }
     hb.m = m; return hb;
   }
   resolveHit(a, d, hb) {
@@ -2209,7 +2286,9 @@ class Fight {
     this.applyDamage(a, d, dmg, counter ? 'counter' : 'hit', null, false, hb, m);
     if (d.hp <= 0) return;
     const air = d.state === 'juggle' || d.airborne();
-    if (air) {
+    if (air && m.aa && d.juggle < 3) { // anti-air: knocks jumpers out of the sky
+      d.setState('juggle'); d.juggle = 2; d.vy = -12; d.vx = dir * 4; d.mv = null; popText('ضد القفز!', hb.x, hb.y - 40, '#7fd6ff', 36);
+    } else if (air) {
       d.setState('juggle'); d.juggle++; d.vy = -Math.max(3.5, 9 * Math.pow(0.82, d.juggle)); d.vx = dir * 2.2;
     } else if (m.launchHit) {
       d.setState('juggle'); d.juggle = 3; d.vy = -11; d.vx = dir * 6.5; d.mv = null;
@@ -2320,7 +2399,7 @@ class Fight {
     for (const f of order) withDepth(f, cam.z, () => drawAura(f));
     for (const f of order) withDepth(f, cam.z, () => {
       if ((f.state === 'attack' && f.mv && f.mv.trail && f.mt >= f.mv.st && f.mt < f.mv.st + f.mv.ac) || (f.state === 'dodge' && f.t < 12)) for (let g = 3; g >= 1; g--) drawFighter(f, { ghost: g });
-      drawFighter(f); drawHeld(f);
+      drawFighter(f); drawHeld(f); if (window.__caps) drawCaps(f);
     });
     for (const pr of this.proj) drawProj(pr);
     drawFX();
@@ -2465,10 +2544,34 @@ class Fight {
 }
 const KEYS_P = [{ 1: 'R', 2: 'T', 3: 'F', 4: 'G' }, { 1: 'I', 2: 'O', 3: 'K', 4: 'L' }];
 const GLYPH = { 1: 'sq', 2: 'tri', 3: 'x', 4: 'o' };
+function drawMoveTabs(F) {
+  const tabs = ['حركات الشخصيات', 'الضربات (اتجاه + زر)'];
+  tabs.forEach((t, i) => { const x = VW / 2 + (i === 0 ? 170 : -170), on = (F.listPage || 0) === i;
+    ctx.fillStyle = on ? 'rgba(230,20,40,0.85)' : 'rgba(255,255,255,0.08)'; rrect(x - 160, 18, 320, 44, 12); ctx.fill();
+    txt(t, x, 41, { size: 24, weight: 900, color: on ? '#fff' : 'rgba(255,255,255,0.6)' }); });
+  txt('◀ ▶ أو اضغط فوق للتبديل', VW / 2, 82, { size: 16, weight: 700, color: 'rgba(255,255,255,0.5)' });
+}
+function drawMoveTable(F) {
+  ctx.fillStyle = 'rgba(3,4,10,0.95)'; ctx.fillRect(0, 0, VW, VH); drawMoveTabs(F);
+  const cols = [['b1', 1], ['b3', 3], ['b4', 4], ['b2', 2]], rows = [['n', 'بدون اتجاه', '•'], ['fwd', 'قدام', '➡'], ['back', 'ورا', '⬅'], ['up', 'فوق', '⬆'], ['down', 'تحت', '⬇'], ['air', 'في الجو', '✈']];
+  const LV = { high: ['عالي', '#ff8a8a'], mid: ['وسط', '#ffd34d'], low: ['واطي', '#7fd6ff'] };
+  const x0 = VW - 175, cw = 255, y0 = 140, rh = 84;
+  cols.forEach(([b, n], i) => { const x = x0 - 130 - i * cw; padGlyph(GLYPH[n], x + 40, y0 - 22, 16); txt(KEYS_P[0][n] + ' / ' + KEYS_P[1][n], x - 20, y0 - 21, { size: 18, font: FE, weight: 700, color: 'rgba(255,255,255,0.55)', rtl: false }); });
+  rows.forEach(([key, label, ic], r) => {
+    const y = y0 + 24 + r * rh; ctx.fillStyle = r % 2 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)'; ctx.fillRect(60, y - 4, VW - 120, rh - 6);
+    txt(ic + ' ' + label, x0 + 60, y + rh / 2 - 6, { size: 24, weight: 900, color: '#fff', align: 'right' });
+    cols.forEach(([b], i) => { const id = MOVESET[key][b], m = MV[id], x = x0 - 130 - i * cw, lv = LV[m.lvl] || LV.mid;
+      const tag = m.aa ? 'ضد القفز' : m.launch ? 'يرفع' : (m.kd ? 'يطيّح' : m.push >= 60 ? 'يبعّد' : '');
+      txt(MOVE_AR[id] || id, x, y + 26, { size: 23, weight: 800, color: '#fff' });
+      txt(lv[0] + (tag ? ' · ' + tag : ''), x, y + 56, { size: 16, weight: 800, color: lv[1] }); });
+  });
+  txt('قدام = جهة الخصم   ·   اللاعب 1: W A S D   ·   اللاعب 2: الأسهم   ·   يد التحكم والجوال: العصا + الزر', VW / 2, 682, { size: 17, weight: 700, color: 'rgba(255,255,255,0.6)' });
+  txt('اضغط أي زر للرجوع', VW / 2, 708, { size: 15, weight: 700, color: 'rgba(255,255,255,0.45)' });
+}
 function drawMoveList(F) {
-  ctx.fillStyle = 'rgba(3,4,10,0.93)'; ctx.fillRect(0, 0, VW, VH);
-  txt('قائمة الحركات', VW / 2, 52, { size: 46, weight: 900, color: '#fff', glow: '#ff2040' });
-  txt('اضغط الزرين مع بعض   ·   فوق فوق = خطوة للداخل   ·   تحت تحت = خطوة للخارج', VW / 2, 94, { size: 20, weight: 700, color: '#ffd34d' });
+  if (F.listPage === 1) { drawMoveTable(F); return; }
+  ctx.fillStyle = 'rgba(3,4,10,0.93)'; ctx.fillRect(0, 0, VW, VH); drawMoveTabs(F);
+  txt('اضغط الزرين مع بعض   ·   فوق فوق = خطوة للداخل   ·   تحت تحت = خطوة للخارج', VW / 2, 104, { size: 18, weight: 700, color: '#ffd34d' });
   F.f.forEach((f, s) => {
     const cx = s === 0 ? 330 : VW - 330, col = s === 0 ? '#3ea0ff' : '#ff3b4a';
     ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(cx - 290, 120, 580, 560); ctx.fillStyle = col; ctx.fillRect(cx - 290, 120, 580, 4);
@@ -2486,7 +2589,8 @@ function drawMoveList(F) {
     txt('L3/R3', cx + 205, y + 26, { size: 18, font: FE, weight: 700, color: '#7dffb0', rtl: false });
     txt(s === 0 ? 'E' : 'U', cx + 205, y - 6, { size: 24, font: FE, weight: 700, color: '#7dffb0', rtl: false });
     txt('المهارة: ' + SKILL_NAMES[f.ci] + ' (كل 10 ثواني)', cx + 70, y, { size: 22, weight: 800, color: '#7dffb0', align: 'right' });
-    txt(`تفادي: ${s === 0 ? 'Q' : 'Y'} أو L2 (كل ثانيتين)   ·   L2+R2 مع بعض (أو □+△) لما دمك يقل = القاضية`, cx, y + 50, { size: 18, weight: 700, color: '#ff8080' });
+    txt(`تفادي: ${s === 0 ? 'Q' : 'Y'} أو L2 (كل ثانيتين)`, cx, y + 40, { size: 17, weight: 700, color: '#7fd6ff' });
+    txt('القاضية: L2+R2 مع بعض (أو □+△) لما دمك يقل', cx, y + 64, { size: 17, weight: 700, color: '#ff8080' });
   });
   txt('اضغط أي زر للرجوع', VW / 2, 700, { size: 18, weight: 700, color: 'rgba(255,255,255,0.5)' });
 }
