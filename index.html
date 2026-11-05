@@ -3889,11 +3889,20 @@ const CH_TIME = ['الليل… في الحلبة', 'العصر… في حوش �
 const CH_GLOW = { reg: '#ff1030', nokh: '#3cb4ff', shadow: '#b030ff', rais: '#d4a640', rais2: '#ff1030' };
 function nmOf(ci, shadow) { return (shadow ? 'ظل ' : '') + CHARS[ci].name; }
 function storyOpp(ch) { const S = G.story, r = CH_ROLE[ch]; return r === 'nokh' ? NOKH : r === 'rais' ? RAIS : r === 'rais2' ? RAIS2 : r === 'shadow' ? S.pc : S.opps[CH_REG[ch]]; }
-function storyStart(pc) {
-  const pool = []; for (let i = 0; i < NCH; i++) if (i !== pc) pool.push(i);
-  for (let i = pool.length - 1; i > 0; i--) { const j = (RR() * (i + 1)) | 0; [pool[i], pool[j]] = [pool[j], pool[i]]; }
-  G.story = { pc, opps: pool.slice(0, 4), ch: 0, step: 'card', t: 0, lines: [], li: 0, ct: 0, phase: 'pre', final: false, sel: 0 };
+function storyMapOpen() { // story entry: pick the chapter first, then the hero
+  const order = []; for (let i = 0; i < NCH; i++) order.push(i);
+  for (let i = order.length - 1; i > 0; i--) { const j = (RR() * (i + 1)) | 0; [order[i], order[j]] = [order[j], order[i]]; }
+  G.storyMap = null; G.mode = 'cpu';
+  G.story = { pc: null, order, opps: order.slice(0, 4), ch: 0, step: 'select', t: 0, lines: [], li: 0, ct: 0, phase: 'pre', final: false, sel: 0 };
   storySelect();
+}
+function storyStart(pc) {
+  const M = G.storyMap; G.storyMap = null;
+  let opps, ch = 0;
+  if (M && M.order) { opps = M.order.slice(0, 4); const k = opps.indexOf(pc); if (k >= 0) opps[k] = M.order[4]; ch = M.sel || 0; }
+  else { const pool = []; for (let i = 0; i < NCH; i++) if (i !== pc) pool.push(i); for (let i = pool.length - 1; i > 0; i--) { const j = (RR() * (i + 1)) | 0; [pool[i], pool[j]] = [pool[j], pool[i]]; } opps = pool.slice(0, 4); }
+  G.story = { pc, opps, ch, step: 'card', t: 0, lines: [], li: 0, ct: 0, phase: 'pre', final: false, sel: ch };
+  if (M) storyChapter(); else storySelect();
 }
 function storyScript(ch, phase) {
   const S = G.story, role = CH_ROLE[ch], P = nmOf(S.pc), oc = storyOpp(ch), O = nmOf(oc, role === 'shadow'), ol = ((PERSONA[oc] && PERSONA[oc].intro[0]) || '').replace(/[!.؟?…]+$/, '');
@@ -3960,7 +3969,7 @@ function updStory() {
   if (S.step === 'select') {
     const mx = storyMax(), tp = G.tap || window.__mtap; window.__mtap = null;
     const go = n => { n = clamp(n, 0, NCHAP - 1); if (n === S.sel) return; if (n > mx) { SFX.move(); S.lockT = 20; return; } S.sel = n; G.stageId = CH_STAGE[n]; SFX.move(); };
-    const start = () => { SFX.ok(); S.ch = S.sel; S.phase = 'pre'; S.final = false; storyChapter(); };
+    const start = () => { SFX.ok(); if (S.pc == null) { const keep = S; G.toSelect(); G.storyPick = true; G.storyMap = keep; return; } S.ch = S.sel; S.phase = 'pre'; S.final = false; storyChapter(); };
     if (S.t < 8) return;
     if (tp) {
       if (tp[0] < 200 && tp[1] < 90) { SFX.move(); G.story = null; G.toTitle(); return; }
@@ -4000,7 +4009,7 @@ function drawStorySelect(S) {
   const mx = storyMax(), a = Math.min(1, S.t / 15);
   ctx.save(); ctx.globalAlpha = a;
   txt('اختر المرحلة', VW / 2, 80, { size: 64, weight: 900, color: '#fff', glow: '#ff1030', glowBlur: 30 });
-  txt('اختار وين تبدي القصة', VW / 2, 140, { size: 24, weight: 800, color: '#ffd34d' });
+  txt(S.pc == null ? 'اختار المرحلة… وبعدها تختار بطلك' : 'اختار وين تكمل القصة', VW / 2, 140, { size: 24, weight: 800, color: '#ffd34d' });
   ctx.fillStyle = 'rgba(0,0,0,0.5)'; rrect(16, 16, 170, 60, 14); ctx.fill();
   txt('→ رجوع', 101, 47, { size: 24, weight: 800, color: '#fff' });
   for (let i = 0; i < NCHAP; i++) {
@@ -4076,7 +4085,7 @@ function drawStory() {
 // ================= SCENES =================
 const G = {
   scene: 'boot', frame: 0, mode: '2p', menuIdx: 0, debug: false, fight: null, sel: null, vs: null, res: null, t: 0,
-  toTitle() { this.scene = 'title'; this.t = 0; this.fight = null; this.story = null; this.storyPick = false; if (AC) Music.intensity = 0; },
+  toTitle() { this.scene = 'title'; this.t = 0; this.fight = null; this.story = null; this.storyPick = false; this.storyMap = null; if (AC) Music.intensity = 0; },
   toSelect() {
     this.story = null; this.storyPick = false;
     const prev = this.sel ? this.sel.cur.slice() : [0, 1];
@@ -4087,7 +4096,7 @@ const G = {
   toFight() { this.scene = 'fight'; this.t = 0; this.fight = new Fight(this.sel.cur[0], this.sel.cur[1], this.mode); if (this.mode === 'online') netFightInit(this.fight); if (this.story) storySetupFight(this.fight); },
   toResult(w, fight) { if (this.story) { storyResult(w); return; } this.scene = 'result'; this.t = 0; this.res = { w, ci: fight.cis[w], wins: fight.wins.slice() }; if (AC) Music.intensity = 0; say(`${w === 0 ? 'Player one' : (this.mode === 'cpu' ? 'Computer' : 'Player two')} wins`); },
 };
-window.__storyAPI = { storyAdvance, storyStart, storyFight }; window.__VOX = VOX; window.__NET = NET; window.__netHost = () => netHost(); window.__netJoin = c => netJoin(c); window.__netHash = () => G.fight ? netHash(G.fight) : 0;
+window.__storyAPI = { storyAdvance, storyStart, storyFight, storyMapOpen }; window.__VOX = VOX; window.__NET = NET; window.__netHost = () => netHost(); window.__netJoin = c => netJoin(c); window.__netHash = () => G.fight ? netHash(G.fight) : 0;
 window.__G = G; window.__MV = MV; window.__SK = SKILL_IDS; window.__COMBOS = COMBOS; window.__CPU = CPUPad; window.__txt = txt; window.__IMG = IMG; window.__FX = FX; window.__spark = spark;
 
 const SET_ROWS = [
@@ -4151,7 +4160,7 @@ function updTitle() {
   if (up) { G.menuIdx = (G.menuIdx + 4) % 5; SFX.move(); }
   if (dn) { G.menuIdx = (G.menuIdx + 1) % 5; SFX.move(); }
   if (G.tap) { const i = Math.round((G.tap[1] - 418) / 46); if (i >= 0 && i < 5 && Math.abs(G.tap[0] - VW / 2) < 300) G.menuIdx = i; }
-  if (pads[0].p.ok || pads[1].p.ok || anyP('Click')) { if (G.t > 10) { SFX.ok(); if (G.menuIdx === 4) { G.settingsOpen = true; setIdx = 0; } else if (G.menuIdx === 3) { G.scene = 'online'; G.t = 0; NET.ui = 'menu'; NET.idx = 0; } else if (G.menuIdx === 2) { G.mode = 'cpu'; G.toSelect(); G.storyPick = true; } else { G.mode = G.menuIdx === 0 ? '2p' : 'cpu'; G.toSelect(); } } }
+  if (pads[0].p.ok || pads[1].p.ok || anyP('Click')) { if (G.t > 10) { SFX.ok(); if (G.menuIdx === 4) { G.settingsOpen = true; setIdx = 0; } else if (G.menuIdx === 3) { G.scene = 'online'; G.t = 0; NET.ui = 'menu'; NET.idx = 0; } else if (G.menuIdx === 2) { storyMapOpen(); } else { G.mode = G.menuIdx === 0 ? '2p' : 'cpu'; G.toSelect(); } } }
 }
 function drawTitle() {
   drawStage({ x: Math.sin(G.frame * 0.003) * 120, z: 1, yaw: Math.sin(G.frame * 0.004) * 0.5 }, G.frame);
@@ -4209,7 +4218,7 @@ function updSelect() {
     if (pd.p.up || pd.p.down) { S.cur[s] = (S.cur[s] + 7) % NCH; SFX.move(); }
     if (pd.p.ok && S.t > 8) { S.done[s] = true; SFX.ok(); S.flash = [s, 14]; }
     else if (pd.p.back && cpu && s === 1) { S.done[0] = false; SFX.move(); }
-    else if (pd.p.back && (!cpu || s === 0) && S.t > 8) { if (online) { netClose(); G.scene = 'online'; G.t = 0; return; } G.toTitle(); return; }
+    else if (pd.p.back && (!cpu || s === 0) && S.t > 8) { if (G.storyPick && G.storyMap) { SFX.move(); G.story = G.storyMap; G.storyMap = null; G.storyPick = false; storySelect(); return; } if (online) { netClose(); G.scene = 'online'; G.t = 0; return; } G.toTitle(); return; }
   }
   if (G.tap && S.t > 8) {
     const tw = 80, gap = 8, x0 = VW / 2 - (7 * tw + 6 * gap) / 2, ty0 = 185, rowH = tw + 40;
