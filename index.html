@@ -846,6 +846,41 @@ function spawnHandball(f) {
   const w = f.toWorld(f.J.fH); SFX.throw();
   spawnProj({ kind: 'hball', owner: f, x: w[0], y: w[1], vx: f.facing * 20, vy: -2.5, g: 0.12, r: 19, life: 90, vr: f.facing * 0.35, m: { dmg: 14, lvl: 'mid', hs: 24, bs: 14, push: 34, stop: 8, p: 1.4 } });
 }
+// ---- second skill (⬇ + ★): الوحش throws a frying pan, الزعيم throws a computer mouse
+const SK2_CD = 240;
+const SKILL2 = { 0: 'sk2_mouse', 1: 'sk2_pan' };
+const SKILL2_NAMES = { 0: 'رمية الماوس', 1: 'رمية المقلاة' };
+const SKILL2_LINE = { 0: 'خذ الماوس!', 1: 'خذ المقلاة!' };
+function spawnPan(f) {
+  const w = f.toWorld(f.J.fH); SFX.throw(); SFX.whoosh(1);
+  spawnProj({ kind: 'pan', owner: f, x: w[0], y: w[1] - 10, vx: f.facing * 16, vy: -6.5, g: 0.32, r: 30, life: 100, vr: f.facing * 0.42, m: { dmg: 16, lvl: 'mid', hs: 26, bs: 16, push: 34, stop: 10, p: 1.6, kdCH: 1 } });
+}
+function spawnMouse(f) {
+  const w = f.toWorld(f.J.fH); SFX.throw(); SFX.zap();
+  spawnProj({ kind: 'mouse', owner: f, x: w[0], y: w[1] - 6, vx: f.facing * 25, vy: -1, g: 0.05, r: 20, life: 70, vr: f.facing * 0.18, m: { dmg: 11, lvl: 'high', hs: 20, bs: 12, push: 22, stop: 7, p: 1.2 } });
+}
+function drawPan(x, y, rot, r) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.fillStyle = '#2a2622'; rrect(r * 0.75, -r * 0.13, r * 1.35, r * 0.26, r * 0.1); ctx.fill(); ctx.fillStyle = '#6b3d1f'; rrect(r * 1.35, -r * 0.16, r * 0.8, r * 0.32, r * 0.12); ctx.fill();
+  const g = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r); g.addColorStop(0, '#5a5550'); g.addColorStop(0.7, '#2b2724'); g.addColorStop(1, '#151311');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.strokeStyle = '#7a756e'; ctx.lineWidth = r * 0.12; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.beginPath(); ctx.ellipse(-r * 0.35, -r * 0.35, r * 0.35, r * 0.15, -0.7, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function drawMouse(x, y, rot, r, vx, t) {
+  ctx.save(); ctx.strokeStyle = '#d8dbe4'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); const d = -Math.sign(vx || 1);
+  ctx.moveTo(x, y); for (let i = 1; i <= 12; i++) ctx.lineTo(x + d * i * 13, y + Math.sin(t * 0.5 + i * 0.8) * (4 + i * 1.4)); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  const g = ctx.createLinearGradient(-r, -r, r, r); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#a9aebb');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, r * 0.7, r, 0, 0, 7); ctx.fill(); ctx.strokeStyle = '#5b6070'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-r * 0.7, -r * 0.15); ctx.lineTo(r * 0.7, -r * 0.15); ctx.moveTo(0, -r); ctx.lineTo(0, -r * 0.15); ctx.stroke();
+  ctx.fillStyle = '#e01b30'; rrect(-r * 0.1, -r * 0.75, r * 0.2, r * 0.38, r * 0.08); ctx.fill();
+  ctx.restore();
+}
+MV.sk2_pan = { name: 'pan', skill: 1, sk2: 1, limb: null, lvl: 'mid', st: 15, ac: 1, rc: 20, p: 1.5, spawnAt: 15, spawn: spawnPan,
+  kf: [[0, {}], [9, { ua: 210, fa: 50, lean: -18, bua: 30, bfa: 120, th: 30, sh: 20, bth: -26, bsh: 10 }], [15, { ua: 80, fa: 6, lean: 26, dx: 14, th: 44, bth: -34 }], [21, {}], [36, null]] };
+MV.sk2_mouse = { name: 'mouse', skill: 1, sk2: 1, limb: null, lvl: 'high', st: 11, ac: 1, rc: 17, p: 1.2, spawnAt: 11, spawn: spawnMouse,
+  kf: [[0, {}], [6, { ua: 150, fa: 120, lean: -10, bua: 30, bfa: 120 }], [11, { ua: 96, fa: 4, lean: 18, dx: 10, th: 34, bth: -28 }], [16, {}], [29, null]] };
 function spawnRock(f) {
   const [x, y] = handsMid(f); SFX.throw();
   const op = G.fight.f[1 - f.slot], vx = 15, g = 0.5, T = Math.max(80, Math.abs(op.x - x)) / vx;
@@ -1257,7 +1292,7 @@ class Fighter {
     this.hp = window.__lowHP ? Math.round(this.maxHp * 0.28) : this.maxHp; this.trailHp = this.hp; this.trailT = 0;
     this.state = 'intro'; this.t = 0; this.mv = null; this.mt = 0; this.stun = 0;
     this.pose = Object.assign({}, GUARD); this.flash = 0; this.combo = 0; this.comboDmg = 0; this.comboT = 0;
-    this.rageUsed = false; this.invuln = 0; this.juggle = 0; this.ko = false; this.walkPh = 0; this.dgCD = 0; this.bubble = null;
+    this.rageUsed = false; this.invuln = 0; this.juggle = 0; this.ko = false; this.walkPh = 0; this.dgCD = 0; this.sk2CD = 0; this.bubble = null;
     this.lastFwd = -99; this.lastBack = -99; this.clock = 0; this.buf = null; this.bufT = 0; this.eatN = 0; this.eatPend = false;
     this.connected = false; this.hitThis = false; this.lowHit = false; this.blockLow = false;
     this.airUsed = false; this.jumpDir = 0; this.J = null; this.hipY = 0; this.hurt = null; this.shakeT = 0; this.vic = null;
@@ -1308,6 +1343,10 @@ class Fighter {
     const P = PERSONA[this.ci] || {}; const line = text || (P[kind] && pickLine(P[kind])); if (!line) return;
     this.bubble = { text: line, t: 0, dur: kind === 'win' ? 160 : 95 }; charSpeak(this.ci, kind, line);
   }
+  useSkill2() {
+    this.talk('skill', SKILL2_LINE[this.ci]); this.spBuf = 0; this.buf = null; this.sk2CD = SK2_CD; this.startMove(SKILL2[this.ci]); this.vx = 0;
+    SFX.skill(); G.fight.skBanner = { slot: this.slot, text: SKILL2_NAMES[this.ci], t: 0, small: 1 };
+  }
   useSkill() {
     this.talk('skill');
     this.sk = 0; this.spBuf = 0; this.buf = null; this.cartGone = false; this.startMove(SKILL_IDS[this.ci]); this.vx = 0;
@@ -1337,6 +1376,7 @@ class Fighter {
     if (this.flash > 0) this.flash--;
     if (this.invuln > 0) this.invuln--;
     if (this.dgCD > 0) this.dgCD--;
+    if (this.sk2CD > 0 && G.fight && G.fight.phase === 'fight') this.sk2CD--;
     if (this.bubble && ++this.bubble.t > this.bubble.dur) this.bubble = null;
     // L2+R2 / touch button = القاضية (cancels a dodge or R2 combo started a few frames earlier)
     if (this.in.h.ra && this.rage && G.fight && G.fight.phase === 'fight' && (NEUTRAL.has(this.state) || ['block', 'land', 'dash', 'side'].includes(this.state) || (this.state === 'dodge' && this.t <= 6) || (this.state === 'attack' && this.mv && this.mv.combo && this.mt <= 4))) {
@@ -1391,7 +1431,8 @@ class Fighter {
     if (this.eatPend && G.fight && G.fight.phase === 'fight' && this.state !== 'air' && !this.jumping) { this.eatPend = false; this.eatN = 0; this.startMove('ab_eat'); return; }
     if (p.fwd) { if (this.clock - this.lastFwd < 13) { this.setState('dash'); this.dashBack = false; this.vx = this.facing * 11 * this.C.spd; dust(this.x, 5, -this.facing); this.lastFwd = -99; SFX.whoosh(0); return; } this.lastFwd = this.clock; }
     if (p.back) { if (this.clock - this.lastBack < 15) { this.setState('dash'); this.dashBack = true; this.vx = -this.facing * 19 * this.C.spd; dust(this.x, 8, this.facing); this.lastBack = -99; SFX.whoosh(1); return; } this.lastBack = this.clock; }
-    if (this.spBuf > 0 && this.sk >= SKMAX) { this.useSkill(); return; }
+    if (this.spBuf > 0 && h.down && SKILL2[this.ci] && this.sk2CD <= 0 && G.fight && G.fight.phase === 'fight') { this.useSkill2(); return; }
+    if (this.spBuf > 0 && this.sk >= SKMAX && !(h.down && SKILL2[this.ci])) { this.useSkill(); return; }
     if (this.cbBuf) { const k = this.cbBuf.k; this.cbBuf = null; if (this.tryCombo(k)) return; }
     if (this.buf && this.tryCombo()) return;
     if (this.buf) {
@@ -1599,6 +1640,7 @@ class CPUPad {
     if (op.state === 'juggle' && dist < 190) { if (Math.random() < 0.5) press('b1'); else press('b2'); return; }
     this.cd--;
     if (me.rage && dist < 230 && Math.random() < 0.03) { press('b1', 'b2'); return; }
+    if (SKILL2[me.ci] && me.sk2CD <= 0 && dist > 240 && dist < 760 && Math.random() < 0.025) { h.down = true; press('sp'); return; }
     if (me.sk >= SKMAX && Math.random() < 0.035) {
       const proj = [3, 4, 5].includes(me.ci), close = me.ci === 1;
       if ((proj && dist > 230) || (close && dist < 190) || (!proj && !close && dist > 150 && dist < 560)) { press('sp'); return; }
@@ -2000,7 +2042,7 @@ function updProj(F) {
     if (Math.hypot(p.x - cx, p.y - cy) <= p.r && p.bob && d.ci === 4) { p.dead = true; spark(p.x, p.y, 'block', d.facing); SFX.block(); popText('صدّها! 🧤', p.x, p.y - 50, '#7fd6ff', 34); d.flash = 6; continue; }
     if (Math.hypot(p.x - cx, p.y - cy) <= p.r) {
       F.hitResolve(p.owner, d, p.m, { x: p.x, y: p.y, proj: true }, Math.sign(p.vx) || p.owner.facing);
-      p.dead = true; if (p.kind === 'rock') crumble(p); if (p.kind === 'egg') eggSplat(p); if (p.kind === 'chicken') featherPuff(p.x, p.y, 14); if (p.kind === 'bike') bikeCrash(p);
+      p.dead = true; if (p.kind === 'pan') { SFX.block(); SFX.hit(1.6); popText('طاخ! 🍳', p.x, p.y - 60, '#ffd34d', 46); finBurst(p.x, p.y, 16, ['#ffffff', '#ffd34d', '#9aa3b5'], 10, 5); G.fight && G.fight.shake(12); } if (p.kind === 'mouse') { SFX.zap(); popText('كليك! 🖱️', p.x, p.y - 50, '#3cf2ff', 40); finBurst(p.x, p.y, 10, ['#ffffff', '#3cf2ff'], 8, 4); } if (p.kind === 'rock') crumble(p); if (p.kind === 'egg') eggSplat(p); if (p.kind === 'chicken') featherPuff(p.x, p.y, 14); if (p.kind === 'bike') bikeCrash(p);
     }
   }
   for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
@@ -2226,6 +2268,8 @@ function drawProj(p) {
   else if (p.kind === 'cartwreck') drawCart(p.x, p.y, p.dir, p.rot * p.dir, Math.min(1, p.life / 25));
   else if (p.kind === 'cartgone') drawCart(p.x, p.y, p.dir, 0, Math.min(1, p.life / 20));
   else if (p.kind === 'egg') drawEgg(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'pan') drawPan(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'mouse') drawMouse(p.x, p.y, p.rot, p.r, p.vx, p.t);
   else if (p.kind === 'pen') drawPen(p.x, p.y, Math.atan2(p.vy, p.vx), p.r, p.col);
   else if (p.kind === 'book') drawBook(p.x, p.y, p.rot, p.r, p.col, p.t, p.heavy);
   else if (p.kind === 'laser') drawLaser(p);
@@ -2242,6 +2286,8 @@ function drawHeld(f) {
   if (m.ruler && f.mt < m.total - 4) drawRuler(f);
   if (m.eat) drawEatProps(f);
   if (m.id === 'sk_cards' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); for (let i = 0; i < 3; i++) drawCard(w[0] + f.facing * (i - 1) * 6, w[1] - 8, f.facing * (i - 1) * 0.35, 1, '♠♥♦'[i], 0.8); }
+  if (m.id === 'sk2_pan' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawPan(w[0], w[1] - 10, -f.facing * 1.2, 30); }
+  if (m.id === 'sk2_mouse' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawMouse(w[0], w[1] - 6, 0, 20, -f.facing, f.mt); }
   if (m.id === 'sk_hball' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawHandball(w[0] + f.facing * 6, w[1] - 6, 0); }
   if (m.id === 'sk_rock' && f.mt >= 12 && f.mt < m.spawnAt) { const [x, y] = handsMid(f); const lift = f.mt < 18 ? 0 : 1; drawRock(x, y - (lift ? ROCK_R * 0.85 : ROCK_R * 0.5), f.mt * 0.02, ROCK_R); }
   if (m.cart && f.mt >= 2 && !f.cartGone && f.mt < m.st + m.ac) { const [hx] = cartHandle(f); const a = Math.min(1, (f.mt - 1) / 4); drawCart(hx, 0, f.facing, 0, a); }
@@ -3034,7 +3080,9 @@ class Fight {
         ctx.fillStyle = cd > 0 ? 'rgba(255,255,255,0.35)' : '#7dffb0'; const ww = sw2 * 0.6 * (1 - cd); if (!rev) ctx.fillRect(sx0, by2, ww, 5); else ctx.fillRect(sx0 + sw2 * 0.4 + sw2 * 0.6 - ww, by2, ww, 5);
         txt(cd > 0 ? `حركات الزرين ${(f.cbCD / 60).toFixed(1)}` : 'حركات الزرين ✓', rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by2 + 3, { size: 12, weight: 800, color: cd > 0 ? 'rgba(255,255,255,0.6)' : '#7dffb0', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 });
         const dc = f.dgCD / 120, by3 = by2 + 11; ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx0 - 2, by3 - 1, sw2 * 0.6 + 4, 7); ctx.fillStyle = dc > 0 ? 'rgba(255,255,255,0.35)' : '#7fd6ff'; const w3 = sw2 * 0.6 * (1 - dc); if (!rev) ctx.fillRect(sx0, by3, w3, 5); else ctx.fillRect(sx0 + sw2 - w3, by3, w3, 5);
-        txt(dc > 0 ? `تفادي ${(f.dgCD / 60).toFixed(1)}` : 'تفادي ✓', rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by3 + 3, { size: 12, weight: 800, color: dc > 0 ? 'rgba(255,255,255,0.6)' : '#7fd6ff', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 }); }
+        txt(dc > 0 ? `تفادي ${(f.dgCD / 60).toFixed(1)}` : 'تفادي ✓', rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by3 + 3, { size: 12, weight: 800, color: dc > 0 ? 'rgba(255,255,255,0.6)' : '#7fd6ff', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 });
+        if (SKILL2[f.ci]) { const c2 = f.sk2CD / SK2_CD, by4 = by3 + 11; ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx0 - 2, by4 - 1, sw2 * 0.6 + 4, 7); ctx.fillStyle = c2 > 0 ? 'rgba(255,255,255,0.35)' : '#ffb04d'; const w4 = sw2 * 0.6 * (1 - c2); if (!rev) ctx.fillRect(sx0, by4, w4, 5); else ctx.fillRect(sx0 + sw2 - w4, by4, w4, 5);
+          txt(c2 > 0 ? `${SKILL2_NAMES[f.ci]} ${(f.sk2CD / 60).toFixed(1)}` : `${SKILL2_NAMES[f.ci]} ✓ (⬇+★)`, rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by4 + 3, { size: 12, weight: 800, color: c2 > 0 ? 'rgba(255,255,255,0.6)' : '#ffb04d', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 }); } }
       txt(label, rev ? sx0 - 10 : sx0 + sw2 + 10, sy + 4, { size: 15, weight: 800, color: full ? '#ffd34d' : 'rgba(255,255,255,0.75)', align: rev ? 'right' : 'left', stroke: '#000', sw: 3 });
     }
     if (f.rage) txt('القاضية جاهزة 💥', rev ? x + 30 : x + w - 30, y + h + 20, { size: 20, weight: 900, color: '#ff2a3a', align: rev ? 'left' : 'right', stroke: '#000', sw: 4, glow: '#ff0020' });
@@ -3135,7 +3183,8 @@ function drawMoveList(F) {
     const y = 205 + 6 * 66;
     txt('L3/R3', cx + 205, y + 26, { size: 18, font: FE, weight: 700, color: '#7dffb0', rtl: false });
     txt(s === 0 ? 'E' : 'U', cx + 205, y - 6, { size: 24, font: FE, weight: 700, color: '#7dffb0', rtl: false });
-    txt('المهارة: ' + SKILL_NAMES[f.ci] + ' (كل 10 ثواني)', cx + 70, y, { size: 22, weight: 800, color: '#7dffb0', align: 'right' });
+    txt('المهارة: ' + SKILL_NAMES[f.ci] + ' (كل 10 ثواني)', cx + 70, y - (SKILL2[f.ci] ? 12 : 0), { size: SKILL2[f.ci] ? 19 : 22, weight: 800, color: '#7dffb0', align: 'right' });
+    if (SKILL2[f.ci]) txt('⬇ + ★: ' + SKILL2_NAMES[f.ci] + ' (كل 4 ثواني)', cx + 70, y + 14, { size: 18, weight: 800, color: '#ffb04d', align: 'right' });
     txt(`تفادي: ${s === 0 ? 'Q' : 'Y'} أو L2 (كل ثانيتين)`, cx, y + 40, { size: 17, weight: 700, color: '#7fd6ff' });
     txt('💥 القاضية: ' + (FIN[f.ci] || FIN[0]).name + '  ·  L2+R2 (أو □+△) لما دمك يقل', cx, y + 64, { size: 17, weight: 700, color: '#ff8080' });
   });
