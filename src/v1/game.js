@@ -1052,7 +1052,7 @@ function bossPick(ci, d) {
   const r = Math.random();
   if (ci === NOKH) return d > 420 ? (r < 0.6 ? 'sk_wave' : 'sk_ship') : d > 200 ? (r < 0.35 ? 'sk_ship' : r < 0.7 ? 'sk_boat' : 'sk_wave') : (r < 0.5 ? 'sk_boat' : null);
   if (ci === RAIS) return d < 300 ? (r < 0.75 ? 'sk_ring' : 'sk_stomp') : (r < 0.6 ? 'sk_stomp' : 'sk_ring');
-  if (ci === RAIS2) return d > 320 ? (r < 0.35 ? 'sk_eyes' : r < 0.75 ? 'sk_redshot' : 'sk_dive') : (r < 0.4 ? 'sk_ring' : r < 0.7 ? 'sk_dive' : 'sk_redshot');
+  if (ci === RAIS2) return d > 320 ? (r < 0.45 ? 'sk_eyes' : r < 0.8 ? 'sk_redshot' : 'sk_dive') : (r < 0.3 ? 'sk_eyes' : r < 0.55 ? 'sk_ring' : r < 0.8 ? 'sk_dive' : 'sk_redshot');
   return null;
 }
 function bossTick(f, opp) {
@@ -3737,8 +3737,8 @@ function storyOpp(ch) { const S = G.story, r = CH_ROLE[ch]; return r === 'nokh' 
 function storyStart(pc) {
   const pool = []; for (let i = 0; i < NCH; i++) if (i !== pc) pool.push(i);
   for (let i = pool.length - 1; i > 0; i--) { const j = (RR() * (i + 1)) | 0; [pool[i], pool[j]] = [pool[j], pool[i]]; }
-  G.story = { pc, opps: pool.slice(0, 4), ch: 0, step: 'card', t: 0, lines: [], li: 0, ct: 0, phase: 'pre', final: false, sel: storyMax() };
-  if (storyMax() > 0) storySelect(); else storyChapter();
+  G.story = { pc, opps: pool.slice(0, 4), ch: 0, step: 'card', t: 0, lines: [], li: 0, ct: 0, phase: 'pre', final: false, sel: 0 };
+  storySelect();
 }
 function storyScript(ch, phase) {
   const S = G.story, role = CH_ROLE[ch], P = nmOf(S.pc), oc = storyOpp(ch), O = nmOf(oc, role === 'shadow'), ol = ((PERSONA[oc] && PERSONA[oc].intro[0]) || '').replace(/[!.؟?…]+$/, '');
@@ -3759,8 +3759,10 @@ function storyScript(ch, phase) {
   if (role === 'rais') return [['O', 'مستحيل… أنا… الرئيس… أخسر؟!']];
   return [['N', 'الجناحين تكسّروا… والهالة الحمرا انطفت.'], ['O', 'الكأس… لك. أنت تستاهله.'], ['N', 'والكأس رجع للشلة! 🏆'], ['P', CHARS[S.pc].quote], ['N', 'والشلة رجعت تضحك… لين البطولة الجاية.'], ['N', 'النهاية 🎉 — شكراً إنك لعبت!']];
 }
-function storyMax() { try { return clamp(+localStorage.getItem('shilla_story_max') || 0, 0, NCHAP - 1); } catch (e) { return 0; } }
-function storySave(ch) { try { if (ch > storyMax()) localStorage.setItem('shilla_story_max', ch); } catch (e) { } }
+const STORY_OPEN = NCHAP - 2; // chapters 1–6 open from the start; the transformed الرئيس unlocks after beating him
+function storySaved() { try { return clamp(+localStorage.getItem('shilla_story_max') || 0, 0, NCHAP - 1); } catch (e) { return 0; } }
+function storyMax() { return Math.max(STORY_OPEN, storySaved()); }
+function storySave(ch) { try { if (ch > storySaved()) localStorage.setItem('shilla_story_max', ch); } catch (e) { } }
 function storySelect() { const S = G.story; S.step = 'select'; S.t = 0; S.sel = clamp(S.sel == null ? S.ch : S.sel, 0, storyMax()); G.scene = 'story'; G.stageId = CH_STAGE[S.sel]; try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } }
 const CH_PLACE = ['الحلبة', 'حوش البيت', 'الميناء', 'الملعب', 'السطح', 'القصر', 'القصر المحترق'];
 const SEL_W = 160, SEL_H = 330, SEL_GAP = 14, SEL_Y = 190;
@@ -3843,7 +3845,7 @@ function drawStorySelect(S) {
   const mx = storyMax(), a = Math.min(1, S.t / 15);
   ctx.save(); ctx.globalAlpha = a;
   txt('اختر المرحلة', VW / 2, 80, { size: 64, weight: 900, color: '#fff', glow: '#ff1030', glowBlur: 30 });
-  txt('تقدر تلعب أي مرحلة وصلت لها', VW / 2, 140, { size: 24, weight: 800, color: '#ffd34d' });
+  txt('اختار وين تبدي القصة', VW / 2, 140, { size: 24, weight: 800, color: '#ffd34d' });
   ctx.fillStyle = 'rgba(0,0,0,0.5)'; rrect(16, 16, 170, 60, 14); ctx.fill();
   txt('→ رجوع', 101, 47, { size: 24, weight: 800, color: '#fff' });
   for (let i = 0; i < NCHAP; i++) {
@@ -3867,7 +3869,7 @@ function drawStorySelect(S) {
     if (role !== 'reg') txt(role === 'nokh' ? 'زعيم' : 'الزعيم الأخير', x + SEL_W / 2, y + 296, { size: 17, weight: 900, color: open ? col : 'rgba(255,255,255,0.25)' });
     ctx.restore();
   }
-  if (S.lockT > 0) { S.lockT--; txt('🔒 لازم تغلب المرحلة اللي قبلها أول', VW / 2, SEL_Y + SEL_H + 34, { size: 24, weight: 800, color: '#ff6b6b' }); }
+  if (S.lockT > 0) { S.lockT--; txt('🔒 اغلب الرئيس أول… وبعدها تنفتح', VW / 2, SEL_Y + SEL_H + 34, { size: 24, weight: 800, color: '#ff6b6b' }); }
   const bx = VW / 2 - 200, by = SEL_Y + SEL_H + 58, pulse = 0.85 + 0.15 * Math.sin(G.frame * 0.12);
   ctx.fillStyle = `rgba(255,42,58,${pulse})`; rrect(bx, by, 400, 70, 18); ctx.fill();
   txt('العب ' + CH_NAMES[S.sel], VW / 2, by + 36, { size: 32, weight: 900, color: '#fff' });
