@@ -995,9 +995,186 @@ const COMBOS = [
     '14': ['الطلقة الواطية', projMove(12, 18, { ...CROUCH, ua: 70, fa: 4, bua: 66, bfa: 30, lean: 10 }, { ...CROUCH, ua: 70, fa: 4, bua: 66, bfa: 30, lean: 10 }, f => blasterShot(f, { dmg: 9, lvl: 'low', vy: 0, sp: 26, kd: 1 }), { gun: 1, base: 'CROUCH' })],
     '34': ['ضربة الأخمص', dashMove({ st: 8, ac: 8, rc: 18, sp: 12, limb: 'fH', r: 50, dmg: 12, kd: 1, gun: 1, pose: { ...AIM, lean: 24, dx: 14 } })] },
 ];
+// ================= STORY BOSSES =================
+// 14 النوخذة — sea captain (ship, speedboat, wave) · 15 الرئيس — the mastermind · 16 الرئيس متحوّل — wings, red aura, eye lasers, red blast
+const NOKH = 14, RAIS = 15, RAIS2 = 16;
+function spawnWave(f) { SFX.whoosh(1); SFX.rock(); if (G.fight) G.fight.shake(10);
+  spawnProj({ kind: 'seawave', owner: f, x: f.x + f.facing * 120, y: -100, vx: f.facing * 10.5, vy: 0, g: 0, r: 100, life: 120, big: 1, m: { dmg: 17, lvl: 'mid', hs: 24, bs: 16, push: 70, stop: 10, p: 1.5, kdCH: 1 } }); }
+function spawnRedShot(f) { const w = f.toWorld(f.J.fH); SFX.zap(); SFX.throw();
+  spawnProj({ kind: 'redball', owner: f, x: w[0] + f.facing * 30, y: w[1], vx: f.facing * 18, vy: 0, g: 0, r: 34, life: 90, big: 1, m: { dmg: 16, lvl: 'mid', hs: 26, bs: 16, push: 46, stop: 10, p: 1.5, kd: 1 } }); }
+function spawnShock(f) { SFX.thud(); SFX.rock(); if (G.fight) G.fight.shake(16); dust(f.x, 30);
+  for (const d of [1, -1]) spawnProj({ kind: 'shock', owner: f, x: f.x + d * 70, y: -34, vx: d * 12, vy: 0, g: 0, r: 34, life: 50, ground: true, m: { dmg: 11, lvl: 'low', hs: 22, bs: 12, push: 26, stop: 8, p: 1.2 } }); }
+function rideStep(f) {
+  const m = f.mv, d = f.facing; if (f.mt < m.st - 2 || f.mt > m.st + m.ac) return;
+  if (f.mt % 2 === 0) for (let i = 0; i < 3; i++) FX.push({ t: 'p', x: f.x - d * (m.ride === 'ship' ? 210 : 150) + rnd(-20, 20), y: -rnd(0, 30), vx: -d * rnd(2, 7), vy: -rnd(3, 9), life: 26, max: 26, c: i % 2 ? '#ffffff' : '#7fd6ff', sz: rnd(3, 7) });
+  if (m.ride === 'ship' && f.mt % 10 === 0) { G.fight && G.fight.shake(4); SFX.whoosh(0); }
+  if (m.ride === 'boat' && f.mt % 6 === 0) SFX.whoosh(1);
+}
+function ringStep(f) { if (f.mt === f.mv.st) { const w = f.toWorld(f.J.fH); finRing(w[0], w[1], '#ff2a3a', 120, 12); finBurst(w[0], w[1], 12, ['#ff2a3a', '#ffd34d'], 7, 5); SFX.zap(); } }
+function eyePos(f) { const J = f.J; return f.toWorld([J.hd[0] + J.hr * 0.55, J.hd[1] - J.hr * 0.1]); }
+function eyesStep(f) {
+  const m = f.mv; if (f.mt === 2) SFX.zap();
+  if (f.mt === m.st) { const o = G.fight.f[1 - f.slot], e = eyePos(f), dx = Math.max(160, Math.abs(o.x - e[0])); f.eyeSlope = clamp(((o.hurt.y0 + 46) - e[1]) / dx, -0.35, 0.35); SFX.zap(); G.fight.shake(8); }
+  if (f.mt >= m.st && f.mt < m.st + m.ac && f.mt % 3 === 0) { const e = eyePos(f); FX.push({ t: 'p', x: e[0], y: e[1], vx: f.facing * rnd(2, 6), vy: rnd(-3, 3), life: 14, max: 14, c: '#ff3040', sz: rnd(3, 6) }); }
+}
+function eyesHB(f) { if (!f.active()) return null; const e = eyePos(f), L = 1500; return { x: e[0] + f.facing * L, y: e[1] + (f.eyeSlope || 0) * L, x2: e[0], y2: e[1], ar: 14, r: 14 }; }
+function diveStep(f) {
+  if (f.mt === 10) { SFX.whoosh(1); dust(f.x, 20); }
+  if (f.mt === 28) { const o = G.fight.f[1 - f.slot]; f.diveTX = clamp(o.x, -STAGE + 60, STAGE - 60); }
+  if (f.mt > 28 && f.mt <= 46 && f.diveTX !== undefined) f.x += (f.diveTX - f.x) * 0.14;
+  if (f.mt >= 12 && f.mt < 45) f.invuln = Math.max(f.invuln, 2);
+  if (f.mt > 10 && f.mt < 46 && f.mt % 2 === 0) finBurst(f.x + rnd(-60, 60), -rnd(200, 560), 2, ['#1a0b0e', '#ff2030'], 4, 6);
+  if (f.mt === 46) { G.fight.shake(30); SFX.thud(); SFX.rock(); dust(f.x, 40); finRing(f.x, -20, '#ff2030', 320, 22); finBurst(f.x, -40, 40, ['#ff2030', '#1a0b0e', '#ffd34d'], 14, 7); }
+}
+MV.sk_wave = { name: 'wave', skill: 1, limb: null, lvl: 'mid', st: 18, ac: 1, rc: 22, p: 1.5, spawnAt: 18, spawn: spawnWave,
+  kf: [[0, {}], [10, { ua: 200, fa: 30, bua: 196, bfa: 34, lean: -14, th: 20, bth: -16 }], [18, { ua: 95, fa: 4, bua: 90, bfa: 8, lean: 26, dx: 14, th: 44, bth: -34 }], [26, {}], [41, null]] };
+MV.sk_ship = { name: 'ship', skill: 1, limb: null, lvl: 'mid', st: 14, ac: 40, rc: 18, dmg: 20, hs: 0, bs: 16, push: 60, stop: 10, p: 1.7, kd: 1, ride: 'ship', mvx: [[12, 54, 11]], onStep: rideStep,
+  hitboxFn: f => f.active() ? { x: f.x + f.facing * 200, y: -80, r: 80 } : null,
+  kf: [[0, {}], [12, { dy: -80, lean: -4, ua: 160, fa: 20, bua: 40, bfa: 110, th: 10, sh: 10, bth: -8, bsh: 8 }], [54, {}], [66, null]] };
+MV.sk_boat = { name: 'boat', skill: 1, limb: null, lvl: 'mid', st: 8, ac: 30, rc: 16, dmg: 13, hs: 0, bs: 13, push: 30, stop: 8, p: 1.4, launch: 1, ride: 'boat', mvx: [[6, 38, 21]], onStep: rideStep,
+  hitboxFn: f => f.active() ? { x: f.x + f.facing * 150, y: -50, r: 66 } : null,
+  kf: [[0, {}], [7, { dy: -44, lean: 24, ua: 70, fa: 60, bua: 66, bfa: 70, th: 70, sh: 100, bth: 30, bsh: 90 }], [38, {}], [50, null]] };
+MV.sk_ring = { name: 'ring', skill: 1, limb: 'fH', lvl: 'mid', st: 12, ac: 8, rc: 22, dmg: 18, hs: 0, bs: 16, push: 52, stop: 12, p: 1.6, kd: 1, ar: 34, mvx: [[4, 20, 13]], onStep: ringStep,
+  kf: [[0, {}], [8, { ua: 20, fa: 130, lean: -12, dx: -8, fsc: 1.3 }], [12, { ua: 94, fa: 0, lean: 28, dx: 26, th: 46, bth: -40, bsh: 10, fsc: 1.6 }], [20, {}], [32, { ua: 50, fa: 100, lean: 8, fsc: 1 }], [42, null]] };
+MV.sk_stomp = { name: 'stomp', skill: 1, limb: null, lvl: 'low', st: 20, ac: 1, rc: 20, p: 1.3, spawnAt: 20, spawn: spawnShock,
+  kf: [[0, {}], [12, { th: 100, sh: 80, lean: -10, ua: 140, fa: 60, bua: 140, bfa: 60 }], [20, { th: 20, sh: 10, lean: 20, dy: 6, ua: 40, fa: 90, bua: 40, bfa: 90 }], [28, {}], [40, null]] };
+MV.sk_eyes = { name: 'eyes', skill: 1, limb: null, lvl: 'high', st: 26, ac: 34, rc: 22, dmg: 3.5, hs: 12, bs: 6, push: 6, stop: 3, p: 0.8, multi: 6, onStep: eyesStep, hitboxFn: eyesHB,
+  kf: [[0, {}], [20, { lean: -8, ua: 40, fa: 120, bua: 40, bfa: 120 }], [26, { lean: 4 }], [60, {}], [82, null]] };
+MV.sk_redshot = { name: 'redshot', skill: 1, limb: null, lvl: 'mid', st: 16, ac: 1, rc: 20, p: 1.4, spawnAt: 16, spawn: spawnRedShot,
+  kf: [[0, {}], [10, { ua: 60, fa: 120, lean: -10, dx: -6 }], [16, { ua: 92, fa: 0, lean: 18, dx: 12, th: 36, bth: -30 }], [22, {}], [36, null]] };
+MV.sk_dive = { name: 'dive', skill: 1, limb: null, lvl: 'mid', st: 46, ac: 6, rc: 24, dmg: 22, hs: 0, bs: 18, push: 50, stop: 14, p: 1.8, kd: 1, onStep: diveStep,
+  hitboxFn: f => f.active() ? { x: f.x + f.facing * 30, y: -90, r: 125 } : null,
+  kf: [[0, {}], [10, { th: 70, sh: 110, bth: 50, bsh: 110, lean: 20, dy: 14 }], [28, { dy: -470, th: 40, sh: 70, bth: 20, bsh: 60, lean: -6, ua: 160, fa: 20, bua: 160, bfa: 20 }], [40, { dy: -470 }],
+    [46, { dy: 0, th: 60, sh: 90, bth: 40, bsh: 80, lean: 30, ua: 80, fa: 10, bua: 76, bfa: 10 }], [52, {}], [76, null]] };
+const BOSS_NAMES = { sk_wave: 'الموجة', sk_ship: 'السفينة', sk_boat: 'الطراد', sk_ring: 'ضربة الخاتم', sk_stomp: 'هيبة الرئيس', sk_eyes: 'ليزر العيون', sk_redshot: 'الطلقة الحمراء', sk_dive: 'انقضاض الجناح' };
+const BOSS_LINES = { sk_wave: 'البحر معي!', sk_ship: 'ارفعوا الشراع!', sk_boat: 'وخّر من دربي!', sk_ring: 'حس بالخاتم!', sk_stomp: 'انحني للرئيس!', sk_eyes: 'شوف عيوني!', sk_redshot: 'خذ!', sk_dive: 'من فوق!' };
+function bossPick(ci, d) {
+  const r = Math.random();
+  if (ci === NOKH) return d > 420 ? (r < 0.6 ? 'sk_wave' : 'sk_ship') : d > 200 ? (r < 0.35 ? 'sk_ship' : r < 0.7 ? 'sk_boat' : 'sk_wave') : (r < 0.5 ? 'sk_boat' : null);
+  if (ci === RAIS) return d < 300 ? (r < 0.75 ? 'sk_ring' : 'sk_stomp') : (r < 0.6 ? 'sk_stomp' : 'sk_ring');
+  if (ci === RAIS2) return d > 320 ? (r < 0.35 ? 'sk_eyes' : r < 0.75 ? 'sk_redshot' : 'sk_dive') : (r < 0.4 ? 'sk_ring' : r < 0.7 ? 'sk_dive' : 'sk_redshot');
+  return null;
+}
+function bossTick(f, opp) {
+  const F = G.fight; if (!F || F.phase !== 'fight') return;
+  if (f.bossCD > 0) f.bossCD--;
+  if (f.C.awake && f.clock % 3 === 0) FX.push({ t: 'p', x: f.x + rnd(-60, 60), y: -rnd(20, 380), vx: rnd(-0.6, 0.6), vy: -rnd(1.5, 4), life: 30, max: 30, c: f.clock % 2 ? '#ff2030' : '#ff7040', sz: rnd(2, 5) });
+  if (f.bossCD > 0 || !NEUTRAL.has(f.state) || opp.state === 'down' || opp.state === 'rageVic') return;
+  const id = bossPick(f.ci, Math.abs(opp.x - f.x));
+  if (!id) { f.bossCD = 30; return; }
+  f.startMove(id); f.vx = 0; f.buf = null; f.bossCD = (f.ci === RAIS2 ? 130 : f.ci === NOKH ? 170 : 190) + ((Math.random() * 70) | 0);
+  f.talk('skill', BOSS_LINES[id]); F.skBanner = { slot: f.slot, text: BOSS_NAMES[id], t: 0 };
+}
+// ---- drawings
+function drawSeaWave(p) {
+  const d = Math.sign(p.vx) || 1, t = p.t, H = 240, Wd = 200, grow = Math.min(1, t / 8);
+  ctx.save(); ctx.translate(p.x, 2); ctx.scale(d, grow);
+  const g = ctx.createLinearGradient(0, -H, 0, 0); g.addColorStop(0, '#c8f6ff'); g.addColorStop(0.35, '#3cb4ff'); g.addColorStop(1, '#0a3a7a');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-Wd, 0); ctx.quadraticCurveTo(-Wd * 0.6, -H * 0.35, -Wd * 0.1, -H * 0.86); ctx.quadraticCurveTo(Wd * 0.35, -H * 1.06 + Math.sin(t * 0.4) * 6, Wd * 0.58, -H * 0.7);
+  ctx.quadraticCurveTo(Wd * 0.3, -H * 0.64, Wd * 0.22, -H * 0.46); ctx.quadraticCurveTo(Wd * 0.5, -H * 0.2, Wd * 0.74, 0); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 0.35; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4; for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.moveTo(-Wd * (0.9 - k * 0.15), -k * 14); ctx.quadraticCurveTo(-Wd * 0.3, -H * 0.3 - k * 10, Wd * 0.1, -H * 0.62 + k * 8); ctx.stroke(); }
+  ctx.globalAlpha = 1; ctx.strokeStyle = 'rgba(255,255,255,0.92)'; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-Wd * 0.16, -H * 0.85); ctx.quadraticCurveTo(Wd * 0.35, -H * 1.06, Wd * 0.58, -H * 0.7); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.88)'; for (let i = 0; i < 10; i++) { const a = i / 10; ctx.beginPath(); ctx.arc(lerp(-Wd * 0.1, Wd * 0.62, a) + Math.sin(t * 0.7 + i) * 4, -H * (0.86 + 0.16 * Math.sin(a * Math.PI)) + Math.cos(t * 0.5 + i) * 5, 6 + ((i * 7) % 5), 0, 7); ctx.fill(); }
+  ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.ellipse(0, 0, Wd * 1.05, 14, 0, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function drawDhow(x, deckY, dir, t) {
+  ctx.save(); ctx.translate(x, 0); ctx.scale(dir, 1);
+  ctx.fillStyle = 'rgba(60,170,240,0.75)'; ctx.beginPath(); ctx.ellipse(0, 6, 300, 26, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.8)'; for (let i = -5; i <= 5; i++) { ctx.beginPath(); ctx.arc(i * 55 + Math.sin(t * 0.5 + i) * 8, -2 + Math.cos(t * 0.6 + i) * 3, 10, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#4a2a14'; ctx.fillRect(-150, deckY - 330, 9, 330);
+  ctx.fillStyle = '#f3ead2'; ctx.beginPath(); ctx.moveTo(-146, deckY - 330); ctx.quadraticCurveTo(-40, deckY - 240, -10, deckY - 40); ctx.lineTo(-146, deckY - 60); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#b8a47a'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#e01b30'; ctx.beginPath(); ctx.moveTo(-142, deckY - 330); ctx.lineTo(-100, deckY - 318); ctx.lineTo(-142, deckY - 306); ctx.fill();
+  const g = ctx.createLinearGradient(0, deckY, 0, 10); g.addColorStop(0, '#9a6a3a'); g.addColorStop(1, '#5a3618');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-230, deckY - 20); ctx.lineTo(180, deckY); ctx.quadraticCurveTo(260, deckY - 10, 280, deckY - 70); ctx.lineTo(250, 4); ctx.lineTo(-190, 8); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(40,20,8,0.6)'; ctx.lineWidth = 2; for (let k = 1; k < 4; k++) { const y = lerp(deckY, 6, k / 4); ctx.beginPath(); ctx.moveTo(-210, y - 6); ctx.lineTo(240, y); ctx.stroke(); }
+  ctx.strokeStyle = '#d4a640'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-230, deckY - 20); ctx.lineTo(180, deckY); ctx.quadraticCurveTo(260, deckY - 10, 280, deckY - 70); ctx.stroke();
+  ctx.restore();
+}
+function drawSpeedboat(x, deckY, dir, t) {
+  ctx.save(); ctx.translate(x, 0); ctx.scale(dir, 1);
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; for (let i = 0; i < 8; i++) { ctx.beginPath(); ctx.ellipse(-160 - i * 26, -6 - Math.abs(Math.sin(t * 0.8 + i)) * 18, 18 - i, 10, 0, 0, 7); ctx.fill(); }
+  ctx.fillStyle = 'rgba(60,170,240,0.7)'; ctx.beginPath(); ctx.ellipse(0, 6, 230, 18, 0, 0, 7); ctx.fill();
+  const g = ctx.createLinearGradient(0, deckY - 10, 0, 6); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#b9c2d0');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-150, deckY); ctx.lineTo(120, deckY); ctx.quadraticCurveTo(200, deckY + 4, 220, deckY + 24); ctx.lineTo(150, 4); ctx.lineTo(-140, 4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#e01b30'; ctx.beginPath(); ctx.moveTo(-148, deckY + 14); ctx.lineTo(160, deckY + 14); ctx.lineTo(180, deckY + 26); ctx.lineTo(-146, deckY + 26); ctx.fill();
+  ctx.fillStyle = 'rgba(120,200,255,0.55)'; ctx.beginPath(); ctx.moveTo(40, deckY); ctx.lineTo(70, deckY - 46); ctx.lineTo(96, deckY); ctx.fill();
+  ctx.fillStyle = '#222833'; rrect(-176, deckY - 26, 34, 58, 6); ctx.fill();
+  ctx.restore();
+}
+function drawRedBall(p) {
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  finComet(p.x, p.y, Math.sign(p.vx) || 1, 0, 260, p.r * 1.1, 'rgba(255,30,40,0.8)', 'rgba(255,180,160,0.8)');
+  const g = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, p.r * 2.2); g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.3, 'rgba(255,40,50,0.9)'); g.addColorStop(1, 'rgba(120,0,10,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2.2, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,90,90,0.8)'; ctx.lineWidth = 3; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.7 + i * 0.25), p.t * 0.3 + i, p.t * 0.3 + i + 2.2); ctx.stroke(); }
+  ctx.restore();
+}
+function drawShock(p) {
+  const d = Math.sign(p.vx) || 1; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createLinearGradient(p.x - d * 80, 0, p.x + d * 30, 0); g.addColorStop(0, 'rgba(212,166,64,0)'); g.addColorStop(1, 'rgba(255,200,90,0.9)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(p.x - d * 90, 0); ctx.quadraticCurveTo(p.x - d * 10, -70 - Math.sin(p.t * 0.6) * 10, p.x + d * 30, 0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,60,40,0.55)'; ctx.beginPath(); ctx.moveTo(p.x - d * 60, 0); ctx.quadraticCurveTo(p.x, -40, p.x + d * 20, 0); ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function drawWings(f) {
+  const nk = f.toWorld(f.J.nk), hp = f.toWorld([0, 0]), d = -f.facing, k = f.R.k;
+  const rx = lerp(nk[0], hp[0], 0.2) + d * 22 * k, ry = lerp(nk[1], hp[1], 0.2);
+  const diving = f.state === 'attack' && f.mv && f.mv.id === 'sk_dive' && f.mt > 8 && f.mt < 50;
+  const flap = Math.sin(f.clock * (diving ? 0.5 : 0.09)) * (diving ? 0.3 : 0.12);
+  // soft red aura around the body + glow on the floor
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const cy = lerp(nk[1], 0, 0.45), ag = ctx.createRadialGradient(f.x, cy, 40, f.x, cy, 340); ag.addColorStop(0, 'rgba(255,30,40,0.34)'); ag.addColorStop(0.6, 'rgba(200,0,20,0.12)'); ag.addColorStop(1, 'rgba(255,0,20,0)'); ctx.fillStyle = ag; ctx.beginPath(); ctx.arc(f.x, cy, 340, 0, 7); ctx.fill();
+  const fg = ctx.createRadialGradient(f.x, 0, 10, f.x, 0, 220); fg.addColorStop(0, 'rgba(255,40,40,0.45)'); fg.addColorStop(1, 'rgba(255,0,0,0)'); ctx.fillStyle = fg; ctx.beginPath(); ctx.ellipse(f.x, 0, 220, 40, 0, 0, 7); ctx.fill();
+  ctx.restore();
+  const L0 = 330 * k * 1.25;
+  for (const far of [1, 0]) {
+    const L = L0 * (far ? 0.86 : 1);
+    ctx.save(); ctx.translate(rx + d * far * 14, ry - far * 22); ctx.scale(d, 1); ctx.rotate(-0.42 - flap - far * 0.25);
+    const top = u => [L * u, -L * 0.42 * Math.sin(u * Math.PI * 0.62)]; // leading edge of the wing
+    const layers = [[11, 1.0, far ? '#050307' : '#0d070b'], [9, 0.62, far ? '#08050a' : '#160c12'], [7, 0.34, far ? '#0a060c' : '#21121a']];
+    for (const [n, lenK, col] of layers) {
+      for (let j = n - 1; j >= 0; j--) {
+        const u = 0.06 + 0.94 * j / (n - 1), [bx, by] = top(u), len = L * lenK * (0.38 + 0.62 * u * u) * (lenK < 1 ? 1 : 0.95), ang = 1.15 + 0.75 * u, w = len * 0.17;
+        ctx.save(); ctx.translate(bx, by); ctx.rotate(ang);
+        ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, -w * 0.5); ctx.quadraticCurveTo(len * 0.55, -w, len, 0); ctx.quadraticCurveTo(len * 0.55, w, 0, w * 0.5); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = far ? 'rgba(255,20,30,0.22)' : 'rgba(255,40,50,0.55)'; ctx.lineWidth = 1.6; ctx.stroke();
+        ctx.strokeStyle = 'rgba(80,40,50,0.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(len * 0.9, 0); ctx.stroke();
+        ctx.restore();
+      }
+    }
+    ctx.strokeStyle = far ? '#050306' : '#120a0f'; ctx.lineWidth = 16 * k; ctx.lineCap = 'round'; ctx.beginPath(); for (let i = 0; i <= 12; i++) { const [x, y] = top(i / 12); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = far ? 'rgba(255,30,40,0.25)' : 'rgba(255,50,50,0.5)'; ctx.lineWidth = 4; ctx.stroke(); ctx.restore();
+    ctx.restore();
+  }
+}
+function drawAwakeFront(f) {
+  const e = eyePos(f), m = f.mv, eyes = f.state === 'attack' && m && m.id === 'sk_eyes';
+  const pw = eyes ? (f.mt < m.st ? f.mt / m.st : 1) : 0.4 + 0.15 * Math.sin(f.clock * 0.2);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(e[0], e[1], 1, e[0], e[1], 16 + pw * 30); g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.3, 'rgba(255,40,40,0.9)'); g.addColorStop(1, 'rgba(255,0,0,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(e[0], e[1], 16 + pw * 30, 0, 7); ctx.fill();
+  if (eyes && f.mt >= m.st && f.mt < m.st + m.ac) {
+    const L = 1500, ex = e[0] + f.facing * L, ey = e[1] + (f.eyeSlope || 0) * L, w = 14 + Math.sin(f.mt * 0.9) * 3;
+    for (const [lw, c] of [[w * 3.2, 'rgba(255,20,30,0.25)'], [w * 1.6, 'rgba(255,40,40,0.7)'], [w * 0.55, 'rgba(255,240,240,0.95)']]) { ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(e[0], e[1]); ctx.lineTo(ex, ey); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+function drawRide(f) {
+  const m = f.mv; if (!(f.state === 'attack' && m && m.ride)) return;
+  const k = f.R.k, a = clamp(Math.min((f.mt - 4) / 6, (m.total - f.mt) / 8), 0, 1); if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha *= a; const deck = -(m.ride === 'ship' ? 80 : 44) * k;
+  if (m.ride === 'ship') drawDhow(f.x + f.facing * 10, deck, f.facing, f.mt); else drawSpeedboat(f.x - f.facing * 10, deck, f.facing, f.mt);
+  ctx.restore();
+}
+CHARS.push(
+  { name: 'النوخذة', en: 'AL-NOKHATHA', h: 0.9, tag: 'سيد البحر', hp: 1.2, dmg: 1.06, spd: 0.98, color: '#3cb4ff', stats: [4, 4, 4], quote: 'البحر ما يرحم… وأنا مثله!', boss: 1 },
+  { name: 'الرئيس', en: 'AL-RAEES', h: 0.95, tag: 'كبيرهم اللي علّمهم', hp: 1.3, dmg: 1.12, spd: 0.92, color: '#d4a640', stats: [5, 3, 5], quote: 'كلكم شغالين عندي!', boss: 1 },
+  { name: 'الرئيس', en: 'AL-RAEES', h: 0.97, tag: 'الجناح الأسود', hp: 1.45, dmg: 1.22, spd: 1.0, color: '#ff1030', stats: [5, 4, 5], quote: 'الحين… تشوف قوتي الحقيقية!', boss: 2, awake: 1 },
+);
+SKILL_IDS.push('sk_wave', 'sk_ring', 'sk_redshot'); SKILL_NAMES.push('الموجة', 'ضربة الخاتم', 'الطلقة الحمراء');
 const COMBO_NAME = {};
 COMBOS.forEach((set, ci) => { for (const k of COMBO_KEYS) { const [name, mv] = set[k]; const id = `cb${ci}_${k}`; MV[id] = mv; mv.cname = name; COMBO_NAME[id] = name; set[k] = id; } });
-for (const id of ['spin', 'k4', 'sweep', 'hook', 'rage', 'sk_rush', 'sk_cart', 'sk_roll', 'sk_barrage']) MV[id].track = 1;
+COMBOS[NOKH] = COMBOS[9]; COMBOS[RAIS] = COMBOS[1]; COMBOS[RAIS2] = COMBOS[1];
+for (const id of ['spin', 'k4', 'sweep', 'hook', 'rage', 'sk_rush', 'sk_cart', 'sk_roll', 'sk_barrage', 'sk_ship', 'sk_boat', 'sk_ring']) MV[id].track = 1;
 for (const id in MV) {
   const m = MV[id]; m.id = id; m.total = m.st + m.ac + m.rc;
   const base = m.base === 'CROUCH' ? CROUCH : m.base === 'JUMP' ? JUMP : GUARD; m.B = base;
@@ -1217,6 +1394,7 @@ class Fighter {
   }
   setState(s) { this.state = s; this.t = 0; }
   think(opp) {
+    if (this.bossAI) bossTick(this, opp);
     this.clock++; this.t++;
     if (this.flash > 0) this.flash--;
     if (this.invuln > 0) this.invuln--;
@@ -1582,6 +1760,12 @@ const PERSONA = [
   { vo: 'kiai', intro: ["أوس!"], skill: ["هاي!"], win: ["خلني أكمل خبزتي"], st: { th: 30, sh: 26, bth: -30, bsh: 30, lean: 2, ua: -6 }, br: 0.07, ba: 1 },
   { vo: 'gamer', intro: ["ريسبون… وجاي"], skill: ["جي جي!"], win: ["جي جي… حظ أوفر المرة الجاية"], st: { ua: -8, fa: -6 }, br: 0.08 },
 ];
+PERSONA.push(
+  { vo: 'roar', intro: ['البحر ما يرحم!'], skill: ['البحر معي!'], win: ['ارجع للبر يا ولد!'], st: { lean: 6, th: 6, bth: -6 }, br: 0.08 },
+  { vo: 'roar', intro: ['كلكم شغالين عندي!'], skill: ['حس بالخاتم!'], win: ['الكأس لي… للأبد!'], st: { lean: 10, ua: 4, bua: 4, th: 8, bth: -10 }, br: 0.05, ba: 2 },
+  { vo: 'roar', intro: ['الحين… تشوف قوتي!'], skill: ['شوف عيوني!'], win: ['ما في أحد يوقف الرئيس!'], st: { lean: 14, ua: 8, bua: 8, th: 10, bth: -12 }, br: 0.05, ba: 2.6 },
+);
+if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 14: [0.82, 0.95], 15: [0.6, 0.86], 16: [0.42, 0.8] });
 const pickLine = a => a[(Math.random() * a.length) | 0];
 // ---- Arabic voices: the browser's Arabic voice when it has one, otherwise the built-in recorded lines ----
 const VOX = { clips: window.VOICE_CLIPS || {}, bufs: {}, last: {}, voices: null };
@@ -1732,11 +1916,54 @@ function makeDark() {
   g.fillStyle = 'rgba(180,30,255,0.18)'; g.fillRect(0, hy - 40, W, 40);
   return c;
 }
+function makePort() {
+  const [c, g] = bdCanvas(), W = c.width, hy = HORIZON;
+  let gr = g.createLinearGradient(0, 0, 0, hy); gr.addColorStop(0, '#1b2a58'); gr.addColorStop(0.45, '#6a5a9a'); gr.addColorStop(0.75, '#f08a5a'); gr.addColorStop(1, '#ffc27a');
+  g.fillStyle = gr; g.fillRect(0, 0, W, hy);
+  g.save(); g.globalCompositeOperation = 'lighter'; const sg = g.createRadialGradient(1250, hy - 150, 10, 1250, hy - 150, 320); sg.addColorStop(0, 'rgba(255,230,160,0.9)'); sg.addColorStop(1, 'rgba(255,140,80,0)'); g.fillStyle = sg; g.fillRect(0, 0, W, hy); g.restore();
+  g.fillStyle = '#ffe9b0'; g.beginPath(); g.arc(1250, hy - 150, 58, 0, 7); g.fill();
+  for (let i = 0; i < 9; i++) { g.fillStyle = 'rgba(255,240,230,0.35)'; g.beginPath(); g.ellipse(Math.random() * W, 60 + Math.random() * 160, 80 + Math.random() * 140, 14 + Math.random() * 10, 0, 0, 7); g.fill(); }
+  // sea
+  const sy = hy - 150; gr = g.createLinearGradient(0, sy, 0, hy); gr.addColorStop(0, '#2a5a8a'); gr.addColorStop(1, '#0a2a4a'); g.fillStyle = gr; g.fillRect(0, sy, W, 150);
+  g.strokeStyle = 'rgba(255,220,170,0.35)'; g.lineWidth = 2; for (let y = sy + 8; y < hy; y += 10) { g.beginPath(); for (let x = 0; x <= W; x += 20) { const yy = y + Math.sin(x / 60 + y) * 2; x ? g.lineTo(x, yy) : g.moveTo(x, yy); } g.stroke(); }
+  g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = 'rgba(255,200,120,0.35)'; for (let y = sy + 4; y < hy; y += 7) g.fillRect(1250 - 40 - (y - sy) * 0.5, y, 80 + (y - sy), 2); g.restore();
+  // dhows on the horizon
+  for (const [x, s] of [[380, 0.7], [820, 0.5], [1800, 0.8], [2150, 0.45]]) { g.save(); g.translate(x, sy + 6); g.scale(s, s); g.fillStyle = '#2a1a14'; g.beginPath(); g.moveTo(-120, -20); g.lineTo(110, -16); g.quadraticCurveTo(150, -30, 160, -60); g.lineTo(130, 6); g.lineTo(-100, 8); g.closePath(); g.fill(); g.fillRect(-40, -220, 7, 200); g.fillStyle = '#3a2a22'; g.beginPath(); g.moveTo(-36, -220); g.quadraticCurveTo(40, -150, 50, -30); g.lineTo(-36, -40); g.closePath(); g.fill(); g.restore(); }
+  // pier posts + crates + cranes
+  g.fillStyle = '#3a2614'; for (let x = 40; x < W; x += 180) g.fillRect(x, hy - 70, 16, 70);
+  g.fillStyle = '#5a3a20'; g.fillRect(0, hy - 74, W, 10);
+  for (const x of [200, 640, 1560, 2050]) { g.fillStyle = '#8a5a2a'; g.fillRect(x, hy - 118, 70, 56); g.strokeStyle = '#4a2a10'; g.lineWidth = 3; g.strokeRect(x, hy - 118, 70, 56); g.beginPath(); g.moveTo(x, hy - 118); g.lineTo(x + 70, hy - 62); g.stroke(); }
+  g.strokeStyle = '#1a2030'; g.lineWidth = 8; for (const x of [1000, 2300]) { g.beginPath(); g.moveTo(x, hy - 70); g.lineTo(x, hy - 380); g.lineTo(x + 220, hy - 380); g.stroke(); g.lineWidth = 2; g.beginPath(); g.moveTo(x + 200, hy - 380); g.lineTo(x + 200, hy - 260); g.stroke(); g.lineWidth = 8; }
+  return c;
+}
+function makePalace(red) {
+  const [c, g] = bdCanvas(), W = c.width, hy = HORIZON;
+  let gr = g.createLinearGradient(0, 0, 0, hy); gr.addColorStop(0, red ? '#120004' : '#0a0604'); gr.addColorStop(0.6, red ? '#3a0410' : '#2a1608'); gr.addColorStop(1, red ? '#6a0a14' : '#4a2a10');
+  g.fillStyle = gr; g.fillRect(0, 0, W, hy);
+  // tall windows (red sky for the second form)
+  for (let x = 140; x < W; x += 320) { g.fillStyle = red ? '#ff2a2a' : '#1a2a50'; g.beginPath(); g.moveTo(x, hy - 120); g.lineTo(x, hy - 380); g.quadraticCurveTo(x + 55, hy - 450, x + 110, hy - 380); g.lineTo(x + 110, hy - 120); g.closePath(); g.fill();
+    if (red) { g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = 'rgba(255,80,40,0.25)'; g.fillRect(x - 40, hy - 460, 190, 360); g.restore(); }
+    g.strokeStyle = '#d4a640'; g.lineWidth = 4; g.stroke(); g.beginPath(); g.moveTo(x + 55, hy - 420); g.lineTo(x + 55, hy - 120); g.moveTo(x, hy - 260); g.lineTo(x + 110, hy - 260); g.stroke(); }
+  // gold pillars
+  for (let x = 0; x < W; x += 320) { const gp = g.createLinearGradient(x - 26, 0, x + 26, 0); gp.addColorStop(0, '#6a4a10'); gp.addColorStop(0.5, '#f0c860'); gp.addColorStop(1, '#5a3a08'); g.fillStyle = gp; g.fillRect(x - 24, 40, 48, hy - 40); g.fillRect(x - 36, 40, 72, 22); g.fillRect(x - 36, hy - 34, 72, 22); }
+  // red curtains
+  for (let x = 0; x < W; x += 320) { g.fillStyle = red ? '#5a0010' : '#7a0a18'; g.beginPath(); g.moveTo(x + 30, 30); g.quadraticCurveTo(x + 90, 120, x + 60, 300); g.lineTo(x + 30, 300); g.closePath(); g.fill(); g.beginPath(); g.moveTo(x + 290, 30); g.quadraticCurveTo(x + 230, 120, x + 260, 300); g.lineTo(x + 290, 300); g.closePath(); g.fill(); }
+  // throne
+  const tx = 1200; g.fillStyle = '#2a1608'; g.fillRect(tx - 110, hy - 330, 220, 300); g.fillStyle = '#7a0a18'; g.fillRect(tx - 80, hy - 300, 160, 230); g.strokeStyle = '#f0c860'; g.lineWidth = 6; g.strokeRect(tx - 110, hy - 330, 220, 300);
+  g.beginPath(); g.moveTo(tx - 110, hy - 330); g.lineTo(tx - 70, hy - 400); g.lineTo(tx, hy - 360); g.lineTo(tx + 70, hy - 400); g.lineTo(tx + 110, hy - 330); g.stroke();
+  // chandeliers
+  g.save(); g.globalCompositeOperation = 'lighter'; for (const x of [600, 1200, 1800]) { const cg = g.createRadialGradient(x, 120, 6, x, 120, 160); cg.addColorStop(0, red ? 'rgba(255,90,60,0.8)' : 'rgba(255,220,140,0.8)'); cg.addColorStop(1, 'rgba(255,180,80,0)'); g.fillStyle = cg; g.beginPath(); g.arc(x, 120, 160, 0, 7); g.fill(); } g.restore();
+  for (const x of [600, 1200, 1800]) { g.strokeStyle = '#d4a640'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 100); g.stroke(); g.beginPath(); g.ellipse(x, 118, 60, 16, 0, 0, 7); g.stroke(); }
+  return c;
+}
 const STAGE_DEFS = {
   arena: { name: 'الحلبة', make: () => BACKDROP || makeBackdrop(), floor: ['#141826', '#0c0f19', '#040509'], grid: 'rgba(150,170,240,0.16)', ring: '255,30,50', glow: '#ff2040', fog: '12,14,24', twinkle: 1 },
   pitch: { name: 'ملعب الكورة', make: makePitch, floor: ['#2a7a34', '#1c5e26', '#0a2a10'], stripes: 1, lines: 1, fog: '30,60,40' },
   hosh: { name: 'حوش البيت', make: makeHosh, floor: ['#d3ac72', '#b08a52', '#5a4426'], grid: 'rgba(90,60,30,0.10)', rug: 1, fog: '200,150,100' },
   roof: { name: 'سطح البيت', make: makeRoof, floor: ['#3e4352', '#2b2f3b', '#101218'], grid: 'rgba(200,210,230,0.14)', fog: '20,26,48' },
+  port: { name: 'الميناء', make: makePort, floor: ['#7a5a3a', '#5e4428', '#2a1c10'], grid: 'rgba(30,15,5,0.32)', fog: '120,110,140' },
+  palace: { name: 'قصر الرئيس', make: () => makePalace(false), floor: ['#2a1a12', '#1a0f0a', '#050302'], grid: 'rgba(212,166,64,0.16)', ring: '212,166,64', glow: '#d4a640', fog: '40,24,10' },
+  palace2: { name: 'القصر يحترق', make: () => makePalace(true), floor: ['#2a0608', '#160204', '#050001'], grid: 'rgba(255,40,40,0.2)', ring: '255,20,40', glow: '#ff1030', fog: '60,4,8', storm: 1, red: 1 },
   dark: { name: 'عرش الظل', make: makeDark, floor: ['#1a0624', '#0c0314', '#020005'], grid: 'rgba(190,60,255,0.22)', ring: '190,40,255', glow: '#b030ff', fog: '30,4,40', storm: 1 },
 };
 const STAGE_POOL = ['arena', 'pitch', 'hosh', 'roof'];
@@ -1777,7 +2004,7 @@ function drawStage(cam, t, sid) {
   if (SD.ring) { ctx.globalCompositeOperation = 'lighter'; ctx.shadowColor = SD.glow; ctx.shadowBlur = 18;
     for (const [rr, al] of [[620, 0.38], [430, 0.2]]) line(circ(rr), `rgba(${SD.ring},${al})`, 3); }
   ctx.restore();
-  if (SD.storm) { const ph = t % 300; if (ph < 10 || (ph > 16 && ph < 22)) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(200,150,255,${ph < 10 ? 0.22 : 0.12})`; ctx.fillRect(0, 0, VW, VH); ctx.strokeStyle = 'rgba(240,220,255,0.9)'; ctx.lineWidth = 3; ctx.beginPath(); let lx = 300 + ((t / 300 | 0) * 377) % 700, ly = 0; ctx.moveTo(lx, ly); while (ly < HORIZON - 60) { lx += ((ly * 7919) % 60) - 30; ly += 40; ctx.lineTo(lx, ly); } ctx.stroke(); ctx.restore(); }
+  if (SD.storm) { const ph = t % 300; if (ph < 10 || (ph > 16 && ph < 22)) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = SD.red ? `rgba(255,90,70,${ph < 10 ? 0.22 : 0.12})` : `rgba(200,150,255,${ph < 10 ? 0.22 : 0.12})`; ctx.fillRect(0, 0, VW, VH); ctx.strokeStyle = 'rgba(240,220,255,0.9)'; ctx.lineWidth = 3; ctx.beginPath(); let lx = 300 + ((t / 300 | 0) * 377) % 700, ly = 0; ctx.moveTo(lx, ly); while (ly < HORIZON - 60) { lx += ((ly * 7919) % 60) - 30; ly += 40; ctx.lineTo(lx, ly); } ctx.stroke(); ctx.restore(); }
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 30; i++) { const x = (i * 211 + t * (1 + i % 3)) % VW, y = VH - ((t * (1.5 + (i % 4) * 0.5) + i * 97) % (VH - 80)); ctx.fillStyle = i % 2 ? 'rgba(255,80,60,0.7)' : 'rgba(190,80,255,0.7)'; ctx.fillRect(x, y, 3, 3); } ctx.restore(); }
   // fade far floor into horizon
   const hz = ctx.createLinearGradient(0, HORIZON, 0, HORIZON + 70); hz.addColorStop(0, `rgba(${SD.fog},0.9)`); hz.addColorStop(1, `rgba(${SD.fog},0)`); ctx.fillStyle = hz; ctx.fillRect(0, HORIZON, VW, 70);
@@ -1822,7 +2049,7 @@ function drawFighter(f, opts = {}) {
   ctx.translate(p.dx, p.dy);
   const fl = f.flash > 1;
   const rg = f.rage && !opts.refl && (G.frame % 20 < 10);
-  const front = fl ? 'flash' : rg ? 'rage' : f.shadow ? 'shadow' : 'img';
+  const front = fl ? 'flash' : rg ? 'rage' : f.shadow ? 'shadow' : f.C.awake ? 'dark' : 'img';
   const back = fl ? 'flash' : 'dark';
   const seg = (s, v) => { const [name, at, a, piv, sc] = s; const Pp = R.P[name]; ctx.save(); ctx.translate(at[0], at[1]); ctx.rotate(a); if (sc && sc !== 1) ctx.scale(sc, sc); ctx.drawImage(Pp[v], Pp.ox - piv[0], Pp.oy - piv[1]); ctx.restore(); };
   for (const s of J.barm) seg(s, back);
@@ -1857,6 +2084,7 @@ function updProj(F) {
   for (const p of P) {
     p.t++; p.x += p.vx; p.y += p.vy; p.vy += p.g; p.rot += p.vr; p.life--;
     if (p.sin) p.y = p.base + Math.sin(p.t * p.sin[1]) * p.sin[0];
+    if (p.kind === 'seawave' && p.t % 2 === 0) FX.push({ t: 'p', x: p.x + rnd(-120, 120), y: -rnd(60, 240), vx: Math.sign(p.vx) * rnd(1, 5), vy: -rnd(1, 5), life: 22, max: 22, c: p.t % 4 ? '#ffffff' : '#9fe0ff', sz: rnd(3, 7) });
     if (p.ground) { p.y = -p.r; if (p.t % 3 === 0) dust(p.x - Math.sign(p.vx) * p.r * 0.6, 1); }
     if (p.bounce && p.y >= -p.r && p.vy > 0) { p.y = -p.r; p.vy = -Math.abs(p.vy) * p.bounce; p.bounces = (p.bounces || 0) + 1; dust(p.x, 3); if (p.bounces > 4) p.dead = true; }
     if (p.kind === 'wave') { if (p.t % 2 === 0) FX.push({ t: 'd', x: p.x, y: -rnd(0, 20), vx: 0, vy: -rnd(0.5, 2), life: 20, max: 20, sz: rnd(10, 18) }); }
@@ -1892,6 +2120,7 @@ function updProj(F) {
   }
   for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
     const a = P[i], b = P[j]; if (a.dead || b.dead || a.noHit || b.noHit || a.owner === b.owner) continue;
+    if ((a.big || b.big) && !(a.big && b.big)) { const sm = a.big ? b : a; if (Math.hypot(a.x - b.x, a.y - b.y) < a.r + b.r) { sm.dead = true; spark(sm.x, sm.y, 'block', 0); SFX.block(); } continue; }
     if (Math.hypot(a.x - b.x, a.y - b.y) < a.r + b.r) { a.dead = b.dead = true; spark((a.x + b.x) / 2, (a.y + b.y) / 2, 'block', 0); SFX.block(); for (const q of [a, b]) { if (q.kind === 'rock') crumble(q); if (q.kind === 'egg') eggSplat(q); if (q.kind === 'chicken') featherPuff(q.x, q.y, 10); if (q.kind === 'bike') bikeCrash(q); } }
   }
   F.proj = P.filter(p => !p.dead);
@@ -2114,6 +2343,9 @@ function drawProj(p) {
   else if (p.kind === 'cartgone') drawCart(p.x, p.y, p.dir, 0, Math.min(1, p.life / 20));
   else if (p.kind === 'egg') drawEgg(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'pan') drawPan(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'seawave') drawSeaWave(p);
+  else if (p.kind === 'redball') drawRedBall(p);
+  else if (p.kind === 'shock') drawShock(p);
   else if (p.kind === 'mouse') drawMouse(p.x, p.y, p.rot, p.r, p.vx, p.t);
   else if (p.kind === 'pen') drawPen(p.x, p.y, Math.atan2(p.vy, p.vx), p.r, p.col);
   else if (p.kind === 'book') drawBook(p.x, p.y, p.rot, p.r, p.col, p.t, p.heavy);
@@ -2835,7 +3067,7 @@ class Fight {
     for (const f of order) withDepth(f, cam.z, () => drawAura(f));
     for (const f of order) withDepth(f, cam.z, () => {
       if ((f.state === 'attack' && f.mv && f.mv.trail && f.mt >= f.mv.st && f.mt < f.mv.st + f.mv.ac) || (f.state === 'dodge' && f.t < 12) || (f.state === 'rageSeq' && f.finTrail)) for (let g = 3; g >= 1; g--) drawFighter(f, { ghost: g });
-      drawFighter(f); drawHeld(f); if (window.__caps) drawCaps(f);
+      if (f.C.awake) drawWings(f); drawFighter(f); drawRide(f); drawHeld(f); if (f.C.awake) drawAwakeFront(f); if (window.__caps) drawCaps(f);
     });
     for (const pr of this.proj) drawProj(pr);
     if (this.fin && FIN[this.fin.ci].front) FIN[this.fin.ci].front(this, this.fin.a, this.fin.d, this.fin.t);
@@ -3440,56 +3672,70 @@ function drawNetOverlay() {
 }
 
 // ================= STORY MODE =================
-const CH_NAMES = ['الفصل الأول', 'الفصل الثاني', 'الفصل الثالث', 'الفصل الرابع', 'الفصل الأخير'];
-const CH_STAGE = ['arena', 'hosh', 'pitch', 'roof', 'dark'];
-const CH_TIME = ['الليل… في الحلبة', 'العصر… في حوش البيت القديم', 'المغرب… في ملعب الكورة', 'نص الليل… فوق السطح', 'عرش الظل… السما حمرا'];
+const CH_ROLE = ['reg', 'reg', 'nokh', 'reg', 'shadow', 'rais', 'rais2'];
+const NCHAP = CH_ROLE.length;
+const CH_NAMES = ['الفصل الأول', 'الفصل الثاني', 'الفصل الثالث', 'الفصل الرابع', 'الفصل الخامس', 'الفصل السادس', 'الفصل الأخير'];
+const CH_STAGE = ['arena', 'hosh', 'port', 'pitch', 'roof', 'palace', 'palace2'];
+const CH_TIME = ['الليل… في الحلبة', 'العصر… في حوش البيت القديم', 'الفجر… في الميناء، والبحر هايج', 'المغرب… في ملعب الكورة', 'نص الليل… فوق السطح', 'قصر الرئيس… الذهب في كل مكان', 'السما صارت حمرا… والقصر يحترق'];
+const CH_GLOW = { reg: '#ff1030', nokh: '#3cb4ff', shadow: '#b030ff', rais: '#d4a640', rais2: '#ff1030' };
 function nmOf(ci, shadow) { return (shadow ? 'ظل ' : '') + CHARS[ci].name; }
+function storyOpp(ch) { const S = G.story, r = CH_ROLE[ch]; return r === 'nokh' ? NOKH : r === 'rais' ? RAIS : r === 'rais2' ? RAIS2 : r === 'shadow' ? S.pc : S.opps[ch < 2 ? ch : 2]; }
 function storyStart(pc) {
   const pool = []; for (let i = 0; i < NCH; i++) if (i !== pc) pool.push(i);
   for (let i = pool.length - 1; i > 0; i--) { const j = (RR() * (i + 1)) | 0; [pool[i], pool[j]] = [pool[j], pool[i]]; }
-  G.story = { pc, opps: pool.slice(0, 4), ch: 0, step: 'card', t: 0, lines: [], li: 0, ct: 0, phase: 'pre', final: false };
+  G.story = { pc, opps: pool.slice(0, 3), ch: 0, step: 'card', t: 0, lines: [], li: 0, ct: 0, phase: 'pre', final: false };
   storyChapter();
 }
 function storyScript(ch, phase) {
-  const S = G.story, P = nmOf(S.pc), boss = ch === 4, oc = boss ? S.pc : S.opps[ch], O = nmOf(oc, boss), ol = ((PERSONA[oc] && PERSONA[oc].intro[0]) || '').replace(/[!.؟?…]+$/, '');
+  const S = G.story, role = CH_ROLE[ch], P = nmOf(S.pc), oc = storyOpp(ch), O = nmOf(oc, role === 'shadow'), ol = ((PERSONA[oc] && PERSONA[oc].intro[0]) || '').replace(/[!.؟?…]+$/, '');
   if (phase === 'pre') {
-    if (ch === 0) return [['N', 'في ليلة من ليالي الشلة… الكل مجتمع في الحلبة.'], ['N', 'وفجأة… انطفت الأنوار. ولما رجعت… كأس الشلة اختفى! 🏆'], ['P', 'منو اللي أخذ الكأس؟! محد بيطلع من هنا لين أعرف!'], ['O', `${ol}… يمكن أنا ويمكن لا. غلبني وأقول لك!`]];
+    if (ch === 0) return [['N', 'في ليلة من ليالي الشلة… الكل مجتمع في الحلبة.'], ['N', 'وفجأة… انطفت الأنوار. ولما رجعت… كأس الشلة اختفى! 🏆'], ['P', 'منو اللي أخذ الكأس؟! محد بيطلع من هنا لين أعرف!'], ['O', `${ol}… ولا تتهمني يا ${P}!`]];
     if (ch === 1) return [['N', 'العصر… الشمس تغيب ورا حوش البيت القديم.'], ['P', `أدري إنك هنا يا ${O}!`], ['O', `${ol}… ما بتاخذ مني شي إلا بالقوة!`]];
-    if (ch === 2) return [['N', 'المغرب… أنوار الملعب تولّعت والجمهور يصارخ.'], ['O', `هذا ملعبي يا ${P}. هنا محد يفوز علي!`], ['P', 'نشوف… الكأس أهم من كل شي.']];
-    if (ch === 3) return [['N', 'نص الليل… فوق السطح، والقمر طالع.'], ['O', `وصلت لين هنا؟ ما توقعتها منك يا ${P}!`], ['P', 'آخر واحد… وبعدها أعرف الحقيقة.']];
-    return [['N', 'السما صارت حمرا… والريح قامت…'], ['N', 'ومن الظلام طلع واحد… يشبهك بالضبط!'], ['O', `أنا أنت يا ${P}… بس أقوى. الكأس صار لي!`], ['P', 'ما في أحد يسرق من الشلة… حتى ظلي!']];
+    if (role === 'nokh') return [['N', 'الفجر… ريحة البحر، والسفن راسية في الميناء.'], ['N', 'وعلى ظهر سفينة كبيرة… واقف رجل بلبس أبيض. النوخذة!'], ['O', 'هذا بحري يا ولد. والكأس؟ أمانة عندي لين يجي الرئيس.'], ['P', 'الرئيس؟! منو هذا الرئيس؟'], ['O', 'لو غلبتني… يمكن أقولك. بس البحر ما يرحم!']];
+    if (ch === 3) return [['N', 'المغرب… أنوار الملعب تولّعت والجمهور يصارخ.'], ['O', `هذا ملعبي يا ${P}. هنا محد يفوز علي!`], ['P', 'نشوف… الكأس أهم من كل شي.']];
+    if (role === 'shadow') return [['N', 'نص الليل… فوق السطح، والقمر طالع.'], ['N', 'ومن الظلام طلع واحد… يشبهك بالضبط!'], ['O', `أنا ظلّك يا ${P}… الرئيس صنعني عشان أوقفك!`], ['P', 'ما في أحد يوقفني… حتى ظلي!']];
+    if (role === 'rais') return [['N', 'قصر كبير… ذهب وثريات، وفي آخر القاعة كرسي ضخم.'], ['N', 'وعلى الكرسي قاعد… الرئيس. وجنبه كأس الشلة! 🏆'], ['O', 'وصلت لين هنا؟ النوخذة وظلّك ما قدروا عليك؟'], ['O', 'أنا اللي جمعتكم… وأنا اللي أخذت الكأس. كلكم شغالين عندي!'], ['P', 'الكأس للشلة… وبتعطيني إياه غصب!']];
+    return [['N', 'الرئيس طاح… بس فجأة بدأ يضحك.'], ['O', 'هههه… تحسب إنها خلصت؟'], ['N', 'السما صارت حمرا… وطلع له جناحين سود من ظهره، وعيونه ولّعت أحمر!'], ['O', 'الحين… تشوف قوتي الحقيقية!'], ['P', 'ولو صار لك ألف جناح… الكأس راجع للشلة!']];
   }
   if (ch === 0) return [['O', 'خلاص خلاص! مو أنا… بس شفت واحد طالع صوب الحوش.'], ['P', 'يلا… على الحوش!']];
-  if (ch === 1) return [['O', 'الكأس؟ واحد لابس أسود أخذه للملعب!'], ['P', 'الملعب… جاي.']];
-  if (ch === 2) return [['O', 'آخر مرة شفته… كان طالع السطح!'], ['P', 'السطح؟ في هالليل؟']];
-  if (ch === 3) return [['O', 'اسمعني زين… اللي أخذ الكأس مو واحد منا…'], ['O', 'هو… ظلّك!'], ['P', 'ظلي؟!']];
-  return [['N', 'الظل اختفى… والكأس رجع للشلة! 🏆'], ['P', CHARS[S.pc].quote], ['N', 'والشلة رجعت تضحك… لين البطولة الجاية.'], ['N', 'النهاية 🎉 — شكراً إنك لعبت!']];
+  if (ch === 1) return [['O', 'الكأس؟ سمعتهم يقولون إنه انشحن على سفينة في الميناء!'], ['P', 'الميناء… جاي.']];
+  if (role === 'nokh') return [['O', 'آخ… والله إنك قوي. البحر ما شاف مثلك.'], ['O', 'الكأس مو عندي… الرئيس أخذه. وجماعته في الملعب.'], ['P', 'الرئيس… أنا جايك!']];
+  if (ch === 3) return [['O', 'اللي طلبوني قالوا: روح السطح… هناك بتلقى نفسك!'], ['P', 'ألقى نفسي؟ شو قصدهم؟']];
+  if (role === 'shadow') return [['O', 'انتهيت… بس الرئيس… أقوى مني بمليون مرة…'], ['N', 'واختفى الظل… وطاحت منه ورقة مكتوب فيها: قصر الرئيس.'], ['P', 'خلاص… المواجهة الأخيرة.']];
+  if (role === 'rais') return [['O', 'مستحيل… أنا… الرئيس… أخسر؟!']];
+  return [['N', 'الجناحين تكسّروا… والهالة الحمرا انطفت.'], ['O', 'الكأس… لك. أنت تستاهله.'], ['N', 'والكأس رجع للشلة! 🏆'], ['P', CHARS[S.pc].quote], ['N', 'والشلة رجعت تضحك… لين البطولة الجاية.'], ['N', 'النهاية 🎉 — شكراً إنك لعبت!']];
 }
 function storyChapter() { const S = G.story; S.step = 'card'; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; if (AC) Music.intensity = 0; }
-function storySpeak() { const S = G.story, L = S && S.lines[S.li]; if (!L || !SET.voice || muted) return; try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } const boss = S.ch === 4, oc = boss ? S.pc : S.opps[S.ch]; const ci = L[0] === 'P' ? S.pc : oc; const T = L[0] === 'N' ? [0.95, 0.95] : ((window.VOICE_TTS && window.VOICE_TTS[ci]) || [1, 1]); speakAr(L[1], L[0] === 'O' && boss ? T[0] * 0.6 : T[0], T[1], L[0] === 'N' ? 99 : ci); }
+function storySpeak() { const S = G.story, L = S && S.lines[S.li]; if (!L || !SET.voice || muted) return; try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } const role = CH_ROLE[S.ch], oc = storyOpp(S.ch); const ci = L[0] === 'P' ? S.pc : oc; const T = L[0] === 'N' ? [0.95, 0.95] : ((window.VOICE_TTS && window.VOICE_TTS[ci]) || [1, 1]); speakAr(L[1], L[0] === 'O' && role === 'shadow' ? T[0] * 0.6 : T[0], T[1], L[0] === 'N' ? 99 : ci); }
 function storyTalk(phase) { const S = G.story; S.step = 'talk'; S.phase = phase; S.lines = storyScript(S.ch, phase); S.li = 0; S.ct = 0; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; storySpeak(); }
 function storyFight() {
-  const S = G.story, boss = S.ch === 4; G.mode = 'cpu'; G.stageId = CH_STAGE[S.ch];
-  G.sel = { cur: [S.pc, boss ? S.pc : S.opps[S.ch]], done: [true, true], t: 0, readyT: 0 };
+  const S = G.story; G.mode = 'cpu'; G.stageId = CH_STAGE[S.ch];
+  G.sel = { cur: [S.pc, storyOpp(S.ch)], done: [true, true], t: 0, readyT: 0 };
   G.toVS();
 }
 function storySetupFight(F) {
-  const S = G.story; if (!S) return; const op = F.f[1], me = F.f[0];
+  const S = G.story; if (!S) return; const op = F.f[1], me = F.f[0], role = CH_ROLE[S.ch];
   // story hero is stronger: hits harder and takes a bit less damage
   me.dmgMul = 1.35; me.defMul = 0.85; me.storyBuff = true;
-  F.pads[1].lvl = S.ch === 4 ? 3 : 1 + S.ch * 0.45;
-  if (S.ch === 4) { op.shadow = true; op.maxHp = Math.round(op.maxHp * 1.6); op.hp = op.trailHp = op.maxHp; op.dmgMul = 1.2; op.dispName = nmOf(op.ci, true); }
+  const reg = [0, 1, -1, 2][S.ch]; F.pads[1].lvl = role === 'reg' ? 1 + reg * 0.55 : role === 'nokh' ? 2.2 : role === 'shadow' ? 2.6 : role === 'rais' ? 2.7 : 3;
+  const hpx = (op, k) => { op.maxHp = Math.round(op.maxHp * k); op.hp = op.trailHp = op.maxHp; };
+  if (role === 'shadow') { op.shadow = true; hpx(op, 1.5); op.dmgMul = 1.15; op.dispName = nmOf(op.ci, true); }
+  if (role === 'nokh') { op.bossAI = 1; op.bossCD = 90; op.rageUsed = true; hpx(op, 1.2); }
+  if (role === 'rais') { op.bossAI = 1; op.bossCD = 100; op.rageUsed = true; hpx(op, 1.25); }
+  if (role === 'rais2') { op.bossAI = 1; op.bossCD = 70; op.rageUsed = true; hpx(op, 1.22); op.dmgMul = 1.0; op.dispName = 'الرئيس — الجناح الأسود'; }
 }
 function storyResult(w) {
   const S = G.story;
-  if (w === 0) { if (S.ch === 4) S.final = true; storyTalk('post'); if (S.final) SFX.ready(); }
+  if (w === 0) { if (CH_ROLE[S.ch] === 'rais2') S.final = true; storyTalk('post'); if (S.final) SFX.ready(); }
   else { S.step = 'lost'; S.t = 0; G.scene = 'story'; }
 }
 function storyAdvance() {
   const S = G.story;
   if (S.phase === 'pre') { storyFight(); return; }
-  if (S.final || S.ch >= 4) { G.story = null; G.toTitle(); return; }
-  S.ch++; storyChapter();
+  if (S.final || S.ch >= NCHAP - 1) { G.story = null; G.toTitle(); return; }
+  S.ch++;
+  if (CH_ROLE[S.ch] === 'rais2') { G.stageId = CH_STAGE[S.ch]; storyTalk('pre'); SFX.rage(); return; } // transformation follows straight on
+  storyChapter();
 }
 function updStory() {
   const S = G.story; if (!S) { G.toTitle(); return; } S.t++;
@@ -3519,14 +3765,14 @@ function drawStory() {
   drawStage({ x: Math.sin(G.frame * 0.004) * 120, z: 1, yaw: Math.sin(G.frame * 0.003) * 0.35 }, G.frame, CH_STAGE[S.ch]);
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, VW, VH);
   // chapter progress
-  for (let i = 0; i < 5; i++) { const x = VW / 2 + (2 - i) * 46; ctx.fillStyle = i < S.ch ? '#ffd34d' : i === S.ch ? '#ff2a3a' : 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.arc(x, 34, i === S.ch ? 11 : 8, 0, 7); ctx.fill(); }
+  for (let i = 0; i < NCHAP; i++) { const x = VW / 2 + ((NCHAP - 1) / 2 - i) * 40; ctx.fillStyle = i < S.ch ? '#ffd34d' : i === S.ch ? '#ff2a3a' : 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.arc(x, 34, i === S.ch ? 11 : 8, 0, 7); ctx.fill(); }
   if (S.step === 'card') {
     const a = Math.min(1, S.t / 25) * Math.min(1, (170 - S.t) / 20 + 0.2);
     ctx.save(); ctx.globalAlpha = clamp(a, 0, 1);
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, VH / 2 - 130, VW, 260);
-    txt(CH_NAMES[S.ch], VW / 2, VH / 2 - 40, { size: 92, weight: 900, color: '#fff', glow: S.ch === 4 ? '#b030ff' : '#ff1030', glowBlur: 35 });
+    txt(CH_NAMES[S.ch], VW / 2, VH / 2 - 40, { size: 92, weight: 900, color: '#fff', glow: CH_GLOW[CH_ROLE[S.ch]], glowBlur: 35 });
     txt(CH_TIME[S.ch], VW / 2, VH / 2 + 50, { size: 34, weight: 800, color: '#ffd34d' });
-    txt(S.ch === 4 ? 'الخصم: ؟؟؟' : 'الخصم: ' + nmOf(S.opps[S.ch]), VW / 2, VH / 2 + 100, { size: 24, weight: 700, color: 'rgba(255,255,255,0.75)' });
+    { const r = CH_ROLE[S.ch]; txt(r === 'shadow' || r === 'rais' ? 'الخصم: ؟؟؟' : r === 'rais2' ? 'الخصم: الرئيس… بجناحين' : 'الخصم: ' + nmOf(storyOpp(S.ch)), VW / 2, VH / 2 + 100, { size: 24, weight: 700, color: 'rgba(255,255,255,0.75)' }); }
     ctx.restore(); return;
   }
   if (S.step === 'lost') {
@@ -3537,15 +3783,15 @@ function drawStory() {
     return;
   }
   // dialogue
-  const L = S.lines[S.li] || ['N', ''], who = L[0], boss = S.ch === 4, oc = boss ? S.pc : S.opps[S.ch];
+  const L = S.lines[S.li] || ['N', ''], who = L[0], role = CH_ROLE[S.ch], boss = role === 'shadow', big = role !== 'reg', bcol = CH_GLOW[role], oc = storyOpp(S.ch);
   const pimg = IMG['vs' + (S.pc + 1)], oimg0 = IMG['vs' + (oc + 1)], oimg = boss ? shadowOf(oimg0) : oimg0;
   const drawP = (im, cx, flip, on) => { const h = 560, w = im.width * h / im.height; ctx.save(); ctx.globalAlpha = on ? 1 : 0.38; if (flip) { ctx.translate(cx * 2, 0); ctx.scale(-1, 1); } ctx.drawImage(im, cx - w / 2, VH - h - (on ? 6 : 0), w, h); ctx.restore(); };
   drawP(pimg, 300, false, who === 'P'); drawP(oimg, VW - 300, true, who === 'O');
-  if (boss) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(VW - 300, 380, 30, VW - 300, 380, 330); g.addColorStop(0, 'rgba(170,40,255,0.25)'); g.addColorStop(1, 'rgba(170,40,255,0)'); ctx.fillStyle = g; ctx.fillRect(VW - 640, 40, 640, 680); ctx.restore(); }
+  if (big) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(VW - 300, 380, 30, VW - 300, 380, 330); g.addColorStop(0, bcol + (role === 'rais2' ? '77' : '44')); g.addColorStop(1, bcol + '00'); ctx.fillStyle = g; ctx.fillRect(VW - 640, 40, 640, 680); ctx.restore(); }
   const bx = 150, by = 500, bw = VW - 300, bh = 190;
-  ctx.save(); ctx.fillStyle = 'rgba(6,8,16,0.92)'; ctx.strokeStyle = boss && who === 'O' ? '#b030ff' : '#ff2a3a'; ctx.lineWidth = 3; rrect(bx, by, bw, bh, 16); ctx.fill(); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.fillStyle = 'rgba(6,8,16,0.92)'; ctx.strokeStyle = big && who === 'O' ? bcol : '#ff2a3a'; ctx.lineWidth = 3; rrect(bx, by, bw, bh, 16); ctx.fill(); ctx.stroke(); ctx.restore();
   const name = who === 'N' ? 'الراوي' : who === 'P' ? nmOf(S.pc) : nmOf(oc, boss);
-  const ncol = who === 'N' ? '#9fd8ff' : who === 'P' ? '#3ea0ff' : (boss ? '#c77dff' : '#ff6b6b');
+  const ncol = who === 'N' ? '#9fd8ff' : who === 'P' ? '#3ea0ff' : (big ? bcol : '#ff6b6b');
   ctx.save(); ctx.font = `900 26px ${FA}`; const nw = ctx.measureText(name).width + 40; ctx.fillStyle = ncol; rrect(bx + bw - nw - 24, by - 22, nw, 44, 12); ctx.fill(); ctx.restore();
   txt(name, bx + bw - 24 - nw / 2, by + 1, { size: 26, weight: 900, color: '#05060b' });
   const shown = L[1].slice(0, Math.floor(S.ct));
@@ -3959,7 +4205,7 @@ async function boot() {
   requestAnimationFrame(loop);
   const fontP = (document.fonts && document.fonts.load) ? Promise.race([Promise.all([document.fonts.load(`900 40px Cairo`), document.fonts.load(`700 40px Teko`), document.fonts.load(`800 40px Cairo`)]), new Promise(r => setTimeout(r, 2500))]).catch(() => { }) : Promise.resolve();
   await Promise.all([loadImages(), fontP]);
-  for (let i = 0; i < NCH; i++) RIGS[i] = buildRig(i);
+  for (let i = 0; i < CHARS.length; i++) RIGS[i] = buildRig(i);
   BACKDROP = makeBackdrop();
   cv.focus();
 }
