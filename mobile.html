@@ -3924,7 +3924,7 @@ function storyScript(ch, phase) {
   if (role === 'rais') return [['O', 'مستحيل… أنا… الرئيس… أخسر؟!']];
   return [['N', 'الجناحين تكسّروا… والهالة الحمرا انطفت.'], ['O', 'الكأس… لك. أنت تستاهله.'], ['N', 'والكأس رجع للشلة! 🏆'], ['P', CHARS[S.pc].quote], ['N', 'والشلة رجعت تضحك… لين البطولة الجاية.'], ['N', 'النهاية 🎉 — شكراً إنك لعبت!']];
 }
-const STORY_OPEN = NCHAP - 2; // chapters 1–6 open from the start; the transformed الرئيس unlocks after beating him
+const STORY_OPEN = NCHAP - 1; // all seven chapters open from the start
 function storySaved() { try { return clamp(+localStorage.getItem('shilla_story_max') || 0, 0, NCHAP - 1); } catch (e) { return 0; } }
 function storyMax() { return Math.max(STORY_OPEN, storySaved()); }
 function storySave(ch) { try { if (ch > storySaved()) localStorage.setItem('shilla_story_max', ch); } catch (e) { } }
