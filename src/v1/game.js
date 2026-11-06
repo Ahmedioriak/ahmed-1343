@@ -142,7 +142,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.23';
+const GAME_VER = '1.24';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1892,7 +1892,38 @@ PERSONA.push(
 if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 15: [0.82, 0.95], 16: [0.6, 0.86], 17: [0.42, 0.8] });
 const pickLine = a => a[(Math.random() * a.length) | 0];
 // ---- Arabic voices: the browser's Arabic voice when it has one, otherwise the built-in recorded lines ----
-const VOX = { clips: window.VOICE_CLIPS || {}, bufs: {}, last: {}, voices: null };
+const VOX = { clips: window.VOICE_CLIPS || {}, txt: window.VOICE_TXT || {}, bufs: {}, tbufs: {}, last: {}, voices: null, cur: [] };
+// ---- recorded neural Arabic voice (Piper «Kareem»): every sentence recorded once, names recorded separately ----
+const VOICE_RATE = { 0: 1.1, 1: 0.88, 5: 0.87, 6: 1.12, 8: 1.13, 11: 1.13, 15: 0.93, 16: 0.9, 17: 0.82, 99: 0.96 };
+function voiceNorm(t) { return t.replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF\uFE0F]/gu, '').replace(/[!؟?.,،:؛—"«»]/g, ' ').replace(/\s+/g, ' ').trim(); }
+let VNAMES = null;
+function voiceSegs(text) {
+  if (!VNAMES) VNAMES = CHARS.slice(0, NCH).map(c => c.name).sort((a, b) => b.length - a.length);
+  const out = [];
+  text.split('…').forEach((part, pi) => {
+    let segs = [voiceNorm(part)];
+    for (const n of VNAMES) segs = segs.flatMap(sg => { if (sg === n || !sg.includes(n)) return [sg]; const i = sg.indexOf(n); const a = sg.slice(0, i).trim(), b = sg.slice(i + n.length).trim(); return [a, n, b].filter(Boolean); });
+    segs.filter(Boolean).forEach((sg, si) => out.push({ t: sg, gap: si === 0 && pi > 0 ? 0.2 : 0.03 }));
+  });
+  return out;
+}
+function voiceBuf(key) {
+  if (VOX.tbufs[key]) return VOX.tbufs[key];
+  const b64 = VOX.txt[key]; if (!b64 || !AC) return null;
+  return (VOX.tbufs[key] = new Promise(ok => { try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); AC.decodeAudioData(u.buffer, ok, () => ok(null)); } catch (e) { ok(null); } }));
+}
+function voiceStop() { for (const s of VOX.cur) { try { s.stop(); } catch (e) { } } VOX.cur = []; }
+function speakRec(text, who, stopPrev) {
+  if (!AC) return false; const segs = voiceSegs(text); if (!segs.length || segs.some(sg => !VOX.txt[sg.t])) return false;
+  const tok = (VOX.tok = (VOX.tok || 0) + 1); if (stopPrev) voiceStop();
+  Promise.all(segs.map(sg => voiceBuf(sg.t))).then(bufs => {
+    if (stopPrev && tok !== VOX.tok) return; if (bufs.some(b => !b)) return;
+    const rate = VOICE_RATE[who] || 1; let t = AC.currentTime + 0.03;
+    bufs.forEach((b, i) => { const s = AC.createBufferSource(); s.buffer = b; s.playbackRate.value = rate; const g = AC.createGain(); g.gain.value = 1.25; s.connect(g); g.connect(master);
+      if (i) t += segs[i].gap; s.start(t); t += b.duration / rate; VOX.cur.push(s); s.onended = () => { VOX.cur = VOX.cur.filter(x => x !== s); }; });
+  });
+  return true;
+}
 function arVoices() {
   if (VOX.voices) return VOX.voices;
   try {
@@ -1925,6 +1956,7 @@ function charSpeak(ci, kind, text) {
   if (!SET.voice || muted) return;
   const now = performance.now(); if (VOX.last[ci] && now - VOX.last[ci] < 700) return; VOX.last[ci] = now;
   const T = (window.VOICE_TTS && window.VOICE_TTS[ci]) || [1, 1];
+  if (text && speakRec(text, ci, false)) return;
   if (speakAr(text, T[0], T[1], ci)) return;
   if (playClip(ci + '_' + kind)) return;
   const P = PERSONA[ci]; if (P && P.vo) SFX.voice(P.vo);
@@ -3947,10 +3979,10 @@ const CH_PLACE = ['الحلبة', 'حوش البيت', 'الميناء', 'الم
 const SEL_W = 160, SEL_H = 330, SEL_GAP = 14, SEL_Y = 190;
 function selCardX(i) { return VW / 2 + ((NCHAP - 1) / 2 - i) * (SEL_W + SEL_GAP) - SEL_W / 2; }
 function storyChapter() { const S = G.story; storySave(S.ch); S.step = 'card'; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; if (AC) Music.intensity = 0; }
-function storySpeak() { const S = G.story, L = S && S.lines[S.li]; if (!L || !SET.voice || muted) return; try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } const role = CH_ROLE[S.ch], oc = storyOpp(S.ch); const ci = L[0] === 'P' ? S.pc : oc; const T = L[0] === 'N' ? [0.95, 0.95] : ((window.VOICE_TTS && window.VOICE_TTS[ci]) || [1, 1]); speakAr(L[1], L[0] === 'O' && role === 'shadow' ? T[0] * 0.6 : T[0], T[1], L[0] === 'N' ? 99 : ci); }
+function storySpeak() { const S = G.story, L = S && S.lines[S.li]; if (!L || !SET.voice || muted) return; try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } const role = CH_ROLE[S.ch], oc = storyOpp(S.ch); const ci = L[0] === 'P' ? S.pc : oc; const T = L[0] === 'N' ? [0.95, 0.95] : ((window.VOICE_TTS && window.VOICE_TTS[ci]) || [1, 1]); if (speakRec(L[1], L[0] === 'N' ? 99 : ci, true)) return; speakAr(L[1], L[0] === 'O' && role === 'shadow' ? T[0] * 0.6 : T[0], T[1], L[0] === 'N' ? 99 : ci); }
 function storyTalk(phase) { const S = G.story; S.step = 'talk'; S.phase = phase; S.lines = storyScript(S.ch, phase); S.li = 0; S.ct = 0; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; storySpeak(); }
 function storyFight() {
-  const S = G.story; G.mode = 'cpu'; G.stageId = CH_STAGE[S.ch];
+  voiceStop(); const S = G.story; G.mode = 'cpu'; G.stageId = CH_STAGE[S.ch];
   G.sel = { cur: [S.pc, storyOpp(S.ch)], done: [true, true], t: 0, readyT: 0 };
   G.toVS();
 }
@@ -4111,7 +4143,9 @@ const G = {
   toFight() { this.scene = 'fight'; this.t = 0; this.fight = new Fight(this.sel.cur[0], this.sel.cur[1], this.mode); if (this.mode === 'online') netFightInit(this.fight); if (this.story) storySetupFight(this.fight); },
   toResult(w, fight) { if (this.story) { storyResult(w); return; } this.scene = 'result'; this.t = 0; this.res = { w, ci: fight.cis[w], wins: fight.wins.slice() }; if (AC) Music.intensity = 0; say(`${w === 0 ? 'Player one' : (this.mode === 'cpu' ? 'Computer' : 'Player two')} wins`); },
 };
-window.__storyAPI = { storyAdvance, storyStart, storyFight, storyMapOpen }; window.__VOX = VOX; window.__NET = NET; window.__netHost = () => netHost(); window.__netJoin = c => netJoin(c); window.__netHash = () => G.fight ? netHash(G.fight) : 0;
+window.__storyAPI = { storyAdvance, storyStart, storyFight, storyMapOpen, storyScript };
+window.__voiceTexts = () => { const T = new Set(); PERSONA.forEach(P => ['intro', 'skill', 'win'].forEach(k => (P[k] || []).forEach(x => T.add(x)))); Object.values(SKILL2_LINE).forEach(x => T.add(x)); Object.values(BOSS_LINES).forEach(x => T.add(x)); FIN.forEach(F => F && F.line && T.add(F.line)); CHARS.forEach(c => c.quote && T.add(c.quote)); return [...T]; };
+window.__voiceSegs = t => voiceSegs(t).map(x => x.t); window.__VOXS = VOX; window.__speakRec = speakRec; window.__VOX = VOX; window.__NET = NET; window.__netHost = () => netHost(); window.__netJoin = c => netJoin(c); window.__netHash = () => G.fight ? netHash(G.fight) : 0;
 window.__G = G; window.__MV = MV; window.__SK = SKILL_IDS; window.__COMBOS = COMBOS; window.__CPU = CPUPad; window.__txt = txt; window.__IMG = IMG; window.__FX = FX; window.__spark = spark;
 
 const SET_ROWS = [
