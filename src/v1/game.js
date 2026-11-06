@@ -144,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.27';
+const GAME_VER = '1.28';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -312,7 +312,7 @@ tcRoot.addEventListener('pointerdown', e => {
   if (sys) { tPtr.set(e.pointerId, { kind: 'sys', x, y }); if (sys.id === 'pause') TOUCH.pause = true; else tryFS(true); return; }
   if (fsOK() && !window.__rec) tryFS(false);
   if (tcHit(x, y).length) { tPtr.set(e.pointerId, { kind: 'btn', x, y }); tcUpdate(); return; }
-  if (x < innerWidth * 0.45 && y > innerHeight * 0.22) {
+  if (x < innerWidth * 0.45 && y > innerHeight * 0.22 && !uiTapZone((x * DPR - OX) / (SC * DPR), (y * DPR - OY) / (SC * DPR))) {
     if (STK.id !== null) tPtr.delete(STK.id); // a new thumb on the stick always takes over (old one may be a lost touch)
     STK.id = e.pointerId;
     if (Math.hypot(x - STK.cx, y - STK.cy) < STK.R * 1.6) { STK.ox = STK.cx; STK.oy = STK.cy; }
@@ -343,6 +343,18 @@ for (const ev of ['touchstart', 'touchend', 'touchcancel']) addEventListener(ev,
 addEventListener('blur', tcReset); addEventListener('pagehide', tcReset);
 document.addEventListener('visibilitychange', () => { if (document.hidden) tcReset(); });
 tcRoot.addEventListener('contextmenu', e => e.preventDefault());
+// menu areas a finger should tap (character tiles, outfits, story chapters) even on the joystick side of the screen
+function uiTapZone(gx, gy) {
+  try {
+    if (G.scene === 'select' && G.sel) { const S = G.sel;
+      if (S.panel && (S.panel[0] && gx < 400 || S.panel[1] && gx > VW - 400) && gy > 130 && gy < 570) return true;
+      if (gy > 170 && gy < 430 && gx > 280 && gx < 1000) return true;   // character tiles
+      if (gy > 550 && gy < 600 && (gx < 330 || gx > VW - 330)) return true;   // outfits button
+    }
+    if (G.scene === 'story' && G.story && G.story.step === 'select' && gy > 90) return true;
+  } catch (e) { }
+  return false;
+}
 function enableTouch() {
   if (TOUCH_ON) return; TOUCH_ON = true; tcRoot.classList.add('on'); resize(); tcLayout();
 }
@@ -503,6 +515,23 @@ const PARTS = ['torso', 'uarm', 'farm', 'thigh', 'shin', 'foot'];
 const RIGS = [], RIGSK = {};
 // ---- outfits: switch on the character-select screen (★ / E / U / L1-R1, or tap the outfit button) ----
 const OUTFITS = { 1: [{ id: '', name: 'الأساسي' }, { id: 'chef', name: 'طبّاخ', hat: 1 }] };
+function outfitList(ci) { return OUTFITS[ci] || [{ id: '', name: 'الأساسي' }]; }
+const OPW = 380, OCW = 112, OCH = 236, OCY = 236; // outfit panel geometry
+function opanelCards(s, n) { const cx = s === 0 ? 200 : VW - 200, tot = n * OCW + (n - 1) * 12; return [...Array(n)].map((_, i) => [cx - tot / 2 + i * (OCW + 12), OCY]); }
+function drawOutfitPanel(S, s) {
+  const ci = S.cur[s], L = outfitList(ci), cx = s === 0 ? 200 : VW - 200, cur = (S.outfit[s] | 0) % L.length, col = s === 0 ? '#3ea0ff' : '#ff3b4a';
+  ctx.save(); ctx.fillStyle = 'rgba(6,8,16,0.94)'; ctx.strokeStyle = col; ctx.lineWidth = 3; rrect(cx - OPW / 2, 140, OPW, 420, 18); ctx.fill(); ctx.stroke(); ctx.restore();
+  txt('👕 مظاهر ' + CHARS[ci].name, cx, 172, { size: 26, weight: 900, color: '#fff' });
+  txt(L.length > 1 ? L.length + ' مظاهر' : 'ما عنده مظاهر ثانية للحين', cx, 204, { size: 17, weight: 700, color: '#ffd34d' });
+  opanelCards(s, L.length).forEach(([x, y], i) => {
+    const on = i === cur, im = imgOf('front', ci, L[i].id);
+    ctx.save(); ctx.fillStyle = on ? 'rgba(255,211,77,0.18)' : 'rgba(255,255,255,0.05)'; ctx.strokeStyle = on ? '#ffd34d' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = on ? 4 : 2; rrect(x, y, OCW, OCH, 12); ctx.fill(); ctx.stroke();
+    const h = OCH - 46, w = im.width * h / im.height, sc = Math.min(1, (OCW - 10) / w); ctx.drawImage(im, x + OCW / 2 - w * sc / 2, y + 6 + (h - h * sc), w * sc, h * sc); ctx.restore();
+    txt(L[i].name, x + OCW / 2, y + OCH - 20, { size: 19, weight: 900, color: on ? '#ffd34d' : '#fff' });
+    if (on) txt('✓', x + OCW - 16, y + 18, { size: 22, weight: 900, color: '#ffd34d', rtl: false });
+  });
+  txt(TOUCH_ON ? 'المس المظهر للاختيار · المس برّا للرجوع' : '◀ ▶ تنقّل  ·  ✕ تأكيد  ·  ○ رجوع', cx, 536, { size: 16, weight: 700, color: 'rgba(255,255,255,0.7)' });
+}
 function outfitOf(ci, i) { const L = OUTFITS[ci]; return (L && L[(i | 0) % L.length]) || null; }
 function rigFor(ci, skin) { if (!skin) return RIGS[ci]; return RIGSK[ci + skin] || (RIGSK[ci + skin] = buildRig(ci, skin)); }
 function imgOf(kind, ci, skin) { return (skin && IMG[kind + (ci + 1) + skin]) || IMG[kind + (ci + 1)]; }
@@ -4286,17 +4315,29 @@ function updSelect() {
   for (let s = 0; s < 2; s++) {
     const pd = ctrl(s); if (!pd) continue;
     if (S.done[s]) { if (pd.p.back) { S.done[s] = false; SFX.move(); } continue; }
+    if (!S.outfit) S.outfit = [0, 0]; if (!S.panel) S.panel = [null, null];
+    if (S.panel[s]) { // □ outfits panel is open for this player
+      const n = outfitList(S.cur[s]).length;
+      if (pd.p.left) { S.outfit[s] = ((S.outfit[s] | 0) + n - 1) % n; SFX.move(); }
+      if (pd.p.right) { S.outfit[s] = ((S.outfit[s] | 0) + 1) % n; SFX.move(); }
+      if (pd.p.ok || pd.p.b1 || pd.p.sp) { S.panel[s] = null; SFX.ok(); S.flash = [s, 8]; }
+      else if (pd.p.back || pd.p.b4) { S.outfit[s] = S.panel[s].prev; S.panel[s] = null; SFX.move(); }
+      continue;
+    }
+    if ((pd.p.b1 && !pd.p.ok) || pd.p.sp || pd.p.c12 || pd.p.c13) { S.panel[s] = { prev: S.outfit[s] | 0 }; SFX.ok(); continue; }
     if (pd.p.left) { S.cur[s] = (S.cur[s] + NCH - 1) % NCH; SFX.move(); }
     if (pd.p.right) { S.cur[s] = (S.cur[s] + 1) % NCH; SFX.move(); }
     if (pd.p.up || pd.p.down) { const c = S.cur[s]; S.cur[s] = c < 8 ? Math.min(c + 8, NCH - 1) : c - 8; SFX.move(); }
-    if ((pd.p.sp || pd.p.c12 || pd.p.c13) && OUTFITS[S.cur[s]]) { if (!S.outfit) S.outfit = [0, 0]; S.outfit[s] = ((S.outfit[s] | 0) + 1) % OUTFITS[S.cur[s]].length; SFX.ok(); S.flash = [s, 8]; }
     if (pd.p.ok && S.t > 8) { S.done[s] = true; SFX.ok(); S.flash = [s, 14]; }
     else if (pd.p.back && cpu && s === 1) { S.done[0] = false; SFX.move(); }
     else if (pd.p.back && (!cpu || s === 0) && S.t > 8) { if (G.storyPick && G.storyMap) { SFX.move(); G.story = G.storyMap; G.storyMap = null; G.storyPick = false; storySelect(); return; } if (online) { netClose(); G.scene = 'online'; G.t = 0; return; } G.toTitle(); return; }
   }
   if (G.tap && S.t > 8) {
     const so = online ? NET.slot : (cpu && S.done[0] ? 1 : 0), ocx = so === 0 ? 200 : VW - 200;
-    if (OUTFITS[S.cur[so]] && !S.done[so] && Math.abs(G.tap[0] - ocx) < 125 && Math.abs(G.tap[1] - 574) < 26) { if (!S.outfit) S.outfit = [0, 0]; S.outfit[so] = ((S.outfit[so] | 0) + 1) % OUTFITS[S.cur[so]].length; SFX.ok(); S.flash = [so, 8]; G.tap = null; return; }
+    if (!S.outfit) S.outfit = [0, 0]; if (!S.panel) S.panel = [null, null];
+    if (S.panel[so]) { const L = outfitList(S.cur[so]); let hit = -1; opanelCards(so, L.length).forEach(([x, y], i) => { if (G.tap[0] >= x && G.tap[0] <= x + OCW && G.tap[1] >= y && G.tap[1] <= y + OCH) hit = i; });
+      if (hit >= 0) { if ((S.outfit[so] | 0) === hit) { S.panel[so] = null; SFX.ok(); S.flash = [so, 8]; } else { S.outfit[so] = hit; SFX.move(); } } else { S.panel[so] = null; SFX.ok(); } G.tap = null; return; }
+    if (!S.done[so] && Math.abs(G.tap[0] - ocx) < 125 && Math.abs(G.tap[1] - 574) < 26) { S.panel[so] = { prev: S.outfit[so] | 0 }; SFX.ok(); G.tap = null; return; }
   }
   if (G.tap && S.t > 8) {
     const tw = 74, gap = 7, x0 = VW / 2 - (8 * tw + 7 * gap) / 2, ty0 = 185, rowH = tw + 40;
@@ -4333,10 +4374,10 @@ function drawSelect() {
     ctx.drawImage(im, cx - w / 2, 150 + 470 - hgt + slide, w, hgt);
     ctx.restore();
     const ny = 640;
-    if (OUTFITS[ci]) { // outfit switch button
+    { // □ outfits button (every character)
       const py = 574, on = OF && OF.id; ctx.save(); ctx.fillStyle = on ? 'rgba(255,211,77,0.95)' : 'rgba(10,12,22,0.85)'; ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 2; rrect(cx - 118, py - 19, 236, 38, 19); ctx.fill(); ctx.stroke(); ctx.restore();
-      const kh = G.mode === 'online' ? (TOUCH_ON ? 'المس' : 'E') : TOUCH_ON ? 'المس' : (gpSlotKind(s) ? 'L1' : s === 0 ? 'E' : 'U');
-      txt('👕 ' + OF.name + '  ⇄ ' + kh, cx, py + 1, { size: 20, weight: 900, color: on ? '#1a1206' : '#ffd34d' });
+      const kh = TOUCH_ON || gpSlotKind(s) ? '□' : (G.mode === 'online' || s === 0 ? 'E' : 'U');
+      txt('👕 ' + (OF ? OF.name : 'المظاهر') + '  ·  ' + kh, cx, py + 1, { size: 20, weight: 900, color: on ? '#1a1206' : '#ffd34d' });
     }
     ctx.save(); ctx.fillStyle = s === 0 ? 'rgba(30,100,230,0.85)' : 'rgba(220,30,50,0.85)';
     ctx.beginPath(); ctx.moveTo(cx - 170, ny - 34); ctx.lineTo(cx + 185, ny - 34); ctx.lineTo(cx + 170, ny + 30); ctx.lineTo(cx - 185, ny + 30); ctx.closePath(); ctx.fill(); ctx.restore();
@@ -4397,6 +4438,7 @@ function drawSelect() {
     txt('Share/View', VW / 2 - 60, 663, { size: 18, font: FE, weight: 700, color: '#9fd8ff', rtl: false });
     txt('تبديل اللاعب', VW / 2 - 150, 663, { size: 16, weight: 700, color: 'rgba(255,255,255,0.7)' });
   }
+  if (S.panel) for (let s = 0; s < 2; s++) if (S.panel[s]) drawOutfitPanel(S, s);
   const solo = cpu || G.mode === 'online';
   if (!TOUCH_ON) hintRow(solo ? VW / 2 : 470, ['A', 'D'], 'R', 'T');
   if (!solo && !TOUCH_ON) hintRow(VW - 470, ['←', '→'], 'I', 'O');
