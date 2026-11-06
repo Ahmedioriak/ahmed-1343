@@ -62,7 +62,7 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => { keys.delete(e.code); });
 addEventListener('blur', () => keys.clear());
 let started = false;
-cv.addEventListener('pointerdown', e => { cv.focus(); audioInit(); started = true; pressQ.add('Click'); if (e.pointerType === 'mouse' && G.scene === 'story') { const r = cv.getBoundingClientRect(); window.__mtap = [(e.clientX - r.left) / r.width * VW, (e.clientY - r.top) / r.height * VH]; } });
+cv.addEventListener('pointerdown', e => { cv.focus(); audioInit(); started = true; pressQ.add('Click'); if (e.pointerType === 'mouse' && (G.scene === 'story' || G.scene === 'cup')) { const r = cv.getBoundingClientRect(); window.__mtap = [(e.clientX - r.left) / r.width * VW, (e.clientY - r.top) / r.height * VH]; } });
 
 const MAPS = [
   { up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'], b1: ['KeyR'], b2: ['KeyT'], b3: ['KeyF'], b4: ['KeyG'], sp: ['KeyE'], dg: ['KeyQ'], ok: ['KeyR', 'Space', 'KeyF'], back: ['KeyT', 'Escape'] },
@@ -144,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.36';
+const GAME_VER = '1.37';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -354,6 +354,7 @@ function uiTapZone(gx, gy) {
       if (gy > 550 && gy < 600 && (gx < 330 || gx > VW - 330)) return true;   // outfits button
     }
     if (G.scene === 'story' && G.story && G.story.step === 'select' && gy > 90) return true;
+    if (G.scene === 'cup') return true;
   } catch (e) { }
   return false;
 }
@@ -366,10 +367,10 @@ function tcFrame() {
   rotEl.classList.toggle('on', innerHeight > innerWidth * 1.05);
   const fight = G.scene === 'fight' && G.fight && !G.fight.paused && !G.fight.showList && !NET.menu;
   const f0 = fight ? G.fight.f[G.mode === 'online' ? NET.slot : 0] : null; // online: the buttons follow my own fighter
-  const key = [fight, G.scene === 'fight', fsOK(), f0 && f0.sk >= SKMAX, f0 && f0.cbCD > 0, f0 && f0.dgCD > 0, f0 && f0.rage, f0 && f0.rageUsed].join();
+  const key = [fight, G.scene === 'fight', fsOK(), f0 && f0.sk >= SKMAX, f0 && f0.cbCD > 0, f0 && f0.dgCD > 0, f0 && f0.canFin, f0 && f0.rageUsed].join();
   if (key === tcVisKey) return; tcVisKey = key; tcLayout();
   for (const b of TBTN) {
-    let show = !b.fight || fight; if (b.id === 'fs' && !fsOK()) show = false; if (b.id === 'ra') { b.el.classList.toggle('ready', !!(f0 && f0.rage)); b.el.classList.toggle('used', !!(f0 && f0.rageUsed)); }
+    let show = !b.fight || fight; if (b.id === 'fs' && !fsOK()) show = false; if (b.id === 'ra') { b.el.classList.toggle('ready', !!(f0 && f0.canFin)); b.el.classList.toggle('used', !!(f0 && f0.rageUsed)); }
     b.el.classList.toggle('hide', !show);
     if (b.id === 'sp') b.el.classList.toggle('full', !!(f0 && f0.sk >= SKMAX));
     if (b.kind === 'cb') b.el.classList.toggle('cd', !!(f0 && (b.id === 'dg' ? f0.dgCD > 0 : f0.cbCD > 0)));
@@ -1780,6 +1781,7 @@ class Fighter {
     this.in = { h: {}, p: {} }; this.animate();
   }
   get rage() { return !this.rageUsed && this.hp > 0 && this.hp <= this.maxHp * 0.3; }
+  get canFin() { return this.rage || (!this.rageUsed && this.hp > 0 && this.slot === 0 && !!G.fight && G.fight.train); }
   readInput(frozen = false) {
     const pd = this.pad, h = Object.assign({}, pd.h), p = Object.assign({}, pd.p);
     const f = this.facing > 0 ? 'right' : 'left', b = this.facing > 0 ? 'left' : 'right';
@@ -1859,7 +1861,7 @@ class Fighter {
     if (this.sk2CD > 0 && G.fight && G.fight.phase === 'fight') this.sk2CD--;
     if (this.bubble && ++this.bubble.t > this.bubble.dur) this.bubble = null;
     // L2+R2 / touch button = القاضية (cancels a dodge or R2 combo started a few frames earlier)
-    if (this.in.h.ra && this.rage && G.fight && G.fight.phase === 'fight' && (NEUTRAL.has(this.state) || ['block', 'land', 'dash', 'side'].includes(this.state) || (this.state === 'dodge' && this.t <= 6) || (this.state === 'attack' && this.mv && this.mv.combo && this.mt <= 4))) {
+    if (this.in.h.ra && this.canFin && G.fight && G.fight.phase === 'fight' && (NEUTRAL.has(this.state) || ['block', 'land', 'dash', 'side'].includes(this.state) || (this.state === 'dodge' && this.t <= 6) || (this.state === 'attack' && this.mv && this.mv.combo && this.mt <= 4))) {
       if (this.state === 'dodge') { this.dgCD = 0; this.invuln = 0; } else if (this.state === 'attack') this.cbCD = 0;
       this.vx = 0; this.rageUsed = true; this.startMove('rage'); G.fight.rageFlash(this);
     }
@@ -3531,7 +3533,7 @@ const FIN = [
 class Fight {
   constructor(c1, c2, mode) {
     this.mode = mode; this.cis = [c1, c2]; this.stage = G.stageId || 'arena';
-    this.pads = [pads[0], mode === 'cpu' ? new CPUPad(1) : pads[1]];
+    this.pads = [pads[0], mode === 'cpu' || mode === 'train' ? new CPUPad(1) : pads[1]]; this.train = mode === 'train'; // training: slot 1 is a still dummy (its CPUPad has no target, so it never presses anything)
     this.f = [new Fighter(0, c1, this.pads[0]), new Fighter(1, c2, this.pads[1])];
     this.f.forEach((f, s) => { const O = outfitOf(f.ci, G.sel && G.sel.outfit && G.sel.outfit[s]); if (O && O.id) { f.outfit = O.id; f.hat = O.hat; f.R = rigFor(f.ci, O.id); } });
     if (mode === 'cpu') { this.pads[1].me = this.f[1]; this.pads[1].op = this.f[0]; }
@@ -3621,6 +3623,7 @@ class Fight {
     updProj(this);
     if (this.phase === 'fight') for (const f of this.f) { if (f.sk < SKMAX && !(f.state === 'attack' && f.mv && f.mv.skill)) { f.sk++; if (f.sk === SKMAX && !f.pad.cpu) SFX.ready(); } }
     for (const f of this.f) { if (f.trailT > 0) f.trailT--; else f.trailHp = Math.max(f.hp, f.trailHp - f.maxHp * 0.006); }
+    if (this.train) this.trainStep();
     updFX();
     if (this.phase === 'ko') this.koStep();
     if (this.phase === 'end') this.endStep();
@@ -3757,6 +3760,7 @@ class Fight {
     this.freeze = Math.max(this.freeze, (m ? m.stop : 5) + (kind === 'counter' ? 3 : 0));
     this.shake(m ? m.p * 5 : 6);
     if (this.fin && this.fin.d === d && !this.fin.final && d.hp <= 0) d.hp = 1; // the finisher always plays out; KO lands on the last blow
+    if (this.train) { d.trainHit = G.frame; if (d.hp <= 0) d.hp = 1; }
     if (d.hp <= 0 && !d.ko) this.ko(a, d);
   }
   ko(a, d) {
@@ -3766,6 +3770,14 @@ class Fight {
     if (Music) Music.intensity = 0;
   }
   koLanded(d) { this.koLandT = this.pt; }
+  // training: nobody dies, the clock stands still, the skill meter is always full and the finisher can be used again and again
+  trainStep() {
+    this.timer = 60 * 60; const [a, b] = this.f;
+    a.sk = SKMAX; a.sk2CD = 0;
+    if (!this.fin && a.rageUsed && NEUTRAL.has(a.state)) a.rageUsed = false;
+    for (const f of this.f) { if (f.ko) { f.ko = false; } if (f.hp < f.maxHp && !this.fin && NEUTRAL.has(f.state) && G.frame - (f.trainHit || 0) > 75) { f.hp = f.maxHp; f.trailHp = f.maxHp; } }
+    if (this.phase === 'ko') { this.phase = 'fight'; this.slow = 0; }
+  }
   timeUp() {
     const [a, b] = this.f; this.phase = 'ko'; this.pt = 0; this.timeout = true;
     this.msg('TIME UP', 'en', 120, '#ffffff'); say('Time up');
@@ -3869,8 +3881,9 @@ class Fight {
     ctx.save();
     ctx.fillStyle = 'rgba(8,10,18,0.85)'; ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(VW / 2 - 50, 18); ctx.lineTo(VW / 2 + 50, 18); ctx.lineTo(VW / 2 + 40, 92); ctx.lineTo(VW / 2 - 40, 92); ctx.closePath(); ctx.fill(); ctx.stroke();
-    txt(String(tsec), VW / 2, 58, { size: 70, font: FE, weight: 600, color: tsec <= 10 ? '#ff4d4d' : '#ffffff', rtl: false });
+    txt(this.train ? '∞' : String(tsec), VW / 2, 58, { size: 70, font: FE, weight: 600, color: tsec <= 10 ? '#ff4d4d' : '#ffffff', rtl: false });
     ctx.restore();
+    if (this.train) txt('🎯 تدريب · الدم ما يخلص · المهارة دايماً مليانة · القاضية جاهزة (' + (TOUCH_ON ? 'زر القاضية' : 'L2+R2') + ') · ' + (TOUCH_ON ? '❚❚' : 'Esc') + ' للخروج', VW / 2, 662, { size: 19, weight: 800, color: '#7dffb0', stroke: '#000', sw: 4 });
     // round wins
     for (let s = 0; s < 2; s++) for (let i = 0; i < 2; i++) {
       const x = s === 0 ? 540 - i * 26 : VW - 540 + i * 26, y = 84;
@@ -3934,8 +3947,8 @@ class Fight {
           txt(c2 > 0 ? `${SKILL2_NAMES[f.ci]} ${(f.sk2CD / 60).toFixed(1)}` : `${SKILL2_NAMES[f.ci]} ✓ (⬇+★)`, rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by4 + 3, { size: 12, weight: 800, color: c2 > 0 ? 'rgba(255,255,255,0.6)' : '#ffb04d', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 }); } }
       txt(label, rev ? sx0 - 10 : sx0 + sw2 + 10, sy + 4, { size: 15, weight: 800, color: full ? '#ffd34d' : 'rgba(255,255,255,0.75)', align: rev ? 'right' : 'left', stroke: '#000', sw: 3 });
     }
-    if (f.rage) txt('القاضية جاهزة 💥', rev ? x + 30 : x + w - 30, y + h + 20, { size: 20, weight: 900, color: '#ff2a3a', align: rev ? 'left' : 'right', stroke: '#000', sw: 4, glow: '#ff0020' });
-    txt((this.mode === 'online' ? (f.slot === NET.slot ? 'YOU' : 'NET') : f.slot === 0 ? '1P' : (this.mode === 'cpu' ? 'CPU' : '2P')) + (gpSlotKind(f.slot) && !(this.mode === 'cpu' && f.slot === 1) ? ' 🎮' : (TOUCH_ON && f.slot === (this.mode === 'online' ? NET.slot : 0) ? ' 📱' : '')), rev ? px + 38 : px + 38, py + 92, { size: 22, font: FE, weight: 700, color: f.slot === 0 ? '#3ea0ff' : '#ff3b4a', rtl: false });
+    if (f.rage || (this.train && f.canFin)) txt('القاضية جاهزة 💥', rev ? x + 30 : x + w - 30, y + h + 20, { size: 20, weight: 900, color: '#ff2a3a', align: rev ? 'left' : 'right', stroke: '#000', sw: 4, glow: '#ff0020' });
+    txt((this.mode === 'online' ? (f.slot === NET.slot ? 'YOU' : 'NET') : f.slot === 0 ? '1P' : (this.mode === 'cpu' ? 'CPU' : this.mode === 'train' ? 'DUMMY' : '2P')) + (gpSlotKind(f.slot) && !(this.mode === 'cpu' && f.slot === 1) ? ' 🎮' : (TOUCH_ON && f.slot === (this.mode === 'online' ? NET.slot : 0) ? ' 📱' : '')), rev ? px + 38 : px + 38, py + 92, { size: 22, font: FE, weight: 700, color: f.slot === 0 ? '#3ea0ff' : '#ff3b4a', rtl: false });
     ctx.restore();
   }
   drawMsgs() {
@@ -4672,17 +4685,17 @@ function drawStory() {
 // ================= SCENES =================
 const G = {
   scene: 'boot', frame: 0, mode: '2p', menuIdx: 0, debug: false, fight: null, sel: null, vs: null, res: null, t: 0,
-  toTitle() { if (window.__updPending) { window.__updPending = false; location.reload(); } this.scene = 'title'; this.t = 0; this.fight = null; this.story = null; this.storyPick = false; this.storyMap = null; if (AC) Music.intensity = 0; },
+  toTitle() { if (window.__updPending) { window.__updPending = false; location.reload(); } this.cup = null; this.scene = 'title'; this.t = 0; this.fight = null; this.story = null; this.storyPick = false; this.storyMap = null; if (AC) Music.intensity = 0; },
   toSelect() {
-    this.story = null; this.storyPick = false;
+    this.story = null; this.storyPick = false; this.cup = null;
     const prev = this.sel ? this.sel.cur.slice() : [0, 1];
     const pout = this.sel && this.sel.outfit ? this.sel.outfit.slice() : [0, 0];
     this.scene = 'select'; this.t = 0; this.fight = null; this.sel = { cur: prev, done: [false, false], t: 0, readyT: 0, outfit: pout };
     if (AC) Music.intensity = 0;
   },
   toVS() { this.scene = 'vs'; this.t = 0; if (!this.story && this.mode !== 'online') this.stageId = STAGE_POOL[(RR() * STAGE_POOL.length) | 0]; },
-  toFight() { this.scene = 'fight'; this.t = 0; this.fight = new Fight(selCI(this.sel, 0), selCI(this.sel, 1), this.mode); { const mi = this.mode === 'online' ? NET.slot : 0, mc = this.fight.f[mi].ci; statsPing({ fight: 1, char: CHARS[mc].name, mode: this.story ? 'القصة' : ({ '2p': 'لاعبين', cpu: 'ضد الكمبيوتر', online: 'أونلاين' })[this.mode] || this.mode }); } if (this.mode === 'online') netFightInit(this.fight); if (this.story) storySetupFight(this.fight); },
-  toResult(w, fight) { if (this.story) { storyResult(w); return; } this.scene = 'result'; this.t = 0; this.res = { w, ci: fight.cis[w], wins: fight.wins.slice() }; if (AC) Music.intensity = 0; say(`${w === 0 ? 'Player one' : (this.mode === 'cpu' ? 'Computer' : 'Player two')} wins`); },
+  toFight() { this.scene = 'fight'; this.t = 0; this.fight = new Fight(selCI(this.sel, 0), selCI(this.sel, 1), this.mode); { const mi = this.mode === 'online' ? NET.slot : 0, mc = this.fight.f[mi].ci; statsPing({ fight: 1, char: CHARS[mc].name, mode: this.story ? 'القصة' : this.cup ? 'الدوري' : ({ '2p': 'لاعبين', cpu: 'ضد الكمبيوتر', online: 'أونلاين', train: 'التدريب' })[this.mode] || this.mode }); } if (this.mode === 'online') netFightInit(this.fight); if (this.story) storySetupFight(this.fight); if (this.cup) cupSetupFight(this.fight); },
+  toResult(w, fight) { if (this.story) { storyResult(w); return; } if (this.cup && this.cup.play) { cupResult(w); return; } this.scene = 'result'; this.t = 0; this.res = { w, ci: fight.cis[w], wins: fight.wins.slice() }; if (AC) Music.intensity = 0; say(`${w === 0 ? 'Player one' : (this.mode === 'cpu' ? 'Computer' : 'Player two')} wins`); },
 };
 window.__storyAPI = { storyAdvance, storyStart, storyFight, storyMapOpen, storyScript };
 window.__voiceTexts = () => { const T = new Set(); PERSONA.forEach(P => ['intro', 'skill', 'win'].forEach(k => (P[k] || []).forEach(x => T.add(x)))); Object.values(SKILL2_LINE).forEach(x => T.add(x)); Object.values(BOSS_LINES).forEach(x => T.add(x)); FIN.forEach(F => F && F.line && T.add(F.line)); CHARS.forEach(c => c.quote && T.add(c.quote)); return [...T]; };
@@ -4746,15 +4759,168 @@ function drawSettings() {
     txt('اضغط أي مكان للرجوع', VW / 2, 290 + L.length * 62, { size: 18, weight: 700, color: 'rgba(255,255,255,0.55)' });
   }
 }
+// ================= الدوري — 8-fighter knockout cup: quarter-finals → semi-finals → final, random draw =================
+// up to 8 people pick a fighter each (hot-seat), the empty places are filled by the computer; human vs computer is a normal
+// CPU fight, human vs human is a 2-player fight on this device, computer vs computer is decided instantly.
+const CUP_ROUNDS = ['ربع النهائي', 'نصف النهائي', 'النهائي'];
+const CUP_COLS = ['#3ea0ff', '#ff3b4a', '#ffd34d', '#5be37d', '#c46bff', '#ff8a2a', '#36e0e0', '#ff6fb5'];
+function cupOpen() { G.cup = { phase: 'setup', n: 1, picks: [], pi: 0, cur: 0, o: 0, t: 0 }; G.scene = 'cup'; G.t = 0; SFX.ok(); }
+function cupEff(e) { const O = outfitOf(e.ci, e.o); return O && O.as !== undefined ? O.as : e.ci; }
+function cupName(e) { return e.h >= 0 ? 'لاعب ' + (e.h + 1) : 'كمبيوتر'; }
+function cupDraw() {
+  const C = G.cup, ent = C.picks.map((p, i) => ({ ci: p.ci, o: p.o, h: i }));
+  const pool = []; for (let i = 0; i < NCH; i++) if (!ent.some(e => e.ci === i)) pool.push(i);
+  for (let i = 0; i < NCH && pool.length < 8 - ent.length; i++) pool.push(i);
+  while (ent.length < 8) { const k = (Math.random() * pool.length) | 0, ci = pool.splice(k, 1)[0]; const L = OUTFITS[ci]; ent.push({ ci, o: L && Math.random() < 0.35 ? 1 + ((Math.random() * (L.length - 1)) | 0) : 0, h: -1 }); }
+  for (let i = ent.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [ent[i], ent[j]] = [ent[j], ent[i]]; }
+  C.ent = ent; C.R = [[0, 1, 2, 3, 4, 5, 6, 7], [], [], []]; C.phase = 'draw'; C.t = 0; C.res = null; SFX.ready();
+}
+function cupNext() { const C = G.cup; for (let r = 0; r < 3; r++) for (let k = 0; k < C.R[r].length / 2; k++) if (C.R[r + 1][k] === undefined) return { r, k, a: C.R[r][2 * k], b: C.R[r][2 * k + 1] }; return null; }
+function cupPower(e) { const c = CHARS[cupEff(e)]; return c.stats[0] + c.stats[1] + c.stats[2] + c.hp * 3 + c.dmg * 3; }
+function cupWin(m, s) { const C = G.cup; C.R[m.r + 1][m.k] = s; C.last = { m, s, t: 0 }; if (m.r === 2) { C.phase = 'champ'; C.t = 0; SFX.ready(); } else { C.phase = 'bracket'; C.t = 0; } }
+function cupPlay() {
+  const C = G.cup, m = cupNext(); if (!m) return; const A = C.ent[m.a], B = C.ent[m.b];
+  if (A.h < 0 && B.h < 0) { const pa = cupPower(A), pb = cupPower(B), w = Math.random() < 0.5 + (pa - pb) * 0.03 ? m.a : m.b; C.sim = { m, w, t: 0 }; SFX.ok(); return; }
+  const swap = A.h < 0, P = swap ? B : A, Q = swap ? A : B;   // a human is always on the left
+  C.play = { m, s0: swap ? m.b : m.a, s1: swap ? m.a : m.b };
+  G.mode = Q.h < 0 ? 'cpu' : '2p'; G.sel = { cur: [P.ci, Q.ci], done: [true, true], t: 0, readyT: 0, outfit: [P.o, Q.o] }; G.toVS();
+}
+function cupSetupFight(F) { const C = G.cup; if (!C || !C.play) return; if (F.pads[1].cpu) F.pads[1].lvl = 1 + C.play.m.r * 0.7; }
+function cupResult(w) { const C = G.cup, P = C.play; C.play = null; G.scene = 'cup'; G.fight = null; if (AC) Music.intensity = 0; cupWin(P.m, w === 0 ? P.s0 : P.s1); }
+function cupTap() { const t = G.tap || window.__mtap || null; G.tap = null; window.__mtap = null; return t; }
+const CUP_GRID = { x0: VW / 2 - 4 * 92 + 46, y0: 470, dx: 92, dy: 100, per: 8 };
+function cupGridPos(i) { const row = (i / CUP_GRID.per) | 0, col = i % CUP_GRID.per, n = row === 0 ? Math.min(CUP_GRID.per, NCH) : NCH - CUP_GRID.per; const x0 = VW / 2 - (n - 1) * CUP_GRID.dx / 2; return [x0 + col * CUP_GRID.dx, CUP_GRID.y0 + row * CUP_GRID.dy]; }
+function updCup() {
+  const C = G.cup; if (!C) { G.toTitle(); return; } C.t++; G.t++;
+  const p = pads[0].p, q = pads[1].p, ok = p.ok || q.ok, back = p.back || q.back || anyP('Escape', 'Backspace'), tap = cupTap();
+  const hitBtn = (x, y, w, h) => tap && Math.abs(tap[0] - x) < w / 2 && Math.abs(tap[1] - y) < h / 2;
+  if (C.phase === 'setup') {
+    if (p.left || q.left || hitBtn(VW / 2 - 150, 330, 90, 90)) { C.n = Math.max(1, C.n - 1); SFX.move(); }
+    if (p.right || q.right || hitBtn(VW / 2 + 150, 330, 90, 90)) { C.n = Math.min(8, C.n + 1); SFX.move(); }
+    if ((ok && C.t > 8) || hitBtn(VW / 2, 520, 340, 70)) { C.phase = 'pick'; C.pi = 0; C.cur = 0; C.o = 0; C.t = 0; SFX.ok(); }
+    else if (back && C.t > 8) { SFX.move(); G.cup = null; G.toTitle(); }
+    return;
+  }
+  if (C.phase === 'pick') {
+    const L = outfitList(C.cur);
+    if (p.left || q.left) { C.cur = (C.cur + NCH - 1) % NCH; C.o = 0; SFX.move(); }
+    if (p.right || q.right) { C.cur = (C.cur + 1) % NCH; C.o = 0; SFX.move(); }
+    if (p.up || q.up || p.down || q.down) { C.cur = (C.cur + CUP_GRID.per) % (CUP_GRID.per * 2); if (C.cur >= NCH) C.cur = NCH - 1; C.o = 0; SFX.move(); }
+    if ((p.b1 || q.b1 || anyP('KeyE') || hitBtn(VW / 2, 392, 260, 44)) && L.length > 1) { C.o = (C.o + 1) % L.length; SFX.move(); }
+    if (tap) for (let i = 0; i < NCH; i++) { const [x, y] = cupGridPos(i); if (Math.abs(tap[0] - x) < 42 && Math.abs(tap[1] - y) < 46) { if (C.cur === i) { C.go = 1; } else { C.cur = i; C.o = 0; SFX.move(); } } }
+    if ((ok && C.t > 8) || C.go || hitBtn(VW - 150, 660, 220, 60)) { C.go = 0; C.picks[C.pi] = { ci: C.cur, o: C.o }; SFX.ok(); C.pi++; C.t = 0; if (C.pi >= C.n) cupDraw(); }
+    else if (back && C.t > 8) { SFX.move(); if (C.pi > 0) { C.pi--; C.t = 0; } else { C.phase = 'setup'; C.t = 0; } }
+    return;
+  }
+  if (C.phase === 'draw') { if (C.t > 80 || ((ok || tap) && C.t > 12)) { C.phase = 'bracket'; C.t = 0; } return; }
+  if (C.phase === 'bracket') {
+    if (C.sim) { C.sim.t++; if (C.sim.t === 70) { const S = C.sim; C.sim = null; cupWin(S.m, S.w); } return; }
+    if ((ok || tap) && C.t > 15) cupPlay();
+    else if (back && C.t > 8) { SFX.move(); G.cup = null; G.toTitle(); }
+    return;
+  }
+  if (C.phase === 'champ') { if ((ok || tap || back) && C.t > 60) { G.cup = null; G.toTitle(); } }
+}
+function cupCard(x, y, e, st, w = 170) {
+  const h = 58; ctx.save();
+  ctx.globalAlpha = st === 'out' ? 0.38 : 1;
+  ctx.fillStyle = st === 'win' ? 'rgba(255,211,77,0.28)' : st === 'next' ? 'rgba(230,20,40,0.45)' : 'rgba(10,12,24,0.85)';
+  rrect(x - w / 2, y - h / 2, w, h, 12); ctx.fill(); ctx.lineWidth = st === 'next' ? 3 : 2;
+  ctx.strokeStyle = st === 'next' ? '#ff3b4a' : st === 'win' ? '#ffd34d' : 'rgba(255,255,255,0.25)'; ctx.stroke();
+  if (e) {
+    const ci = cupEff(e), im = IMG['face' + (ci + 1)];
+    if (im) { ctx.save(); rrect(x + w / 2 - 54, y - 25, 50, 50, 10); ctx.clip(); ctx.drawImage(im, x + w / 2 - 54, y - 25, 50, 50); ctx.restore(); }
+    txt(CHARS[ci].name, x + w / 2 - 62, y - 9, { size: 19, weight: 900, color: '#fff', align: 'right' });
+    txt(cupName(e), x + w / 2 - 62, y + 15, { size: 15, weight: 800, color: e.h >= 0 ? CUP_COLS[e.h] : 'rgba(255,255,255,0.55)', align: 'right' });
+  } else txt('؟', x, y + 2, { size: 28, weight: 900, color: 'rgba(255,255,255,0.35)' });
+  ctx.restore();
+}
+function drawCupBg(title, sub) {
+  drawStage({ x: Math.sin(G.frame * 0.003) * 120, z: 1, yaw: Math.sin(G.frame * 0.004) * 0.4 }, G.frame);
+  ctx.fillStyle = 'rgba(4,5,12,0.72)'; ctx.fillRect(0, 0, VW, VH);
+  txt(title, VW / 2, 52, { size: 50, weight: 900, color: '#fff', stroke: '#1a0004', sw: 8, glow: '#ff1030' });
+  if (sub) txt(sub, VW / 2, 98, { size: 22, weight: 800, color: '#ffd34d' });
+}
+function drawCup() {
+  const C = G.cup; if (!C) return;
+  if (C.phase === 'setup') {
+    drawCupBg('🏆 الدوري', 'ربع النهائي ← نصف النهائي ← النهائي · القرعة عشوائية');
+    txt('كم لاعب بيشارك؟', VW / 2, 215, { size: 34, weight: 900, color: '#fff' });
+    for (const [dx, s] of [[-150, '◀'], [150, '▶']]) { ctx.fillStyle = 'rgba(230,20,40,0.85)'; ctx.beginPath(); ctx.arc(VW / 2 + dx, 330, 42, 0, 7); ctx.fill(); txt(s, VW / 2 + dx, 332, { size: 34, weight: 900, color: '#fff', rtl: false }); }
+    txt(String(C.n), VW / 2, 330, { size: 120, font: FE, weight: 700, color: '#ffd34d', rtl: false, stroke: '#000', sw: 6 });
+    txt(C.n === 8 ? 'كل الأماكن لاعبين' : `${C.n} ${C.n === 1 ? 'لاعب' : 'لاعبين'} + ${8 - C.n} كمبيوتر`, VW / 2, 425, { size: 24, weight: 800, color: 'rgba(255,255,255,0.8)' });
+    ctx.fillStyle = 'rgba(230,20,40,0.9)'; rrect(VW / 2 - 170, 485, 340, 70, 16); ctx.fill(); txt('اختيار الشخصيات ←', VW / 2, 522, { size: 30, weight: 900, color: '#fff' });
+    txt(TOUCH_ON ? 'كل لاعب يختار شخصيته بدوره · لاعب ضد لاعب يلعبون على نفس الجهاز' : 'يمين/يسار للعدد · Enter للتأكيد · Esc للرجوع · لاعب ضد لاعب يلعبون على نفس الجهاز (كيبورد أو يدين)', VW / 2, 640, { size: 18, weight: 700, color: 'rgba(255,255,255,0.55)' });
+    return;
+  }
+  if (C.phase === 'pick') {
+    drawCupBg('🏆 الدوري', null);
+    txt(`لاعب ${C.pi + 1} — اختر شخصيتك`, VW / 2, 100, { size: 30, weight: 900, color: CUP_COLS[C.pi] });
+    const L = outfitList(C.cur), O = L[C.o % L.length], ci = O && O.as !== undefined ? O.as : C.cur, im = IMG['front' + (ci + 1)];
+    if (im) { const hgt = 250, w = im.width * hgt / im.height; ctx.drawImage(im, VW / 2 - w / 2, 120, w, hgt); }
+    txt(CHARS[ci].name, VW / 2 - 230, 230, { size: 44, weight: 900, color: '#fff', stroke: '#000', sw: 6 });
+    txt(CHARS[ci].tag || '', VW / 2 - 230, 280, { size: 20, weight: 700, color: '#ffd34d' });
+    if (L.length > 1) { ctx.fillStyle = 'rgba(255,211,77,0.9)'; rrect(VW / 2 - 130, 370, 260, 44, 22); ctx.fill(); txt('👕 ' + O.name + (TOUCH_ON ? ' · المس للتغيير' : ' · E للتغيير'), VW / 2, 393, { size: 19, weight: 900, color: '#111' }); }
+    for (let i = 0; i < NCH; i++) {
+      const [x, y] = cupGridPos(i), on = i === C.cur, f = IMG['face' + (i + 1)];
+      ctx.save(); rrect(x - 40, y - 40, 80, 80, 12); ctx.fillStyle = 'rgba(10,12,24,0.9)'; ctx.fill(); ctx.clip(); if (f) ctx.drawImage(f, x - 40, y - 40, 80, 80); ctx.restore();
+      ctx.lineWidth = on ? 4 : 1.5; ctx.strokeStyle = on ? CUP_COLS[C.pi] : 'rgba(255,255,255,0.25)'; rrect(x - 40, y - 40, 80, 80, 12); ctx.stroke();
+      C.picks.forEach((pk, j) => { if (j < C.pi && pk.ci === i) txt(String(j + 1), x + 30, y - 30, { size: 18, font: FE, weight: 700, color: CUP_COLS[j], rtl: false, stroke: '#000', sw: 4 }); });
+    }
+    ctx.fillStyle = 'rgba(230,20,40,0.9)'; rrect(VW - 260, 630, 220, 60, 14); ctx.fill(); txt('تأكيد ✓', VW - 150, 661, { size: 26, weight: 900, color: '#fff' });
+    txt(`${C.pi + 1} / ${C.n}`, 120, 661, { size: 26, font: FE, weight: 700, color: 'rgba(255,255,255,0.6)', rtl: false });
+    return;
+  }
+  drawCupBg('🏆 الدوري', C.phase === 'champ' ? null : C.phase === 'draw' ? 'القرعة…' : (() => { const m = cupNext(); return m ? CUP_ROUNDS[m.r] : ''; })());
+  const pos = [];
+  for (let i = 0; i < 8; i++) { const L = i < 4, j = i % 4; pos.push([L ? 125 : VW - 125, [175, 245, 405, 475][j]]); }
+  const sfp = [[330, 210], [330, 440], [VW - 330, 210], [VW - 330, 440]], fp = [[VW / 2 - 165, 325], [VW / 2 + 165, 325]];
+  const nm = C.phase === 'bracket' && !C.sim ? cupNext() : C.sim ? C.sim.m : null;
+  const line = (x1, y1, x2, y2, hot) => { ctx.strokeStyle = hot ? '#ffd34d' : 'rgba(255,255,255,0.22)'; ctx.lineWidth = hot ? 4 : 2; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo((x1 + x2) / 2, y1); ctx.lineTo((x1 + x2) / 2, y2); ctx.lineTo(x2, y2); ctx.stroke(); };
+  for (let i = 0; i < 8; i++) line(pos[i][0], pos[i][1], sfp[i >> 1][0], sfp[i >> 1][1], C.R[1][i >> 1] === C.R[0][i]);
+  for (let k = 0; k < 4; k++) line(sfp[k][0], sfp[k][1], fp[k >> 1][0], fp[k >> 1][1], C.R[1][k] !== undefined && C.R[2][k >> 1] === C.R[1][k]);
+  const st = (r, k, s) => { if (s === undefined) return ''; if (nm && nm.r === r && (nm.a === s || nm.b === s)) return 'next'; const nx = C.R[r + 1] && C.R[r + 1][k >> 1]; return nx === undefined ? '' : nx === s ? 'win' : 'out'; };
+  const shuffling = C.phase === 'draw' && C.t < 60;
+  for (let i = 0; i < 8; i++) { const s = C.R[0][i]; cupCard(pos[i][0], pos[i][1], shuffling ? C.ent[(i + ((C.t / 4) | 0) * 3) % 8] : C.ent[s], shuffling ? '' : st(0, i, s)); }
+  for (let k = 0; k < 4; k++) { const s = C.R[1][k]; cupCard(sfp[k][0], sfp[k][1], s === undefined ? null : C.ent[s], st(1, k, s), 160); }
+  for (let k = 0; k < 2; k++) { const s = C.R[2][k]; cupCard(fp[k][0], fp[k][1], s === undefined ? null : C.ent[s], st(2, k, s), 160); }
+  txt('ربع النهائي', 125, 135, { size: 18, weight: 800, color: 'rgba(255,255,255,0.5)' }); txt('ربع النهائي', VW - 125, 135, { size: 18, weight: 800, color: 'rgba(255,255,255,0.5)' });
+  txt('نصف النهائي', 330, 160, { size: 18, weight: 800, color: 'rgba(255,255,255,0.5)' }); txt('نصف النهائي', VW - 330, 160, { size: 18, weight: 800, color: 'rgba(255,255,255,0.5)' });
+  txt('النهائي', VW / 2, 270, { size: 22, weight: 900, color: '#ffd34d' }); txt('VS', VW / 2, 327, { size: 30, font: FE, weight: 700, color: '#ff3b4a', rtl: false });
+  const champ = C.R[3][0];
+  // trophy
+  ctx.save(); ctx.translate(VW / 2, 190); const g = ctx.createLinearGradient(0, -50, 0, 40); g.addColorStop(0, '#fff3b0'); g.addColorStop(0.5, '#ffd34d'); g.addColorStop(1, '#b07a00'); ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(-32, -48); ctx.lineTo(32, -48); ctx.quadraticCurveTo(30, 6, 0, 12); ctx.quadraticCurveTo(-30, 6, -32, -48); ctx.fill(); ctx.fillRect(-6, 10, 12, 20); ctx.fillRect(-22, 28, 44, 10);
+  ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(-34, -28, 14, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke(); ctx.beginPath(); ctx.arc(34, -28, 14, -Math.PI * 0.5, Math.PI * 0.5); ctx.stroke(); ctx.restore();
+  if (C.sim) { const k = C.sim.t; txt('🤖 الكمبيوتر يلعب' + '.'.repeat(1 + ((k / 12) | 0) % 3), VW / 2, 600, { size: 28, weight: 900, color: '#9fd8ff' }); }
+  else if (C.phase === 'bracket' && nm) { const A = C.ent[nm.a], B = C.ent[nm.b]; txt(`${CHARS[cupEff(A)].name} (${cupName(A)})  ضد  ${CHARS[cupEff(B)].name} (${cupName(B)})`, VW / 2, 585, { size: 26, weight: 900, color: '#fff' });
+    const how = A.h < 0 && B.h < 0 ? 'الكمبيوتر يلعبها' : A.h >= 0 && B.h >= 0 ? `لاعب ${A.h + 1} ضد لاعب ${B.h + 1} على نفس الجهاز` : 'ضد الكمبيوتر';
+    if (G.frame % 60 < 44) txt((TOUCH_ON ? 'المس الشاشة' : 'اضغط Enter') + ' للعب · ' + how, VW / 2, 625, { size: 21, weight: 800, color: '#ffd34d' }); }
+  if (C.last && C.phase === 'bracket' && C.t < 120) { const e = C.ent[C.last.s]; txt(`فاز ${CHARS[cupEff(e)].name} (${cupName(e)}) ✓`, VW / 2, 660, { size: 22, weight: 800, color: '#5be37d' }); }
+  if (C.phase === 'champ' && champ !== undefined) {
+    const e = C.ent[champ], ci = cupEff(e), im = IMG['vs' + (ci + 1)], k = Math.min(1, C.t / 30);
+    ctx.fillStyle = `rgba(0,0,0,${0.75 * k})`; ctx.fillRect(0, 0, VW, VH); ctx.save(); ctx.globalAlpha = k;
+    if (im) { const hgt = 480, w = im.width * hgt / im.height; ctx.drawImage(im, VW / 2 - w / 2, VH - hgt, w, hgt); }
+    txt('🏆 بطل الدوري', VW / 2, 90, { size: 64, weight: 900, color: '#ffd34d', stroke: '#000', sw: 8, glow: '#ffb000' });
+    txt(CHARS[ci].name, VW / 2, 170, { size: 56, weight: 900, color: '#fff', stroke: '#000', sw: 8 });
+    txt(cupName(e), VW / 2, 222, { size: 30, weight: 900, color: e.h >= 0 ? CUP_COLS[e.h] : '#9fd8ff', stroke: '#000', sw: 5 });
+    if (C.t > 60 && G.frame % 60 < 44) txt(TOUCH_ON ? 'المس للرجوع' : 'Enter للرجوع', VW / 2, 690, { size: 20, weight: 800, color: 'rgba(255,255,255,0.8)', stroke: '#000', sw: 4 });
+    ctx.restore();
+    const cc = ['#ffd34d', '#ffffff', '#ff3b4a', '#3ea0ff', '#5be37d']; for (let i = 0; i < 70; i++) { const x = (i * 97 + C.t * (1 + i % 3)) % VW, y = ((i * 53 + C.t * (2 + i % 4)) % (VH + 40)) - 20; ctx.save(); ctx.translate(x, y); ctx.rotate(C.t * 0.1 + i); ctx.fillStyle = cc[i % 5]; ctx.fillRect(-5, -3, 10, 6); ctx.restore(); }
+  }
+}
+const TITLE_MENU = [['2p', 'لاعب ضد لاعب'], ['cpu', 'ضد الكمبيوتر'], ['train', 'التدريب 🎯'], ['cup', 'الدوري 🏆'], ['story', 'القصة 📖'], ['online', 'أونلاين 🌐'], ['set', 'الإعدادات']], MENU_Y0 = 412, MENU_DY = 33;
 function updTitle() {
   G.t++;
   if (G.settingsOpen) { if (updSettings()) G.settingsOpen = false; return; }
   if (G.t === 40) statsAskName(false);
   const up = pads[0].p.up || pads[1].p.up, dn = pads[0].p.down || pads[1].p.down;
-  if (up) { G.menuIdx = (G.menuIdx + 4) % 5; SFX.move(); }
-  if (dn) { G.menuIdx = (G.menuIdx + 1) % 5; SFX.move(); }
-  if (G.tap) { const i = Math.round((G.tap[1] - 418) / 46); if (i >= 0 && i < 5 && Math.abs(G.tap[0] - VW / 2) < 300) G.menuIdx = i; }
-  if (pads[0].p.ok || pads[1].p.ok || anyP('Click')) { if (G.t > 10) { SFX.ok(); if (G.menuIdx === 4) { G.settingsOpen = true; setIdx = 0; } else if (G.menuIdx === 3) { G.scene = 'online'; G.t = 0; NET.ui = 'menu'; NET.idx = 0; } else if (G.menuIdx === 2) { storyMapOpen(); } else { G.mode = G.menuIdx === 0 ? '2p' : 'cpu'; G.toSelect(); } } }
+  const NM = TITLE_MENU.length;
+  if (up) { G.menuIdx = (G.menuIdx + NM - 1) % NM; SFX.move(); }
+  if (dn) { G.menuIdx = (G.menuIdx + 1) % NM; SFX.move(); }
+  if (G.tap) { const i = Math.round((G.tap[1] - MENU_Y0) / MENU_DY); if (i >= 0 && i < NM && Math.abs(G.tap[0] - VW / 2) < 300) G.menuIdx = i; }
+  if (pads[0].p.ok || pads[1].p.ok || anyP('Click')) { if (G.t > 10) { SFX.ok(); const id = TITLE_MENU[G.menuIdx][0];
+    if (id === 'set') { G.settingsOpen = true; setIdx = 0; } else if (id === 'online') { G.scene = 'online'; G.t = 0; NET.ui = 'menu'; NET.idx = 0; } else if (id === 'story') { storyMapOpen(); } else if (id === 'cup') { cupOpen(); } else { G.mode = id; G.toSelect(); } } }
 }
 function drawTitle() {
   drawStage({ x: Math.sin(G.frame * 0.003) * 120, z: 1, yaw: Math.sin(G.frame * 0.004) * 0.5 }, G.frame);
@@ -4777,14 +4943,13 @@ function drawTitle() {
   txt('v' + GAME_VER, 560, 120, { size: 18, font: FE, weight: 700, color: 'rgba(255,255,255,0.45)', rtl: false });
   ctx.restore();
   // menu
-  const opts = ['لاعب ضد لاعب', 'ضد الكمبيوتر', 'القصة 📖', 'أونلاين 🌐', 'الإعدادات'];
-  opts.forEach((o, i) => {
-    const y = 418 + i * 46, sel = i === G.menuIdx;
+  TITLE_MENU.forEach(([, o], i) => {
+    const y = MENU_Y0 + i * MENU_DY, sel = i === G.menuIdx;
     if (sel) {
       ctx.save(); ctx.fillStyle = 'rgba(230,20,40,0.9)'; ctx.shadowColor = '#ff1030'; ctx.shadowBlur = 25;
-      ctx.beginPath(); ctx.moveTo(VW / 2 - 200, y - 22); ctx.lineTo(VW / 2 + 220, y - 22); ctx.lineTo(VW / 2 + 200, y + 22); ctx.lineTo(VW / 2 - 220, y + 22); ctx.closePath(); ctx.fill(); ctx.restore();
+      ctx.beginPath(); ctx.moveTo(VW / 2 - 200, y - 17); ctx.lineTo(VW / 2 + 220, y - 17); ctx.lineTo(VW / 2 + 200, y + 17); ctx.lineTo(VW / 2 - 220, y + 17); ctx.closePath(); ctx.fill(); ctx.restore();
     }
-    txt(o, VW / 2, y + 2, { size: 33, weight: 800, color: sel ? '#fff' : 'rgba(255,255,255,0.55)' });
+    txt(o, VW / 2, y + 2, { size: 28, weight: 800, color: sel ? '#fff' : 'rgba(255,255,255,0.55)' });
   });
   if (G.frame % 60 < 40) txt(TOUCH_ON ? 'المس الخيار اللي تبيه' : 'اختر بالأسهم أو W/S  ·  ابدأ بـ Enter أو Space', VW / 2, 636, { size: 20, weight: 700, color: 'rgba(255,255,255,0.75)' });
   if (!TOUCH_ON) txt('M: كتم الصوت  ·  N: الموسيقى', VW / 2, 700, { size: 16, weight: 600, color: 'rgba(255,255,255,0.35)' });
@@ -4797,7 +4962,7 @@ function drawTitle() {
 
 function updSelect() {
   const S = G.sel; S.t++;
-  const cpu = G.mode === 'cpu';
+  const cpu = G.mode === 'cpu' || G.mode === 'train';
   const p1done = S.done[0];
   const online = G.mode === 'online';
   const ctrl = (slot) => {
@@ -4850,10 +5015,10 @@ function drawSelect() {
   drawStage({ x: 0, z: 1 }, G.frame);
   ctx.fillStyle = 'rgba(3,4,10,0.72)'; ctx.fillRect(0, 0, VW, VH);
   txt('اختر مقاتلك', VW / 2, 56, { size: 58, weight: 900, color: '#fff', glow: '#ff1030', glowBlur: 30 });
-  const cpu = G.mode === 'cpu';
+  const cpu = G.mode === 'cpu' || G.mode === 'train';
   if (G.mode === 'online') txt(S.done[NET.slot] ? (S.done[1 - NET.slot] ? 'يلا نبدأ!' : 'ننتظر صاحبك يختار...') : 'اختر شخصيتك · صاحبك يختار بنفس الوقت', VW / 2, 106, { size: 24, weight: 700, color: '#ffd34d' });
   else if (G.storyPick) txt('اختر بطل القصة 📖', VW / 2, 106, { size: 26, weight: 800, color: '#ffd34d' });
-  else if (cpu) txt(S.done[0] ? 'اختر خصمك (الكمبيوتر)' : 'اختر شخصيتك', VW / 2, 106, { size: 24, weight: 700, color: '#ffd34d' });
+  else if (cpu) txt(S.done[0] ? (G.mode === 'train' ? 'اختر الدمية اللي تتدرب عليها' : 'اختر خصمك (الكمبيوتر)') : (G.mode === 'train' ? '🎯 التدريب — اختر شخصيتك' : 'اختر شخصيتك'), VW / 2, 106, { size: 24, weight: 700, color: '#ffd34d' });
   // big previews
   for (let s = 0; s < 2; s++) {
     const OF = outfitOf(S.cur[s], S.outfit && S.outfit[s]), ci = selCI(S, s), base = IMG['front' + (S.cur[s] + 1)], im = IMG['front' + (ci + 1)], C = CHARS[ci];
@@ -4876,7 +5041,7 @@ function drawSelect() {
     ctx.beginPath(); ctx.moveTo(cx - 170, ny - 34); ctx.lineTo(cx + 185, ny - 34); ctx.lineTo(cx + 170, ny + 30); ctx.lineTo(cx - 185, ny + 30); ctx.closePath(); ctx.fill(); ctx.restore();
     txt(C.name, cx, ny - 4, { size: 44, weight: 900, color: '#fff', stroke: '#000', sw: 4 });
     txt(C.tag, cx, ny + 50, { size: 20, weight: 700, color: 'rgba(255,255,255,0.75)' });
-    txt(G.mode === 'online' ? (s === NET.slot ? 'YOU' : 'FRIEND') : (s === 0 ? '1P' : (cpu ? 'CPU' : '2P')), cx, 140, { size: 44, font: FE, weight: 700, color: s === 0 ? '#3ea0ff' : '#ff3b4a', rtl: false, italic: true });
+    txt(G.mode === 'online' ? (s === NET.slot ? 'YOU' : 'FRIEND') : (s === 0 ? '1P' : (cpu ? (G.mode === 'train' ? 'DUMMY' : 'CPU') : '2P')), cx, 140, { size: 44, font: FE, weight: 700, color: s === 0 ? '#3ea0ff' : '#ff3b4a', rtl: false, italic: true });
     { const kd = gpSlotKind(s); if (kd && !(cpu && s === 1)) txt('🎮 ' + kd, cx + (s === 0 ? 105 : -105), 142, { size: 24, font: FE, weight: 700, color: '#9fd8ff', rtl: false }); }
     if (S.done[s]) {
       ctx.save(); ctx.translate(cx, 400); ctx.rotate(-0.12);
@@ -4903,7 +5068,7 @@ function drawSelect() {
     ctx.strokeRect(x - 4 + ins, ty - 4 + ins, tw + 8 - ins * 2, tw + 8 - ins * 2); ctx.restore();
     ctx.save(); ctx.fillStyle = col; const lx = s === 0 ? x : x + tw - 44;
     ctx.fillRect(lx, ty, 44, 24); ctx.restore();
-    txt(s === 0 ? '1P' : (cpu ? 'CPU' : '2P'), lx + 22, ty + 13, { size: 22, font: FE, weight: 700, color: '#fff', rtl: false });
+    txt(s === 0 ? '1P' : (cpu ? (G.mode === 'train' ? 'DUMMY' : 'CPU') : '2P'), lx + 22, ty + 13, { size: 22, font: FE, weight: 700, color: '#fff', rtl: false });
   }
   // stats for both
   const statN = ['قوة', 'سرعة', 'تحمّل'];
@@ -5061,6 +5226,7 @@ function tick() {
     case 'fight': if (G.mode === 'online') { netFightTick(); break; } if (G.fight.pads[1].cpu) G.fight.pads[1].read(); G.fight.update(); break;
     case 'online': updOnline(); break;
     case 'story': updStory(); break;
+    case 'cup': updCup(); break;
     case 'result': updResult(); break;
   }
 }
@@ -5077,6 +5243,7 @@ function render() {
     case 'fight': G.fight.draw(); if (G.mode === 'online') drawNetOverlay(); break;
     case 'online': drawOnline(); break;
     case 'story': drawStory(); break;
+    case 'cup': drawCup(); break;
     case 'result': drawResult(); break;
   }
   if (muted) txt('🔇', VW - 30, 30, { size: 24, rtl: false });
