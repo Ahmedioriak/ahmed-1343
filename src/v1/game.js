@@ -132,9 +132,11 @@ function gpPoll() {
 }
 function rumble(slot, strong, weak, ms) {
   if (!SET.rumble) return;
-  if (TOUCH_ON && slot === 0 && strong > 0.25) try { navigator.vibrate && navigator.vibrate(Math.min(ms, 220)); } catch (e) { }
+  let online = false; try { online = G.mode === 'online'; } catch (e) { }
+  if (online && slot !== NET.slot) return; // online: only my own fighter shakes my phone / controller
+  if (TOUCH_ON && (online || slot === 0) && strong > 0.25) try { navigator.vibrate && navigator.vibrate(Math.min(ms, 220)); } catch (e) { }
   let list; try { list = navigator.getGamepads ? navigator.getGamepads() : []; } catch (e) { return; }
-  for (const i in GP.slots) if (GP.slots[i] === slot) {
+  for (const i in GP.slots) if (online || GP.slots[i] === slot) {
     const g = list[i]; const va = g && g.vibrationActuator;
     try { if (va && va.playEffect) va.playEffect('dual-rumble', { startDelay: 0, duration: ms, strongMagnitude: strong, weakMagnitude: weak }).catch(() => { }); } catch (e) { }
   }
@@ -142,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.24';
+const GAME_VER = '1.25';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -349,7 +351,7 @@ function tcFrame() {
   if (!TOUCH_ON) return;
   rotEl.classList.toggle('on', innerHeight > innerWidth * 1.05);
   const fight = G.scene === 'fight' && G.fight && !G.fight.paused && !G.fight.showList && !NET.menu;
-  const f0 = fight ? G.fight.f[0] : null;
+  const f0 = fight ? G.fight.f[G.mode === 'online' ? NET.slot : 0] : null; // online: the buttons follow my own fighter
   const key = [fight, G.scene === 'fight', fsOK(), f0 && f0.sk >= SKMAX, f0 && f0.cbCD > 0, f0 && f0.dgCD > 0, f0 && f0.rage].join();
   if (key === tcVisKey) return; tcVisKey = key; tcLayout();
   for (const b of TBTN) {
@@ -3406,7 +3408,7 @@ class Fight {
       const fw = sw2 * fr;
       if (full) { const pz = 0.5 + 0.5 * Math.sin(G.frame * 0.3); ctx.save(); ctx.shadowColor = '#ffd34d'; ctx.shadowBlur = 10 + pz * 10; ctx.fillStyle = `rgb(255,${190 + pz * 50},${40 + pz * 60})`; ctx.fillRect(sx0, sy, sw2, 8); ctx.restore(); }
       else { ctx.fillStyle = f.slot === 0 ? '#3ea0ff' : '#ff3b4a'; if (!rev) ctx.fillRect(sx0, sy, fw, 8); else ctx.fillRect(sx0 + sw2 - fw, sy, fw, 8); }
-      const key = (this.mode === 'cpu' && f.slot === 1) ? '' : (gpSlotKind(f.slot) ? 'L3/R3' : (f.slot === 0 || this.mode === 'online' ? (TOUCH_ON ? '★' : 'E') : 'U'));
+      const key = ((this.mode === 'cpu' && f.slot === 1) || (this.mode === 'online' && f.slot !== NET.slot)) ? '' : (this.mode === 'online' ? (TOUCH_ON ? '★' : 'E') : gpSlotKind(f.slot) ? 'L3/R3' : (f.slot === 0 ? (TOUCH_ON ? '★' : 'E') : 'U'));
       const label = SKILL_NAMES[f.ci] + (full ? (key ? `  ✦ جاهزة (${key})` : '  ✦ جاهزة') : '');
       { const cd = f.cbCD / CB_CD, by2 = sy + 14; ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx0 - 2, by2 - 1, sw2 * 0.6 + 4, 7);
         ctx.fillStyle = cd > 0 ? 'rgba(255,255,255,0.35)' : '#7dffb0'; const ww = sw2 * 0.6 * (1 - cd); if (!rev) ctx.fillRect(sx0, by2, ww, 5); else ctx.fillRect(sx0 + sw2 * 0.4 + sw2 * 0.6 - ww, by2, ww, 5);
