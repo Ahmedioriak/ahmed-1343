@@ -300,7 +300,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.39';
+const GAME_VER = '1.40';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -511,6 +511,7 @@ function uiTapZone(gx, gy) {
     }
     if (G.scene === 'story' && G.story && G.story.step === 'select' && gy > 90) return true;
     if (G.scene === 'cup' || G.scene === 'shop') return true;
+    if (G.scene === 'title' && !G.settingsOpen && gx < 340 && gy > VH - 80) return true;   // your name/coins → wardrobe
   } catch (e) { }
   return false;
 }
@@ -4466,7 +4467,7 @@ function statsPing(extra) {
 }
 function statsAskName(force) {
   try { if (!fbDB() && !force) return; if (!force && (statsName() || localStorage.getItem('shilla_name_asked'))) return; localStorage.setItem('shilla_name_asked', '1');
-    setTimeout(() => { const n = window.prompt('وش اسمك؟ (عشان المدير يعرف منو يلعب)', statsName()); if (n !== null) { localStorage.setItem('shilla_name', n.trim().slice(0, 24)); statsPing(); } }, 60);
+    setTimeout(() => { ASK('وش اسمك؟', statsName(), n => { if (n !== null) { localStorage.setItem('shilla_name', n.trim().slice(0, 24)); statsPing(); } }); }, 60);
   } catch (e) { }
 }
 addEventListener('load', () => setTimeout(() => statsPing(), 2500));
@@ -4973,7 +4974,7 @@ const G = {
   toResult(w, fight) { if (this.story) { storyResult(w); return; } if (this.cup && this.cup.play) { cupResult(w); return; } this.scene = 'result'; this.t = 0; this.res = { w, ci: fight.cis[w], wins: fight.wins.slice() }; if (AC) Music.intensity = 0; say(`${w === 0 ? 'Player one' : (this.mode === 'cpu' ? 'Computer' : 'Player two')} wins`); },
 };
 window.__storyAPI = { storyAdvance, storyStart, storyFight, storyMapOpen, storyScript };
-window.__shopAPI = { profCur, shopPrev, shopOpen, clothRig, PROF: () => PROF, profSave, cupOpen };
+window.__shopAPI = { profCur, shopPrev, shopOpen, clothRig, PROF: () => PROF, profSave, cupOpen, profAdd };
 window.__voiceTexts = () => { const T = new Set(); PERSONA.forEach(P => ['intro', 'skill', 'win'].forEach(k => (P[k] || []).forEach(x => T.add(x)))); Object.values(SKILL2_LINE).forEach(x => T.add(x)); Object.values(BOSS_LINES).forEach(x => T.add(x)); FIN.forEach(F => F && F.line && T.add(F.line)); CHARS.forEach(c => c.quote && T.add(c.quote)); return [...T]; };
 window.__voiceSegs = t => voiceSegs(t).map(x => x.t); window.__VOXS = VOX; window.__speakRec = speakRec; window.__VOX = VOX; window.__NET = NET; window.__netHost = () => netHost(); window.__netJoin = c => netJoin(c); window.__netHash = () => G.fight ? netHash(G.fight) : 0;
 window.__G = G; window.__MV = MV; window.__SK = SKILL_IDS; window.__COMBOS = COMBOS; window.__CPU = CPUPad; window.__txt = txt; window.__IMG = IMG; window.__FX = FX; window.__spark = spark;
@@ -5088,7 +5089,10 @@ function clothRig(R, key, e) {
   const k = key + '#' + [e.body || '', e.hand || '', e.feet || ''].join('|'); if (CLOTH_CACHE[k]) return CLOTH_CACHE[k];
   const P = {};
   for (const part in R.P) { const s = R.P[part], im = clothPart(R.m, part, s, e);
-    P[part] = im === s.img ? s : { img: im, shadow: tinted(im, '#1e0430', 0.8), dark: tinted(im, '#0b0d1a', 0.45), flash: tinted(im, '#ffffff', 0.42), rage: tinted(im, '#ff1020', 0.35), ox: s.ox, oy: s.oy, hull: s.hull }; }
+    if (im === s.img) { P[part] = s; continue; }
+    const q = { img: im, ox: s.ox, oy: s.oy, hull: s.hull };
+    for (const [v, c, a] of [['shadow', '#1e0430', 0.8], ['dark', '#0b0d1a', 0.45], ['flash', '#ffffff', 0.42], ['rage', '#ff1020', 0.35]]) { let t = null; Object.defineProperty(q, v, { get: () => t || (t = tinted(im, c, a)) }); }
+    P[part] = q; }
   return (CLOTH_CACHE[k] = Object.assign({}, R, { P }));
 }
 function clothLayers(m, part, e) {
@@ -5285,9 +5289,11 @@ function drawItemIcon(it, x, y, s) {
 }
 // ---- the wardrobe / shop scene
 function shopChars() { const L = []; for (let i = 0; i < NCH; i++) { L.push(i); const O = OUTFITS[i]; if (O) O.forEach(o => { if (o.as !== undefined) L.push(o.as); }); } return L; }
-function shopOpen(back) { G.shop = { ci: 0, cat: 0, idx: 0, try: null, back: back || 'title', t: 0, msg: null, pf: null }; G.scene = 'shop'; G.t = 0; SFX.ok(); shopPrev(); }
+function shopOpen(back) { G.shop = { ci: 0, cat: 0, idx: -1, try: null, back: back || 'title', t: 0, msg: null, pf: null, fx: null }; G.scene = 'shop'; G.t = 0; SFX.ok(); shopPrev(true); }
 function shopEq() { const S = G.shop, P = profCur(), e = Object.assign({}, (P.eq[S.ci]) || {}); if (S.try) e[SHOP_BY[S.try].cat] = S.try; return eqClean(e); }
-function shopPrev() { const S = G.shop; const f = new Fighter(0, S.ci, { h: {}, p: {}, read() { } }); f.state = 'idle'; f.x = 0; f.facing = 1; f.eq = shopEq(); f.R = clothRig(RIGS[S.ci], 'c' + S.ci, f.eq); f.animate(); S.pf = f; }
+function shopBuild() { const S = G.shop; if (!S) return; const e = shopEq(), key = S.ci + '|' + JSON.stringify(e || {}); if (S.pf && S.pfKey === key) return;
+  const f = new Fighter(0, S.ci, { h: {}, p: {}, read() { } }); f.state = 'idle'; f.x = 0; f.facing = 1; f.eq = e; f.R = clothRig(RIGS[S.ci], 'c' + S.ci, e); f.animate(); if (S.pf && S.pf.ci === S.ci) { f.pose = S.pf.pose; f.clock = S.pf.clock; } S.pf = f; S.pfKey = key; }
+function shopPrev(now) { const S = G.shop; if (!S) return; if (now || !S.pf) { shopBuild(); return; } if (S.pend) return; S.pend = 1; setTimeout(() => { if (G.shop) { G.shop.pend = 0; shopBuild(); } }, 0); }
 function shopItems() { return SHOP.filter(it => it.cat === SHOP_CATS[G.shop.cat][0]); }
 function shopMsg(t, c) { G.shop.msg = { t, c: c || '#ffd34d', k: 0 }; }
 function shopAction(it) {
@@ -5296,33 +5302,53 @@ function shopAction(it) {
   const e = (P.eq[S.ci] = P.eq[S.ci] || {}); if (cur) { delete e[it.cat]; shopMsg('شلت ' + it.name); } else { e[it.cat] = it.id; shopMsg('لبست ' + it.name + ' ✓'); } profSave(); SFX.ok(); S.try = null; shopPrev();
 }
 function profSwitch() { const ids = profIds(), i = ids.indexOf(PROF.cur); PROF.cur = ids[(i + 1) % ids.length]; profSave(); shopMsg('الحساب: ' + profCur().name); if (G.shop) shopPrev(); }
-function profAdd() { setTimeout(() => { const n = window.prompt('اسم الحساب الجديد؟', ''); if (n && n.trim()) { PROF.cur = profNew(n.trim()); profSave(); if (G.shop) { shopMsg('حساب جديد: ' + n.trim() + ' · معك ' + START_COINS + ' 🪙'); shopPrev(); } } }, 30); }
-function profRename() { setTimeout(() => { const P = profCur(), n = window.prompt('غيّر اسم الحساب', P.name); if (n && n.trim()) { P.name = n.trim().slice(0, 20); profSave(); } }, 30); }
-const SHOP_UI = { gx: 28, gy: 150, gs: 64, gc: 4, cx: 560, tabY: 128, ix: 800, iy: 182, iw: 222, ih: 104 };
+const ASK = (() => {
+  const d = document.createElement('div'); d.id = 'askbox';
+  d.innerHTML = '<div class="ab"><div class="at"></div><input maxlength="20" dir="rtl" autocomplete="off"><div class="ar"><button class="ok">تم ✓</button><button class="no">إلغاء</button></div></div>';
+  const st = document.createElement('style'); st.textContent = '#askbox{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);font-family:Tajawal,system-ui,sans-serif}#askbox.on{display:flex}#askbox .ab{background:#14151f;border:2px solid #ff2a3a;border-radius:18px;padding:18px 18px 14px;width:min(420px,88vw);box-shadow:0 10px 40px rgba(0,0,0,.6)}#askbox .at{color:#fff;font-weight:900;font-size:20px;text-align:center;margin-bottom:12px}#askbox input{width:100%;box-sizing:border-box;font-size:22px;padding:10px 12px;border-radius:12px;border:2px solid #444;background:#0b0c14;color:#fff;font-family:inherit;text-align:center;outline:none}#askbox input:focus{border-color:#ffd34d}#askbox .ar{display:flex;gap:10px;margin-top:12px}#askbox button{flex:1;font-family:inherit;font-weight:900;font-size:19px;padding:11px;border:0;border-radius:12px;cursor:pointer;touch-action:manipulation}#askbox .ok{background:#e01428;color:#fff}#askbox .no{background:#2a2b36;color:#ddd}';
+  document.head.appendChild(st); document.body.appendChild(d);
+  const inp = d.querySelector('input'); let cb = null, t0 = 0; const fresh = () => performance.now() - t0 < 450;   // the tap that opened the box also sends a click: ignore it
+  const close = v => { d.classList.remove('on'); G.modal = false; try { inp.blur(); } catch (e) { } const f = cb; cb = null; if (f) f(v); };
+  d.querySelector('.ok').addEventListener('click', e => { e.stopPropagation(); if (!fresh()) close((inp.value || '').trim()); });
+  d.querySelector('.no').addEventListener('click', e => { e.stopPropagation(); if (!fresh()) close(null); });
+  d.addEventListener('pointerdown', e => e.stopPropagation()); d.addEventListener('click', e => { if (e.target === d && !fresh()) close(null); });
+  inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); close((inp.value || '').trim()); } if (e.key === 'Escape') close(null); });
+  return (title, val, f) => { t0 = performance.now(); d.querySelector('.at').textContent = title; inp.value = val || ''; cb = f; G.modal = true; d.classList.add('on'); setTimeout(() => { try { inp.focus(); inp.select(); } catch (e) { } }, 60); };
+})();
+function profAdd() { ASK('اسم الحساب الجديد', '', n => { if (n) { PROF.cur = profNew(n); profSave(); if (G.shop) { shopMsg('حساب جديد: ' + n + ' · معك ' + START_COINS + ' 🪙'); shopPrev(); } } }); }
+function profRename() { const P = profCur(); ASK('غيّر اسم الحساب', P.name, n => { if (n) { P.name = n.slice(0, 20); profSave(); if (G.shop) shopMsg('الاسم: ' + P.name); } }); }
+const SHOP_UI = { gx: 26, gy: 150, gs: 66, gc: 4, cx: 560, tabY: 132, tw: 90, th: 54, ix: 790, iy: 196, iw: 226, ih: 104 };
+function shopLeave() { const S = G.shop; SFX.move(); G.shop = null; if (S && S.back === 'select') G.toSelect(); else G.toTitle(); }
+function shopPress(id) { const S = G.shop; S.fx = { id, k: 0 }; }   // a quick flash on whatever was touched
 function updShop() {
-  const S = G.shop; if (!S) { G.toTitle(); return; } S.t++; G.t++; if (S.msg) S.msg.k++;
-  const p = pads[0].p, q = pads[1].p, ok = p.ok || q.ok, back = p.back || q.back || anyP('Escape', 'Backspace'), tap = cupTap(), U = SHOP_UI, CH = shopChars(), items = shopItems();
-  const hit = (x, y, w, h) => tap && tap[0] >= x && tap[0] <= x + w && tap[1] >= y && tap[1] <= y + h;
+  const S = G.shop; if (!S) { G.toTitle(); return; } S.t++; G.t++; if (S.msg) S.msg.k++; if (S.fx) S.fx.k++;
   if (S.pf) { S.pf.clock++; S.pf.t++; S.pf.animate(); }
-  if (back && S.t > 8) { SFX.move(); G.shop = null; if (S.back === 'select') G.toSelect(); else G.toTitle(); return; }
-  // keyboard
-  if (p.up || q.up) { S.cat = (S.cat + SHOP_CATS.length - 1) % SHOP_CATS.length; S.idx = 0; S.try = null; SFX.move(); shopPrev(); }
-  if (p.down || q.down) { S.cat = (S.cat + 1) % SHOP_CATS.length; S.idx = 0; S.try = null; SFX.move(); shopPrev(); }
-  if (p.left || q.left || p.right || q.right) { const n = shopItems().length; S.idx = (S.idx + (p.right || q.right ? 1 : n - 1)) % n; S.try = shopItems()[S.idx].id; SFX.move(); shopPrev(); }
-  if (p.b1 || q.b1 || anyP('KeyQ')) { const i = CH.indexOf(S.ci); S.ci = CH[(i + CH.length - 1) % CH.length]; S.try = null; SFX.move(); shopPrev(); }
-  if (p.b2 || q.b2 || anyP('KeyE')) { const i = CH.indexOf(S.ci); S.ci = CH[(i + 1) % CH.length]; S.try = null; SFX.move(); shopPrev(); }
+  if (G.modal) { cupTap(); return; }
+  const p = pads[0].p, q = pads[1].p, ok = p.ok || q.ok, back = anyP('Escape', 'Backspace') || ((p.back || q.back) && !anyP('KeyT', 'KeyO')), tap = cupTap(), U = SHOP_UI, CH = shopChars(), items = shopItems();
+  const P = 14, hit = (x, y, w, h) => tap && tap[0] >= x - P && tap[0] <= x + w + P && tap[1] >= y - P && tap[1] <= y + h + P;
+  const setCat = i => { if (i !== S.cat) { S.cat = i; S.idx = -1; S.try = null; shopPrev(); } SFX.move(); shopPress('tab' + i); };
+  const setChar = ci => { if (ci !== S.ci) { S.ci = ci; S.try = null; shopPrev(); } SFX.move(); shopPress('ch' + ci); };
+  const pick = i => { const it = shopItems()[i]; if (!it) return; S.idx = i; S.try = (profCur().eq[S.ci] || {})[it.cat] === it.id ? null : it.id; SFX.move(); shopPrev(); shopPress('it' + i); };
+  if (back && S.t > 8) { shopLeave(); return; }
+  // keyboard / pad: ▲▼ sections · ◀▶ items · Q/E (L1/R1) character · Enter buy/wear · Tab account
+  if (p.up || q.up) setCat((S.cat + SHOP_CATS.length - 1) % SHOP_CATS.length);
+  if (p.down || q.down) setCat((S.cat + 1) % SHOP_CATS.length);
+  if (p.left || q.left || p.right || q.right) { const n = items.length; pick(S.idx < 0 ? 0 : (S.idx + (p.right || q.right ? 1 : n - 1)) % n); }
+  if (p.dg || q.dg) { const i = CH.indexOf(S.ci); setChar(CH[(i + CH.length - 1) % CH.length]); }
+  if (p.sp || q.sp) { const i = CH.indexOf(S.ci); setChar(CH[(i + 1) % CH.length]); }
   if (anyP('Tab')) profSwitch();
-  if (ok && S.t > 8) { const it = items[S.idx]; if (it) shopAction(it); }
+  if (ok && S.t > 8) { const it = items[S.idx]; if (it) { shopAction(it); shopPress('act'); } }
   if (!tap) return;
-  // taps
-  CH.forEach((ci, i) => { const x = U.gx + (i % U.gc) * (U.gs + 8), y = U.gy + ((i / U.gc) | 0) * (U.gs + 8); if (hit(x, y, U.gs, U.gs)) { S.ci = ci; S.try = null; SFX.move(); shopPrev(); } });
-  SHOP_CATS.forEach((c, i) => { const x = U.ix + i * 92; if (hit(x, U.tabY - 22, 86, 44)) { S.cat = i; S.idx = 0; S.try = null; SFX.move(); shopPrev(); } });
-  items.forEach((it, i) => { const x = U.ix + (i % 2) * (U.iw + 12), y = U.iy + ((i / 2) | 0) * (U.ih + 10); if (hit(x, y, U.iw, U.ih)) { if (S.idx === i && S.try === it.id) shopAction(it); else { S.idx = i; S.try = it.id; SFX.move(); shopPrev(); } } });
-  if (hit(VW - 330, 650, 300, 56)) { const it = items[S.idx]; if (it) shopAction(it); }
-  if (hit(20, 18, 300, 50)) profSwitch();
-  if (hit(330, 18, 50, 50)) profAdd();
-  if (hit(390, 18, 50, 50)) profRename();
-  if (hit(20, 650, 160, 56)) { SFX.move(); G.shop = null; if (S.back === 'select') G.toSelect(); else G.toTitle(); }
+  // touch / mouse — the closest target wins, one tap is enough
+  if (hit(VW - 330, 646, 300, 64)) { const it = items[S.idx]; if (it) { shopAction(it); shopPress('act'); } return; }
+  if (hit(16, 646, 170, 64)) { shopLeave(); return; }
+  if (hit(20, 18, 300, 50)) { profSwitch(); shopPress('prof'); return; }
+  if (hit(330, 16, 54, 54)) { shopPress('add'); profAdd(); return; }
+  if (hit(392, 16, 54, 54)) { shopPress('ren'); profRename(); return; }
+  for (let i = 0; i < SHOP_CATS.length; i++) { const x = U.ix + i * (U.tw + 4); if (tap[0] >= x - 2 && tap[0] <= x + U.tw + 2 && tap[1] >= U.tabY - U.th / 2 - 14 && tap[1] <= U.tabY + U.th / 2 + 10) { setCat(i); return; } }
+  for (let i = 0; i < items.length; i++) { const x = U.ix + (i % 2) * (U.iw + 12), y = U.iy + ((i / 2) | 0) * (U.ih + 10); if (tap[0] >= x - 5 && tap[0] <= x + U.iw + 5 && tap[1] >= y - 5 && tap[1] <= y + U.ih + 5) { if (S.idx === i) { shopAction(items[i]); shopPress('it' + i); } else pick(i); return; } }
+  let best = -1, bd = 1e9; CH.forEach((ci, i) => { const x = U.gx + (i % U.gc) * (U.gs + 8) + U.gs / 2, y = U.gy + ((i / U.gc) | 0) * (U.gs + 8) + U.gs / 2, d = Math.max(Math.abs(tap[0] - x), Math.abs(tap[1] - y)); if (d < bd) { bd = d; best = ci; } });
+  if (bd < U.gs / 2 + 8) { setChar(best); return; }
 }
 function drawShop() {
   const S = G.shop; if (!S) return; const P = profCur(), U = SHOP_UI, CH = shopChars(), items = shopItems();
@@ -5331,13 +5357,15 @@ function drawShop() {
   txt('👕 غرفة الملابس', VW / 2 + 40, 44, { size: 40, weight: 900, color: '#fff', stroke: '#1a0004', sw: 7, glow: '#ff1030' });
   // profile + coins
   ctx.fillStyle = 'rgba(255,255,255,0.1)'; rrect(20, 18, 300, 50, 25); ctx.fill(); txt('👤 ' + P.name + '  ⇄', 170, 44, { size: 22, weight: 900, color: '#fff' });
-  for (const [x, s] of [[330, '＋'], [390, '✎']]) { ctx.fillStyle = 'rgba(255,255,255,0.1)'; rrect(x, 18, 50, 50, 25); ctx.fill(); txt(s, x + 25, 45, { size: 24, weight: 900, color: '#fff', rtl: false }); }
+  const FX_ = id => S.fx && S.fx.id === id && S.fx.k < 8;
+  if (FX_('prof')) { ctx.fillStyle = 'rgba(255,211,77,0.35)'; rrect(20, 18, 300, 50, 25); ctx.fill(); }
+  for (const [x, s, id] of [[330, '＋', 'add'], [392, '✎', 'ren']]) { ctx.fillStyle = FX_(id) ? 'rgba(255,211,77,0.5)' : 'rgba(255,255,255,0.12)'; rrect(x, 16, 54, 54, 27); ctx.fill(); txt(s, x + 27, 44, { size: 26, weight: 900, color: '#fff', rtl: false }); }
   ctx.fillStyle = 'rgba(255,211,77,0.15)'; rrect(VW - 230, 18, 210, 50, 25); ctx.fill(); txt('🪙 ' + P.coins, VW - 125, 45, { size: 28, weight: 900, color: '#ffd34d', rtl: false });
   // characters
   txt('الشخصية', U.gx + 2 * (U.gs + 8), U.gy - 22, { size: 18, weight: 800, color: 'rgba(255,255,255,0.6)' });
   CH.forEach((ci, i) => { const x = U.gx + (i % U.gc) * (U.gs + 8), y = U.gy + ((i / U.gc) | 0) * (U.gs + 8), on = ci === S.ci, im = IMG['face' + (ci + 1)];
     ctx.save(); rrect(x, y, U.gs, U.gs, 10); ctx.fillStyle = 'rgba(10,12,24,0.9)'; ctx.fill(); ctx.clip(); if (im) ctx.drawImage(im, x, y, U.gs, U.gs); ctx.restore();
-    ctx.lineWidth = on ? 4 : 1.2; ctx.strokeStyle = on ? '#ffd34d' : 'rgba(255,255,255,0.25)'; rrect(x, y, U.gs, U.gs, 10); ctx.stroke();
+    ctx.lineWidth = on ? 4 : 1.2; ctx.strokeStyle = on ? '#ffd34d' : 'rgba(255,255,255,0.25)'; rrect(x, y, U.gs, U.gs, 10); ctx.stroke(); if (FX_('ch' + ci)) { ctx.fillStyle = 'rgba(255,255,255,0.3)'; rrect(x, y, U.gs, U.gs, 10); ctx.fill(); }
     if (P.eq[ci] && eqClean(P.eq[ci])) txt('👕', x + U.gs - 10, y + 12, { size: 13, rtl: false }); });
   // preview
   const f = S.pf; if (f) { ctx.save(); ctx.translate(U.cx, 640); ctx.scale(1.3, 1.3);
@@ -5346,21 +5374,22 @@ function drawShop() {
   txt(CHARS[S.ci].name, U.cx, 112, { size: 30, weight: 900, color: '#fff', stroke: '#000', sw: 5 });
   if (S.try) txt('تجربة: ' + SHOP_BY[S.try].name, U.cx, 146, { size: 18, weight: 800, color: '#7dffb0', stroke: '#000', sw: 4 });
   // categories
-  SHOP_CATS.forEach(([id, nm, ic], i) => { const x = U.ix + i * 92, on = i === S.cat; ctx.fillStyle = on ? 'rgba(230,20,40,0.9)' : 'rgba(255,255,255,0.08)'; rrect(x, U.tabY - 22, 86, 44, 12); ctx.fill(); txt(ic, x + 43, U.tabY + 1, { size: 24, rtl: false }); });
-  txt(SHOP_CATS[S.cat][1], U.ix + 230, U.tabY + 36, { size: 16, weight: 800, color: 'rgba(255,255,255,0.65)' });
+  SHOP_CATS.forEach(([id, nm, ic], i) => { const x = U.ix + i * (U.tw + 4), on = i === S.cat; ctx.fillStyle = FX_('tab' + i) ? 'rgba(255,211,77,0.6)' : on ? 'rgba(230,20,40,0.92)' : 'rgba(255,255,255,0.1)'; rrect(x, U.tabY - U.th / 2, U.tw, U.th, 14); ctx.fill(); txt(ic, x + U.tw / 2, U.tabY + 2, { size: 28, rtl: false }); });
+  txt(SHOP_CATS[S.cat][1], U.ix + 2.5 * (U.tw + 4), U.tabY + 44, { size: 16, weight: 800, color: 'rgba(255,255,255,0.65)' });
   // items
   const eqNow = P.eq[S.ci] || {};
-  items.forEach((it, i) => { const x = U.ix + (i % 2) * (U.iw + 12), y = U.iy + 6 + ((i / 2) | 0) * (U.ih + 10), on = i === S.idx, own = P.own.includes(it.id), wear = eqNow[it.cat] === it.id;
-    ctx.fillStyle = on ? 'rgba(255,211,77,0.16)' : 'rgba(10,12,24,0.85)'; rrect(x, y, U.iw, U.ih, 14); ctx.fill(); ctx.lineWidth = on ? 3 : 1.2; ctx.strokeStyle = wear ? '#5be37d' : on ? '#ffd34d' : 'rgba(255,255,255,0.2)'; ctx.stroke();
+  items.forEach((it, i) => { const x = U.ix + (i % 2) * (U.iw + 12), y = U.iy + ((i / 2) | 0) * (U.ih + 10), on = i === S.idx, own = P.own.includes(it.id), wear = eqNow[it.cat] === it.id;
+    ctx.fillStyle = FX_('it' + i) ? 'rgba(255,211,77,0.4)' : on ? 'rgba(255,211,77,0.16)' : 'rgba(10,12,24,0.85)'; rrect(x, y, U.iw, U.ih, 14); ctx.fill(); ctx.lineWidth = on ? 3 : 1.2; ctx.strokeStyle = wear ? '#5be37d' : on ? '#ffd34d' : 'rgba(255,255,255,0.2)'; ctx.stroke();
     ctx.save(); rrect(x, y, U.iw, U.ih, 14); ctx.clip(); drawItemIcon(it, x + 52, y + U.ih / 2, 62); ctx.restore();
     txt(it.name, x + U.iw - 10, y + 34, { size: 18, weight: 900, color: '#fff', align: 'right' });
     txt(wear ? '✓ لابسه' : own ? 'عندك' : '🪙 ' + it.price, x + U.iw - 10, y + 70, { size: 17, weight: 900, color: wear ? '#5be37d' : own ? '#9fd8ff' : P.coins >= it.price ? '#ffd34d' : '#ff7070', align: 'right' }); });
   // action button
   const it = items[S.idx]; if (it) { const own = P.own.includes(it.id), wear = eqNow[it.cat] === it.id, can = own || P.coins >= it.price;
-    ctx.fillStyle = can ? (wear ? 'rgba(90,90,100,0.9)' : 'rgba(230,20,40,0.92)') : 'rgba(80,80,88,0.7)'; rrect(VW - 330, 650, 300, 56, 16); ctx.fill();
-    txt(wear ? 'شيله' : own ? 'البسه ✓' : 'اشتري · 🪙 ' + it.price, VW - 180, 679, { size: 25, weight: 900, color: '#fff' }); }
-  ctx.fillStyle = 'rgba(255,255,255,0.08)'; rrect(20, 650, 160, 56, 16); ctx.fill(); txt('رجوع', 100, 679, { size: 24, weight: 900, color: '#fff' });
-  txt(TOUCH_ON ? 'المس الغرض تجربه · المسه مرة ثانية تشتريه/تلبسه' : '◀ ▶ الأغراض · ▲ ▼ الأقسام · Q/E الشخصية · Enter شراء/لبس · Tab تبديل الحساب', VW / 2 + 20, 712, { size: 15, weight: 700, color: 'rgba(255,255,255,0.5)' });
+    const pr = FX_('act') ? 4 : 0; ctx.fillStyle = can ? (wear ? 'rgba(90,90,100,0.9)' : 'rgba(230,20,40,0.92)') : 'rgba(80,80,88,0.7)'; rrect(VW - 330 + pr, 646 + pr, 300 - 2 * pr, 64 - 2 * pr, 16); ctx.fill();
+    txt(wear ? 'شيله' : own ? 'البسه ✓' : 'اشتري · 🪙 ' + it.price, VW - 180, 679, { size: 26, weight: 900, color: '#fff' }); }
+  else { ctx.fillStyle = 'rgba(255,255,255,0.06)'; rrect(VW - 330, 646, 300, 64, 16); ctx.fill(); txt('👆 اختر قطعة تجربها', VW - 180, 679, { size: 21, weight: 800, color: 'rgba(255,255,255,0.6)' }); }
+  ctx.fillStyle = 'rgba(255,255,255,0.1)'; rrect(16, 646, 170, 64, 16); ctx.fill(); txt('رجوع', 101, 679, { size: 25, weight: 900, color: '#fff' });
+  txt(TOUCH_ON ? 'المس القطعة تجربها · المسها مرة ثانية أو الزر الأحمر تشتريها/تلبسها' : '◀ ▶ القطع · ▲ ▼ الأقسام · Q/E الشخصية · Enter شراء/لبس · Tab تبديل الحساب · Esc رجوع', VW / 2 + 20, 712, { size: 15, weight: 700, color: 'rgba(255,255,255,0.5)' });
   if (S.msg && S.msg.k < 110) { ctx.save(); ctx.globalAlpha = Math.min(1, (110 - S.msg.k) / 20); ctx.fillStyle = 'rgba(0,0,0,0.75)'; rrect(VW / 2 - 260 + 40, 84, 520, 40, 20); ctx.fill(); txt(S.msg.t, VW / 2 + 40, 105, { size: 20, weight: 900, color: S.msg.c }); ctx.restore(); }
 }
 // ================= الدوري — 8-fighter knockout cup: quarter-finals → semi-finals → final, random draw =================
@@ -5413,8 +5442,8 @@ function updCup() {
     if (p.left || q.left) { C.cur = (C.cur + NCH - 1) % NCH; C.o = 0; SFX.move(); }
     if (p.right || q.right) { C.cur = (C.cur + 1) % NCH; C.o = 0; SFX.move(); }
     if (p.up || q.up || p.down || q.down) { C.cur = (C.cur + CUP_GRID.per) % (CUP_GRID.per * 2); if (C.cur >= NCH) C.cur = NCH - 1; C.o = 0; SFX.move(); }
-    if ((p.b1 || q.b1 || anyP('KeyE') || hitBtn(VW / 2, 392, 260, 44)) && L.length > 1) { C.o = (C.o + 1) % L.length; SFX.move(); }
-    if (p.b2 || q.b2 || anyP('KeyR') || hitBtn(205, 342, 300, 46)) { cupPidNext(C); SFX.move(); }
+    if ((p.sp || q.sp || hitBtn(VW / 2, 392, 260, 44)) && L.length > 1) { C.o = (C.o + 1) % L.length; SFX.move(); }
+    if (p.dg || q.dg || anyP('Tab') || hitBtn(205, 342, 320, 60)) { cupPidNext(C); SFX.move(); }
     if (tap) for (let i = 0; i < NCH; i++) { const [x, y] = cupGridPos(i); if (Math.abs(tap[0] - x) < 42 && Math.abs(tap[1] - y) < 46) { if (C.cur === i) { C.go = 1; } else { C.cur = i; C.o = 0; SFX.move(); } } }
     if ((ok && C.t > 8) || C.go || hitBtn(VW - 150, 660, 220, 60)) { C.go = 0; C.picks[C.pi] = { ci: C.cur, o: C.o, pid: C.pid }; SFX.ok(); C.pi++; C.t = 0; C.pid = null; if (C.pi >= C.n) cupDraw(); }
     else if (back && C.t > 8) { SFX.move(); if (C.pi > 0) { C.pi--; C.t = 0; } else { C.phase = 'setup'; C.t = 0; } }
@@ -5464,7 +5493,7 @@ function drawCup() {
   if (C.phase === 'pick') {
     drawCupBg('🏆 الدوري', null);
     txt(`لاعب ${C.pi + 1} — اختر شخصيتك`, VW / 2, 100, { size: 30, weight: 900, color: CUP_COLS[C.pi] });
-    { const nm = C.pid && PROF.list[C.pid] ? '👤 ' + PROF.list[C.pid].name + ' · 🪙 ' + PROF.list[C.pid].coins : '👤 ضيف (بدون جوايز)'; ctx.fillStyle = 'rgba(255,255,255,0.1)'; rrect(55, 319, 300, 46, 23); ctx.fill(); txt(nm + '  ⇄', 205, 343, { size: 18, weight: 900, color: C.pid ? '#ffd34d' : 'rgba(255,255,255,0.7)' }); txt(TOUCH_ON ? 'المس لتغيير الحساب' : 'R لتغيير الحساب', 205, 380, { size: 14, weight: 700, color: 'rgba(255,255,255,0.45)' }); }
+    { const nm = C.pid && PROF.list[C.pid] ? '👤 ' + PROF.list[C.pid].name + ' · 🪙 ' + PROF.list[C.pid].coins : '👤 ضيف (بدون جوايز)'; ctx.fillStyle = 'rgba(255,255,255,0.1)'; rrect(55, 319, 300, 46, 23); ctx.fill(); txt(nm + '  ⇄', 205, 343, { size: 18, weight: 900, color: C.pid ? '#ffd34d' : 'rgba(255,255,255,0.7)' }); txt(TOUCH_ON ? 'المس لتغيير الحساب' : 'Q لتغيير الحساب', 205, 380, { size: 14, weight: 700, color: 'rgba(255,255,255,0.45)' }); }
     const L = outfitList(C.cur), O = L[C.o % L.length], ci = O && O.as !== undefined ? O.as : C.cur, im = IMG['front' + (ci + 1)];
     if (im) { const hgt = 250, w = im.width * hgt / im.height; ctx.drawImage(im, VW / 2 - w / 2, 120, w, hgt); }
     txt(CHARS[ci].name, VW / 2 - 230, 230, { size: 44, weight: 900, color: '#fff', stroke: '#000', sw: 6 });
@@ -5529,6 +5558,7 @@ function updTitle() {
   const NM = TITLE_MENU.length;
   if (up) { G.menuIdx = (G.menuIdx + NM - 1) % NM; SFX.move(); }
   if (dn) { G.menuIdx = (G.menuIdx + 1) % NM; SFX.move(); }
+  if (G.tap && G.tap[0] < 330 && G.tap[1] > VH - 74) { shopOpen(); return; }
   if (G.tap) { const i = Math.round((G.tap[1] - MENU_Y0) / MENU_DY); if (i >= 0 && i < NM && Math.abs(G.tap[0] - VW / 2) < 300) G.menuIdx = i; }
   if (pads[0].p.ok || pads[1].p.ok || anyP('Click')) { if (G.t > 10) { SFX.ok(); const id = TITLE_MENU[G.menuIdx][0];
     if (id === 'set') { G.settingsOpen = true; setIdx = 0; } else if (id === 'online') { G.scene = 'online'; G.t = 0; NET.ui = 'menu'; NET.idx = 0; } else if (id === 'story') { storyMapOpen(); } else if (id === 'cup') { cupOpen(); } else if (id === 'shop') { shopOpen(); } else { G.mode = id; G.toSelect(); } } }
