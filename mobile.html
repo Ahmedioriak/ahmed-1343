@@ -298,7 +298,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.22';
+const GAME_VER = '1.23';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -4117,8 +4117,8 @@ function storySetupFight(F) {
   const reg = CH_REG[S.ch] || 0; F.pads[1].lvl = role === 'reg' ? 1 + reg * 0.5 : role === 'nokh' ? 2.2 : role === 'shadow' ? 2.6 : role === 'rais' ? 2.7 : 3;
   const hpx = (op, k) => { op.maxHp = Math.round(op.maxHp * k); op.hp = op.trailHp = op.maxHp; };
   if (role === 'shadow') { op.shadow = true; hpx(op, 1.5); op.dmgMul = 1.15; op.dispName = nmOf(op.ci, true); }
-  if (role === 'nokh') { op.bossAI = 1; op.bossCD = 90; hpx(op, 1.2); }
-  if (role === 'rais') { op.bossAI = 1; op.bossCD = 100; hpx(op, 1.25); }
+  if (role === 'nokh') { op.bossAI = 1; op.bossCD = 80; hpx(op, 1.2); op.dmgMul = 1.25; }
+  if (role === 'rais') { op.bossAI = 1; op.bossCD = 90; hpx(op, 1.25); op.dmgMul = 1.25; }
   if (role === 'rais2') { op.bossAI = 1; op.bossCD = 70; hpx(op, 1.22); op.dmgMul = 1.12; op.dispName = 'الرئيس — الجناح الأسود'; }
 }
 function storyResult(w) {
