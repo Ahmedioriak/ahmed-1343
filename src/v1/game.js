@@ -34,7 +34,7 @@ const CHARS = [
   { name: 'الوحش', en: 'AL-WAHSH', tag: 'عضلات من حديد', hp: 1.0, dmg: 1.12, spd: 0.93, color: '#ff2a55', stats: [5, 3, 4], quote: 'روح تمرّن وتعال!' },
   { name: 'الكابتن', en: 'CAPTAIN', tag: 'سرعة البرق', hp: 0.94, dmg: 0.95, spd: 1.15, color: '#f2f2f2', stats: [3, 5, 3], quote: 'أسرع منك بمليون مرة' },
   { name: 'الدكتور', en: 'THE DOCTOR', tag: 'العقل المدبّر', hp: 1.0, dmg: 1.03, spd: 1.0, color: '#e6c37a', stats: [4, 4, 4], quote: 'حسبتها قبل لا تبدأ' },
-  { name: 'الحارس', en: 'THE KEEPER', tag: 'ما يعدّي منه شي', hp: 1.03, dmg: 1.0, spd: 1.03, color: '#ffd21f', stats: [3, 4, 4], quote: 'ولا كورة تعدّي… ولا ضربة!' },
+  { name: 'الحارس', en: 'THE KEEPER', tag: 'ما يعدّي منه شي', hp: 1.03, dmg: 1.06, spd: 1.03, color: '#ffd21f', stats: [3, 4, 4], quote: 'ولا كورة تعدّي… ولا ضربة!' },
   { name: 'البلدوزر', en: 'BULLDOZER', tag: 'يكسر اللي قدامه', hp: 1.12, dmg: 1.1, spd: 0.88, color: '#c9ccd6', stats: [5, 2, 5], quote: 'قلت لك وخّر من دربي' },
   { name: 'المعلّم', en: 'AL-MUALLIM', tag: 'هادي… بس لا تستفزه', hp: 1.15, dmg: 1.05, spd: 0.87, color: '#7c8f5a', stats: [4, 2, 5], quote: 'الدرس خلص… روح البيت' },
   { name: 'التنين', en: 'THE DRAGON', tag: 'أصغرهم وأخطرهم', hp: 0.92, dmg: 0.97, spd: 1.15, color: '#ff3b4a', stats: [3, 5, 3], quote: 'لا تستصغرني مرة ثانية' },
@@ -144,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.33';
+const GAME_VER = '1.34';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -747,7 +747,8 @@ function spawnCards(f) {
 }
 function spawnHandball(f) {
   const w = f.toWorld(f.J.fH); SFX.throw();
-  spawnProj({ kind: 'hball', owner: f, x: w[0], y: w[1], vx: f.facing * 20, vy: -2.5, g: 0.12, r: 19, life: 90, vr: f.facing * 0.35, m: { dmg: 14, lvl: 'mid', hs: 24, bs: 14, push: 34, stop: 8, p: 1.4 } });
+  spawnProj({ kind: 'hball', power: 1, big: 1, owner: f, x: w[0], y: w[1], vx: f.facing * 25, vy: -1.2, g: 0.05, r: 27, life: 80, vr: f.facing * 0.6, tr: [], m: { dmg: 21, lvl: 'mid', hs: 28, bs: 16, push: 56, stop: 13, p: 1.9, kd: 1 } });
+  finRing(w[0], w[1], '#ffd34d', 120, 14); finBurst(w[0], w[1], 14, ['#fff6c8', '#ffd34d', '#ff8a2a'], 8, 5); if (G.fight) G.fight.shake(5);
 }
 // ---- second skill (⬇ + ★): الوحش throws a frying pan, الزعيم throws a computer mouse
 const SK2_CD = 240;
@@ -810,6 +811,7 @@ MV.sk_slide = { name: 'slide', skill: 1, limb: 'fT', lvl: 'low', st: 7, ac: 22, 
 MV.sk_cards = { name: 'cards', skill: 1, limb: null, lvl: 'mid', st: 14, ac: 1, rc: 18, p: 0.8, spawnAt: 14, spawn: spawnCards,
   kf: [[0, {}], [8, { ua: -40, fa: 150, lean: -12, bua: 40, bfa: 120 }], [14, { ua: 88, fa: 4, lean: 16, dx: 8 }], [20, {}], [33, null]] };
 MV.sk_hball = { name: 'handball', skill: 1, limb: null, lvl: 'mid', st: 16, ac: 1, rc: 20, p: 1.2, spawnAt: 16, spawn: spawnHandball,
+  onStep: f => { if (f.mt >= 3 && f.mt < 16 && f.mt % 2 === 0) { const w = f.toWorld(f.J.fH), an = rnd(0, 6.28), d = rnd(50, 80); FX.push({ t: 'p', x: w[0] + Math.cos(an) * d, y: w[1] + Math.sin(an) * d, vx: -Math.cos(an) * d / 9, vy: -Math.sin(an) * d / 9, life: 9, max: 9, c: f.mt % 4 ? '#ffd34d' : '#fff6c8', sz: rnd(3, 6) }); } },
   kf: [[0, {}], [10, { ua: 205, fa: 60, lean: -14, bua: 30, bfa: 120, th: 30, sh: 20, bth: -24, bsh: 10 }], [16, { ua: 78, fa: 4, lean: 22, dx: 10, th: 40, bth: -30 }], [22, {}], [37, null]] };
 MV.sk_rock = { name: 'rock', skill: 1, limb: null, lvl: 'mid', st: 32, ac: 1, rc: 22, p: 1.5, spawnAt: 32, spawn: spawnRock, onStep: rockStep,
   kf: [[0, {}], [10, { ...CROUCH, ua: 0, fa: 5, bua: 0, bfa: 5, lean: 48 }], [14, {}], [24, { ...GUARD, ua: 175, fa: 35, bua: 172, bfa: 35, lean: -10 }], [30, { lean: -18, ua: 195, bua: 192 }], [32, { ua: 80, fa: 10, bua: 78, bfa: 10, lean: 24, dx: 12 }], [38, {}], [55, null]] };
@@ -2528,7 +2530,8 @@ function updProj(F) {
     if (p.kind === 'wave') { if (p.t % 2 === 0) FX.push({ t: 'd', x: p.x, y: -rnd(0, 20), vx: 0, vy: -rnd(0.5, 2), life: 20, max: 20, sz: rnd(10, 18) }); }
     if (p.kind === 'cartproj' && p.y >= -60 && p.vy > 0) { p.dead = true; spawnProj({ kind: 'cartwreck', owner: p.owner, x: p.x, y: 0, vx: p.vx * 0.5, vy: -6, g: 0.6, vr: p.dir * 0.2, life: 60, noHit: true, dir: p.dir }); SFX.rock(); dust(p.x, 14); if (G.fight) G.fight.shake(10); continue; }
     if (p.kind === 'card' && p.t % 3 === 0) FX.push({ t: 'p', x: p.x, y: p.y, vx: -p.vx * 0.05, vy: 0, life: 10, max: 10, c: '#ffffff', sz: 2 });
-    if (p.kind === 'hball' && p.t % 2 === 0) FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 14, y: p.y, vx: 0, vy: 0, life: 9, max: 9, c: '#ffd34d', sz: 3 });
+    if (p.power) { p.tr.push([p.x, p.y]); if (p.tr.length > 9) p.tr.shift(); FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * rnd(16, 34), y: p.y + rnd(-14, 14), vx: -Math.sign(p.vx) * rnd(2, 5), vy: rnd(-1.5, 1.5), life: 14, max: 14, c: p.t % 3 ? '#ffd34d' : '#ff8a2a', sz: rnd(3, 7) }); }
+    else if (p.kind === 'hball' && p.t % 2 === 0) FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 14, y: p.y, vx: 0, vy: 0, life: 9, max: 9, c: '#ffd34d', sz: 3 });
     if (p.kind === 'rock' && !p.ground && !p.bounce && p.y >= -p.r * 0.6 && p.vy > 0) { crumble(p); p.dead = true; continue; }
     if (p.kind === 'grenade' && (p.life <= 1 || (p.bounces || 0) >= 2)) { p.kind = 'boom'; p.r = 95; p.vx = 0; p.vy = 0; p.g = 0; p.bounce = 0; p.life = 10; p.wide = true; SFX.rock(); SFX.thud(); dust(p.x, 20); if (G.fight) G.fight.shake(14); for (let i = 0; i < 26; i++) { const a = rnd(0, 7), sp = rnd(3, 12); FX.push({ t: 'p', x: p.x, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 22, max: 22, c: i % 3 ? '#ff8a2a' : '#ffe06a', sz: rnd(3, 7) }); } }
     if (p.kind === 'grenade') continue;
@@ -2566,7 +2569,7 @@ function updProj(F) {
     if (Math.hypot(p.x - cx, p.y - cy) <= p.r && p.bob && d.ci === 4) { p.dead = true; spark(p.x, p.y, 'block', d.facing); SFX.block(); popText('صدّها! 🧤', p.x, p.y - 50, '#7fd6ff', 34); d.flash = 6; continue; }
     if (Math.hypot(p.x - cx, p.y - cy) <= p.r) {
       F.hitResolve(p.owner, d, p.m, { x: p.x, y: p.y, proj: true }, Math.sign(p.vx) || p.owner.facing);
-      p.dead = true; if (p.kind === 'pan') { SFX.block(); SFX.hit(1.6); popText('طاخ! 🍳', p.x, p.y - 60, '#ffd34d', 46); finBurst(p.x, p.y, 16, ['#ffffff', '#ffd34d', '#9aa3b5'], 10, 5); G.fight && G.fight.shake(12); } if (p.kind === 'mouse') { SFX.zap(); popText('كليك! 🖱️', p.x, p.y - 50, '#3cf2ff', 40); finBurst(p.x, p.y, 10, ['#ffffff', '#3cf2ff'], 8, 4); } if (p.kind === 'rock') crumble(p); if (p.kind === 'egg') eggSplat(p); if (p.kind === 'chicken') featherPuff(p.x, p.y, 14); if (p.kind === 'bike') bikeCrash(p);
+      p.dead = true; if (p.power) { SFX.hit(1.8); SFX.thud(); popText('قووول! 🥅', p.x, p.y - 70, '#ffd34d', 54); finRing(p.x, p.y, '#ffd34d', 190, 18); finRing(p.x, p.y, '#ffffff', 110, 12); finBurst(p.x, p.y, 30, ['#ffffff', '#ffd34d', '#ff8a2a', '#c8142a'], 13, 7); G.fight && G.fight.shake(16); } if (p.kind === 'pan') { SFX.block(); SFX.hit(1.6); popText('طاخ! 🍳', p.x, p.y - 60, '#ffd34d', 46); finBurst(p.x, p.y, 16, ['#ffffff', '#ffd34d', '#9aa3b5'], 10, 5); G.fight && G.fight.shake(12); } if (p.kind === 'mouse') { SFX.zap(); popText('كليك! 🖱️', p.x, p.y - 50, '#3cf2ff', 40); finBurst(p.x, p.y, 10, ['#ffffff', '#3cf2ff'], 8, 4); } if (p.kind === 'rock') crumble(p); if (p.kind === 'egg') eggSplat(p); if (p.kind === 'chicken') featherPuff(p.x, p.y, 14); if (p.kind === 'bike') bikeCrash(p);
     }
   }
   for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
@@ -2583,6 +2586,23 @@ function drawCard(x, y, rot, flip, suit, sc = 1) {
   ctx.strokeStyle = 'rgba(176,16,30,0.35)'; ctx.lineWidth = 1; rrect(-10, -16, 20, 32, 2); ctx.stroke();
   ctx.fillStyle = (suit === '♠' || suit === '♣') ? '#111' : suit === 'J' ? '#6a1ab0' : '#d0102a'; ctx.font = `700 20px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(suit, 0, 1);
   ctx.font = `700 9px Arial`; ctx.fillText('A', -8, -13); ctx.restore();
+}
+// الحارس's golden power shot: comet tail, pulsing aura, speed lines
+function drawPowerBall(p) {
+  const r = p.r, dir = Math.sign(p.vx) || 1, tr = p.tr || [], pulse = 1 + Math.sin(p.t * 0.6) * 0.08;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < tr.length; i++) { const k = (i + 1) / tr.length, [x, y] = tr[i]; ctx.fillStyle = `rgba(255,${120 + 90 * k | 0},40,${0.08 + 0.22 * k})`; ctx.beginPath(); ctx.arc(x, y, r * (0.45 + 0.6 * k), 0, 7); ctx.fill(); }
+  const tl = r * 6.5; const g = ctx.createLinearGradient(p.x, p.y, p.x - dir * tl, p.y); g.addColorStop(0, 'rgba(255,236,150,0.9)'); g.addColorStop(0.35, 'rgba(255,150,40,0.55)'); g.addColorStop(1, 'rgba(255,60,0,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(p.x, p.y - r * 1.15); ctx.quadraticCurveTo(p.x - dir * tl * 0.5, p.y - r * 0.5, p.x - dir * tl, p.y); ctx.quadraticCurveTo(p.x - dir * tl * 0.5, p.y + r * 0.5, p.x, p.y + r * 1.15); ctx.closePath(); ctx.fill();
+  const a = ctx.createRadialGradient(p.x, p.y, r * 0.6, p.x, p.y, r * 2.3 * pulse); a.addColorStop(0, 'rgba(255,240,170,0.85)'); a.addColorStop(0.5, 'rgba(255,190,50,0.35)'); a.addColorStop(1, 'rgba(255,120,0,0)');
+  ctx.fillStyle = a; ctx.beginPath(); ctx.arc(p.x, p.y, r * 2.3 * pulse, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,250,220,0.75)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (let i = 0; i < 5; i++) { const oy = (i - 2) * r * 0.5, ph = (p.t * 7 + i * 37) % 60, x0 = p.x - dir * (r * 1.3 + ph), len = r * (1.2 + (i % 2) * 0.9); ctx.beginPath(); ctx.moveTo(x0, p.y + oy); ctx.lineTo(x0 - dir * len, p.y + oy); ctx.stroke(); }
+  ctx.restore();
+  drawHandball(p.x, p.y, p.rot, r);
+  ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot * 1.5); ctx.strokeStyle = 'rgba(255,220,90,0.9)'; ctx.lineWidth = 3;
+  for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(0, 0, r + 7, i * 2.09, i * 2.09 + 1.1); ctx.stroke(); }
+  ctx.restore();
 }
 function drawHandball(x, y, rot, r = 19) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
@@ -2804,6 +2824,7 @@ function drawProj(p) {
   else if (p.kind === 'flame') drawFlame(p);
   else if (p.kind === 'spice') { ctx.save(); ctx.globalAlpha *= Math.min(1, p.life / 12); for (let i = 0; i < 9; i++) { ctx.fillStyle = i % 3 ? 'rgba(200,60,20,0.55)' : 'rgba(240,170,40,0.6)'; ctx.beginPath(); ctx.arc(p.x + Math.cos(i * 2.1 + p.t * 0.3) * p.r * 0.6, p.y + Math.sin(i * 1.7 + p.t * 0.25) * p.r * 0.5, p.r * (0.3 + 0.03 * (i % 4)), 0, 7); ctx.fill(); } ctx.restore(); }
   else if (p.kind === 'door') drawDoor(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'hball' && p.power) drawPowerBall(p);
   else if (p.kind === 'hball') { if (p.fire) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, p.r * 2); g.addColorStop(0, 'rgba(255,170,60,0.8)'); g.addColorStop(1, 'rgba(255,60,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2, 0, 7); ctx.fill(); ctx.restore(); } drawHandball(p.x, p.y, p.rot, p.r); }
   else if (p.kind === 'joker') drawCard(p.x, p.y, p.rot * 0.2, Math.cos(p.t * 0.3), 'J', 2.6);
   else if (p.kind === 'football') drawFootball(p.x, p.y, p.rot, p.r);
@@ -2842,7 +2863,7 @@ function drawHeld(f) {
   if (m.pan && f.mt < (m.spawnAt || m.st + m.ac + 6)) { const w = f.toWorld(f.J.fH); drawPan(w[0], w[1] - 10, -f.facing * (1.2 - Math.min(1, f.mt / (m.st || 10)) * 1.6), 32); }
   if (m.id === 'sk2_pan' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawPan(w[0], w[1] - 10, -f.facing * 1.2, 30); }
   if (m.id === 'sk2_mouse' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawMouse(w[0], w[1] - 6, 0, 20, -f.facing, f.mt); }
-  if (m.id === 'sk_hball' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawHandball(w[0] + f.facing * 6, w[1] - 6, 0); }
+  if (m.id === 'sk_hball' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH), x = w[0] + f.facing * 6, y = w[1] - 6, k = f.mt / m.spawnAt, rr = 19 + 8 * k; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 4, x, y, rr * (1.6 + k)); g.addColorStop(0, `rgba(255,236,150,${0.3 + 0.6 * k})`); g.addColorStop(1, 'rgba(255,140,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rr * (1.6 + k), 0, 7); ctx.fill(); ctx.restore(); drawHandball(x, y, f.mt * 0.4 * f.facing, rr); }
   if (m.id === 'sk_rock' && f.mt >= 12 && f.mt < m.spawnAt) { const [x, y] = handsMid(f); const lift = f.mt < 18 ? 0 : 1; drawRock(x, y - (lift ? ROCK_R * 0.85 : ROCK_R * 0.5), f.mt * 0.02, ROCK_R); }
   if (m.cart && f.mt >= 2 && !f.cartGone && f.mt < m.st + m.ac) { const [hx] = cartHandle(f); const a = Math.min(1, (f.mt - 1) / 4); drawCart(hx, 0, f.facing, 0, a); }
 }
