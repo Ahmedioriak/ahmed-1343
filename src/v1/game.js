@@ -142,7 +142,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.21';
+const GAME_VER = '1.22';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1114,14 +1114,14 @@ function spawnWave(f) { SFX.whoosh(1); SFX.rock(); if (G.fight) G.fight.shake(10
 function spawnRedShot(f) { const w = f.toWorld(f.J.fH); SFX.zap(); SFX.throw();
   spawnProj({ kind: 'redball', owner: f, x: w[0] + f.facing * 30, y: w[1], vx: f.facing * 18, vy: 0, g: 0, r: 34, life: 90, big: 1, m: { dmg: 16, lvl: 'mid', hs: 26, bs: 16, push: 46, stop: 10, p: 1.5, kd: 1 } }); }
 function spawnShock(f) { SFX.thud(); SFX.rock(); if (G.fight) G.fight.shake(16); dust(f.x, 30);
-  for (const d of [1, -1]) spawnProj({ kind: 'shock', owner: f, x: f.x + d * 70, y: -34, vx: d * 12, vy: 0, g: 0, r: 34, life: 50, ground: true, m: { dmg: 11, lvl: 'low', hs: 22, bs: 12, push: 26, stop: 8, p: 1.2 } }); }
+  for (const d of [1, -1]) spawnProj({ kind: 'shock', owner: f, x: f.x + d * 70, y: -34, vx: d * 13, vy: 0, g: 0, r: 38, life: 72, ground: true, m: { dmg: 11, lvl: 'low', hs: 22, bs: 12, push: 26, stop: 8, p: 1.2 } }); }
 function rideStep(f) {
   const m = f.mv, d = f.facing; if (f.mt < m.st - 2 || f.mt > m.st + m.ac) return;
   if (f.mt % 2 === 0) for (let i = 0; i < 3; i++) FX.push({ t: 'p', x: f.x - d * (m.ride === 'ship' ? 210 : 150) + rnd(-20, 20), y: -rnd(0, 30), vx: -d * rnd(2, 7), vy: -rnd(3, 9), life: 26, max: 26, c: i % 2 ? '#ffffff' : '#7fd6ff', sz: rnd(3, 7) });
   if (m.ride === 'ship' && f.mt % 10 === 0) { G.fight && G.fight.shake(4); SFX.whoosh(0); }
   if (m.ride === 'boat' && f.mt % 6 === 0) SFX.whoosh(1);
 }
-function ringStep(f) { if (f.mt === f.mv.st) { const w = f.toWorld(f.J.fH); finRing(w[0], w[1], '#ff2a3a', 120, 12); finBurst(w[0], w[1], 12, ['#ff2a3a', '#ffd34d'], 7, 5); SFX.zap(); } }
+function ringStep(f) { if (f.mt >= 3 && f.mt < f.mv.st + f.mv.ac && f.mt % 2 === 0) { const w = f.toWorld(f.J.fH); finBurst(w[0] - f.facing * 20, w[1], 3, ['#ffd34d', '#d4a640', '#ffffff'], 4, 5); dust(f.x - f.facing * 40, 1, -f.facing); } if (f.mt === 3) SFX.whoosh(1); if (f.mt === f.mv.st) { const w = f.toWorld(f.J.fH); finRing(w[0], w[1], '#ff2a3a', 120, 12); finBurst(w[0], w[1], 12, ['#ff2a3a', '#ffd34d'], 7, 5); SFX.zap(); } }
 function eyePos(f) { const J = f.J; return f.toWorld([J.hd[0] + J.hr * 0.55, J.hd[1] - J.hr * 0.1]); }
 function eyesStep(f) {
   const m = f.mv; if (f.mt === 2) SFX.zap();
@@ -1145,8 +1145,20 @@ MV.sk_ship = { name: 'ship', skill: 1, limb: null, lvl: 'mid', st: 14, ac: 40, r
 MV.sk_boat = { name: 'boat', skill: 1, limb: null, lvl: 'mid', st: 8, ac: 30, rc: 16, dmg: 13, hs: 0, bs: 13, push: 30, stop: 8, p: 1.4, launch: 1, ride: 'boat', mvx: [[6, 38, 21]], onStep: rideStep,
   hitboxFn: f => f.active() ? { x: f.x + f.facing * 150, y: -50, r: 66 } : null,
   kf: [[0, {}], [7, { dy: -44, lean: 24, ua: 70, fa: 60, bua: 66, bfa: 70, th: 70, sh: 100, bth: 30, bsh: 90 }], [38, {}], [50, null]] };
-MV.sk_ring = { name: 'ring', skill: 1, limb: 'fH', lvl: 'mid', st: 12, ac: 8, rc: 22, dmg: 18, hs: 0, bs: 16, push: 52, stop: 12, p: 1.6, kd: 1, ar: 34, mvx: [[4, 20, 13]], onStep: ringStep,
-  kf: [[0, {}], [8, { ua: 20, fa: 130, lean: -12, dx: -8, fsc: 1.3 }], [12, { ua: 94, fa: 0, lean: 28, dx: 26, th: 46, bth: -40, bsh: 10, fsc: 1.6 }], [20, {}], [32, { ua: 50, fa: 100, lean: 8, fsc: 1 }], [42, null]] };
+MV.sk_ring = { name: 'ring', skill: 1, limb: 'fH', lvl: 'mid', st: 14, ac: 8, rc: 22, dmg: 18, hs: 0, bs: 16, push: 52, stop: 12, p: 1.6, kd: 1, ar: 34, mvx: [[3, 22, 24]], trail: 1, onStep: ringStep,
+  kf: [[0, {}], [8, { ua: 20, fa: 130, lean: -12, dx: -8, fsc: 1.3 }], [14, { ua: 94, fa: 0, lean: 28, dx: 26, th: 46, bth: -40, bsh: 10, fsc: 1.6 }], [20, {}], [32, { ua: 50, fa: 100, lean: 8, fsc: 1 }], [42, null]] };
+function drawGoldBar(x, y, rot, r) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); const W = r * 1.5, H = r * 0.62;
+  const g = ctx.createLinearGradient(0, -H, 0, H); g.addColorStop(0, '#fff3b0'); g.addColorStop(0.45, '#f2c544'); g.addColorStop(1, '#a8761a');
+  ctx.fillStyle = g; ctx.strokeStyle = '#7a5410'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-W * 0.78, -H); ctx.lineTo(W * 0.78, -H); ctx.lineTo(W, H); ctx.lineTo(-W, H); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(-W * 0.6, -H * 0.75, W * 1.1, H * 0.22);
+  ctx.globalCompositeOperation = 'lighter'; const gl = ctx.createRadialGradient(0, 0, 2, 0, 0, r * 1.8); gl.addColorStop(0, 'rgba(255,220,90,0.45)'); gl.addColorStop(1, 'rgba(255,200,60,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, r * 1.8, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function spawnGold(f) { const w = f.toWorld(f.J.fH); SFX.throw(); SFX.zap();
+  [[24, -7], [20, -9.5], [16, -12]].forEach(([vx, vy], i) => spawnProj({ kind: 'goldbar', owner: f, x: w[0] + f.facing * 20, y: w[1] - 10, vx: f.facing * vx, vy, g: 0.42, r: 26, life: 130, vr: f.facing * (0.25 + i * 0.08), big: 1, m: { dmg: 8, lvl: 'mid', hs: 18, bs: 12, push: 26, stop: 7, p: 1.2, kd: i === 2 ? 1 : 0 } })); }
+MV.sk_gold = { name: 'gold', skill: 1, limb: null, lvl: 'mid', st: 16, ac: 1, rc: 22, p: 1.4, spawnAt: 16, spawn: spawnGold,
+  kf: [[0, {}], [10, { ua: 210, fa: 50, lean: -18, bua: 30, bfa: 120, th: 30, sh: 20, bth: -26, bsh: 10 }], [16, { ua: 80, fa: 6, lean: 26, dx: 14, th: 44, bth: -34 }], [24, {}], [40, null]] };
 MV.sk_stomp = { name: 'stomp', skill: 1, limb: null, lvl: 'low', st: 20, ac: 1, rc: 20, p: 1.3, spawnAt: 20, spawn: spawnShock,
   kf: [[0, {}], [12, { th: 100, sh: 80, lean: -10, ua: 140, fa: 60, bua: 140, bfa: 60 }], [20, { th: 20, sh: 10, lean: 20, dy: 6, ua: 40, fa: 90, bua: 40, bfa: 90 }], [28, {}], [40, null]] };
 MV.sk_eyes = { name: 'eyes', skill: 1, limb: null, lvl: 'high', st: 26, ac: 34, rc: 22, dmg: 3.5, hs: 12, bs: 6, push: 6, stop: 3, p: 0.8, multi: 6, onStep: eyesStep, hitboxFn: eyesHB,
@@ -1157,12 +1169,12 @@ MV.sk_dive = { name: 'dive', skill: 1, limb: null, lvl: 'mid', st: 46, ac: 6, rc
   hitboxFn: f => f.active() ? { x: f.x + f.facing * 30, y: -90, r: 125 } : null,
   kf: [[0, {}], [10, { th: 70, sh: 110, bth: 50, bsh: 110, lean: 20, dy: 14 }], [28, { dy: -470, th: 40, sh: 70, bth: 20, bsh: 60, lean: -6, ua: 160, fa: 20, bua: 160, bfa: 20 }], [40, { dy: -470 }],
     [46, { dy: 0, th: 60, sh: 90, bth: 40, bsh: 80, lean: 30, ua: 80, fa: 10, bua: 76, bfa: 10 }], [52, {}], [76, null]] };
-const BOSS_NAMES = { sk_wave: 'الموجة', sk_ship: 'السفينة', sk_boat: 'الطراد', sk_ring: 'ضربة الخاتم', sk_stomp: 'هيبة الرئيس', sk_eyes: 'ليزر العيون', sk_redshot: 'الطلقة الحمراء', sk_dive: 'انقضاض الجناح' };
-const BOSS_LINES = { sk_wave: 'البحر معي!', sk_ship: 'ارفعوا الشراع!', sk_boat: 'وخّر من دربي!', sk_ring: 'حس بالخاتم!', sk_stomp: 'انحني للرئيس!', sk_eyes: 'شوف عيوني!', sk_redshot: 'خذ!', sk_dive: 'من فوق!' };
+const BOSS_NAMES = { sk_gold: 'سبائك الذهب', sk_wave: 'الموجة', sk_ship: 'السفينة', sk_boat: 'الطراد', sk_ring: 'ضربة الخاتم', sk_stomp: 'هيبة الرئيس', sk_eyes: 'ليزر العيون', sk_redshot: 'الطلقة الحمراء', sk_dive: 'انقضاض الجناح' };
+const BOSS_LINES = { sk_gold: 'ذهب الرئيس… خذه!', sk_wave: 'البحر معي!', sk_ship: 'ارفعوا الشراع!', sk_boat: 'وخّر من دربي!', sk_ring: 'حس بالخاتم!', sk_stomp: 'انحني للرئيس!', sk_eyes: 'شوف عيوني!', sk_redshot: 'خذ!', sk_dive: 'من فوق!' };
 function bossPick(ci, d) {
   const r = Math.random();
   if (ci === NOKH) return d > 420 ? (r < 0.6 ? 'sk_wave' : 'sk_ship') : d > 200 ? (r < 0.35 ? 'sk_ship' : r < 0.7 ? 'sk_boat' : 'sk_wave') : (r < 0.5 ? 'sk_boat' : null);
-  if (ci === RAIS) return d < 300 ? (r < 0.75 ? 'sk_ring' : 'sk_stomp') : (r < 0.6 ? 'sk_stomp' : 'sk_ring');
+  if (ci === RAIS) return d < 260 ? (r < 0.55 ? 'sk_ring' : r < 0.8 ? 'sk_stomp' : 'sk_gold') : d < 560 ? (r < 0.4 ? 'sk_ring' : r < 0.75 ? 'sk_gold' : 'sk_stomp') : (r < 0.6 ? 'sk_gold' : r < 0.85 ? 'sk_stomp' : 'sk_ring');
   if (ci === RAIS2) return d > 320 ? (r < 0.45 ? 'sk_eyes' : r < 0.8 ? 'sk_redshot' : 'sk_dive') : (r < 0.3 ? 'sk_eyes' : r < 0.55 ? 'sk_ring' : r < 0.8 ? 'sk_dive' : 'sk_redshot');
   return null;
 }
@@ -2211,6 +2223,7 @@ function updProj(F) {
     if (p.kind === 'hball' && p.fire && p.t % 2 === 0) FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 20, y: p.y + rnd(-10, 10), vx: -Math.sign(p.vx) * 2, vy: rnd(-1, 1), life: 12, max: 12, c: '#ff8a2a', sz: rnd(4, 8) });
     if (p.kind === 'egg' && p.y >= -p.r * 0.6 && p.vy > 0) { p.y = -4; eggSplat(p); p.dead = true; continue; }
     if (p.kind === 'bike' && p.y >= -p.r * 0.55 && p.vy > 0) { bikeCrash(p); p.dead = true; continue; }
+    if (p.kind === 'goldbar' && p.y >= -p.r * 0.5 && p.vy > 0) { finBurst(p.x, -10, 10, ['#ffd34d', '#ffffff'], 6, 5); SFX.rattle(); p.dead = true; continue; }
     if (p.kind === 'door' && p.g && !p.noHit && p.y >= -p.r * 0.4 && p.vy > 0) { dust(p.x, 10); SFX.rattle(); SFX.thud(); if (G.fight) G.fight.shake(8); p.dead = true; continue; }
     if (p.kind === 'bikewreck' && p.y >= -30 && p.vy > 0) { p.y = -30; p.vy *= -0.35; p.vx *= 0.6; p.vr *= 0.5; if (Math.abs(p.vy) > 2) { dust(p.x, 5); SFX.rattle(); } }
     if (p.kind === 'chicken' && p.t % 9 === 0) { FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 20, y: p.y - 10, vx: -Math.sign(p.vx) * rnd(1, 3), vy: rnd(-2, 0), life: 18, max: 18, c: '#ffffff', sz: rnd(2, 4) }); if (p.t % 27 === 0) SFX.cluck(); }
@@ -2461,6 +2474,7 @@ function drawProj(p) {
   else if (p.kind === 'pan') drawPan(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'seawave') drawSeaWave(p);
   else if (p.kind === 'redball') drawRedBall(p);
+  else if (p.kind === 'goldbar') drawGoldBar(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'shock') drawShock(p);
   else if (p.kind === 'mouse') drawMouse(p.x, p.y, p.rot, p.r, p.vx, p.t);
   else if (p.kind === 'pen') drawPen(p.x, p.y, Math.atan2(p.vy, p.vx), p.r, p.col);
@@ -3949,7 +3963,7 @@ function storySetupFight(F) {
   if (role === 'shadow') { op.shadow = true; hpx(op, 1.5); op.dmgMul = 1.15; op.dispName = nmOf(op.ci, true); }
   if (role === 'nokh') { op.bossAI = 1; op.bossCD = 90; hpx(op, 1.2); }
   if (role === 'rais') { op.bossAI = 1; op.bossCD = 100; hpx(op, 1.25); }
-  if (role === 'rais2') { op.bossAI = 1; op.bossCD = 70; hpx(op, 1.22); op.dmgMul = 1.0; op.dispName = 'الرئيس — الجناح الأسود'; }
+  if (role === 'rais2') { op.bossAI = 1; op.bossCD = 70; hpx(op, 1.22); op.dmgMul = 1.12; op.dispName = 'الرئيس — الجناح الأسود'; }
 }
 function storyResult(w) {
   const S = G.story;
