@@ -31,7 +31,7 @@ const pick = a => a[(Math.random() * a.length) | 0];
 // ================= CHARACTERS =================
 const CHARS = [
   { name: 'الزعيم', en: 'AL-ZAEEM', h: 0.82, tag: 'قبضة الشوارع', hp: 1.08, dmg: 1.14, spd: 0.96, color: '#ff4d3d', stats: [4, 3, 5], quote: 'قلت لك لا تلعب معي!' },
-  { name: 'الوحش', en: 'AL-WAHSH', tag: 'عضلات من حديد', hp: 1.0, dmg: 1.24, spd: 0.93, color: '#ff2a55', stats: [5, 3, 4], quote: 'روح تمرّن وتعال!' },
+  { name: 'الوحش', en: 'AL-WAHSH', tag: 'عضلات من حديد', hp: 1.0, dmg: 1.12, spd: 0.93, color: '#ff2a55', stats: [5, 3, 4], quote: 'روح تمرّن وتعال!' },
   { name: 'الكابتن', en: 'CAPTAIN', tag: 'سرعة البرق', hp: 0.94, dmg: 0.95, spd: 1.15, color: '#f2f2f2', stats: [3, 5, 3], quote: 'أسرع منك بمليون مرة' },
   { name: 'الدكتور', en: 'THE DOCTOR', tag: 'العقل المدبّر', hp: 1.0, dmg: 1.03, spd: 1.0, color: '#e6c37a', stats: [4, 4, 4], quote: 'حسبتها قبل لا تبدأ' },
   { name: 'الحارس', en: 'THE KEEPER', tag: 'ما يعدّي منه شي', hp: 1.03, dmg: 1.0, spd: 1.03, color: '#ffd21f', stats: [3, 4, 4], quote: 'ولا كورة تعدّي… ولا ضربة!' },
@@ -144,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.29';
+const GAME_VER = '1.30';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1397,6 +1397,58 @@ COMBOS[CHEF] = {
   '14': ['تقطيع سريع', flurryMove({ st: 6, ac: 30, rc: 16, multi: 5, dmg: 2.8, hs: 14, bs: 7, push: 3, stop: 2, r: 38, mvx: [[6, 36, 2]] })],
   '34': ['ركلة الشيف', M({ st: 12, ac: 4, rc: 20, limb: 'fT', r: 42, dmg: 14, push: 60, kick: 1, p: 1.5, kf: [[0, {}], [8, PZ.stompUp], [12, { th: 90, sh: 0, ft: -40, ffl: 0, lean: -14, dx: 10 }], [16, {}], [36, null]] })],
 };
+// ================= المبرمج — الدكتور's coder outfit: lightning, bugs, keyboards and laptops =================
+const CODER = CHARS.length;
+CHARS.push({ name: 'المبرمج', en: 'THE CODER', tag: 'كهربا وأكواد', hp: 0.98, dmg: 1.06, spd: 1.03, color: '#ff2a3a', stats: [4, 4, 3], quote: 'صلّحت البق… وأنت كنت البق!', hidden: 1 });
+OUTFITS[3] = [{ id: '', name: 'الأساسي' }, { id: 'coder', name: 'المبرمج', as: CODER }];
+function drawBolt(x1, y1, x2, y2, w = 6, seed = 0, core = '#ffffff', glow = 'rgba(255,40,60,0.8)') {
+  const n = 12, pts = [[x1, y1]], dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+  for (let i = 1; i < n; i++) { const u = i / n, j = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453; const o = ((j - Math.floor(j)) - 0.5) * Math.min(80, L * 0.12); pts.push([x1 + dx * u + nx * o, y1 + dy * u + ny * o]); }
+  pts.push([x2, y2]);
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.globalCompositeOperation = 'lighter';
+  for (const [lw, c] of [[w * 4, glow.replace('0.8', '0.25')], [w * 1.8, glow], [w * 0.6, core]]) { ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); }
+  ctx.restore();
+}
+function drawKeyboard(x, y, rot, r) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); const W = r * 1.8, H = r * 0.62;
+  ctx.fillStyle = '#16171c'; ctx.strokeStyle = '#ff2a3a'; ctx.lineWidth = 2; rrect(-W / 2, -H / 2, W, H, 6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#3a3d46'; for (let row = 0; row < 3; row++) for (let c = 0; c < 9; c++) { ctx.fillRect(-W / 2 + 6 + c * (W - 12) / 9, -H / 2 + 6 + row * (H - 12) / 3, (W - 12) / 9 - 3, (H - 12) / 3 - 3); }
+  ctx.restore();
+}
+function drawLaptop(x, y, rot, r) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); const W = r * 1.7, H = r * 1.05;
+  ctx.fillStyle = '#1b1d24'; ctx.strokeStyle = '#555b66'; ctx.lineWidth = 3; rrect(-W / 2, -H, W, H, 8); ctx.fill(); ctx.stroke();
+  const g = ctx.createLinearGradient(0, -H, 0, 0); g.addColorStop(0, '#16202e'); g.addColorStop(1, '#0a0e16'); ctx.fillStyle = g; rrect(-W / 2 + 8, -H + 8, W - 16, H - 16, 4); ctx.fill();
+  ctx.fillStyle = '#ff2a3a'; ctx.font = `900 ${Math.round(r * 0.55)}px ${FE}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'ltr'; ctx.fillText('</>', 0, -H / 2);
+  ctx.fillStyle = '#2b2e36'; ctx.beginPath(); ctx.moveTo(-W / 2 - 10, 0); ctx.lineTo(W / 2 + 10, 0); ctx.lineTo(W / 2 + 22, r * 0.16); ctx.lineTo(-W / 2 - 22, r * 0.16); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function drawBug(p) {
+  ctx.save(); ctx.translate(p.x, p.y); ctx.scale(Math.sign(p.vx) || 1, 1); const r = p.r;
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 3; for (let i = -1; i <= 1; i++) { const k = Math.sin(p.t * 0.9 + i) * 5; ctx.beginPath(); ctx.moveTo(i * r * 0.5, 0); ctx.lineTo(i * r * 0.5 - 6 + k, r * 0.9); ctx.stroke(); }
+  const g = ctx.createRadialGradient(-r * 0.2, -r * 0.4, 2, 0, 0, r); g.addColorStop(0, '#5a5f6b'); g.addColorStop(1, '#16171c'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, -r * 0.1, r, r * 0.72, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#ff2a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -r * 0.8); ctx.lineTo(0, r * 0.5); ctx.stroke();
+  ctx.fillStyle = '#ff3040'; ctx.beginPath(); ctx.arc(r * 0.8, -r * 0.25, r * 0.22, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function drawCodeGlyph(p) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot * 0.15); ctx.shadowColor = '#ff1030'; ctx.shadowBlur = 24; ctx.fillStyle = '#ff3a4a'; ctx.font = `900 ${Math.round(p.r * 1.3)}px ${FE}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'ltr'; ctx.fillText('</>', 0, 0); ctx.shadowBlur = 0; ctx.fillStyle = '#fff'; ctx.font = `900 ${Math.round(p.r * 1.1)}px ${FE}`; ctx.fillText('</>', 0, 0); ctx.restore(); }
+function zapHB(f) { if (!f.active()) return null; const w = f.toWorld(f.J.fH), L = 640; return { x: w[0] + f.facing * L, y: w[1], x2: w[0], y2: w[1], ar: 18, r: 18 }; }
+MV.sk_zap = { name: 'zap', skill: 1, limb: null, lvl: 'mid', st: 14, ac: 26, rc: 20, dmg: 4.6, hs: 12, bs: 6, push: 8, stop: 3, p: 0.9, multi: 4, zap: 1, hitboxFn: zapHB,
+  onStep: f => { if (f.mt === 2) SFX.zap(); if (f.mt >= f.mv.st && f.mt < f.mv.st + f.mv.ac) { if (f.mt % 4 === 0) SFX.zap(); if (f.mt % 2 === 0) { const w = f.toWorld(f.J.fH); finBurst(w[0], w[1], 3, ['#ff3040', '#ffffff'], 6, 4); } } },
+  kf: [[0, {}], [10, { ua: 40, fa: 120, lean: -10, dx: -6 }], [14, { ua: 92, fa: 0, lean: 18, dx: 14, th: 30, bth: -28 }], [40, { ua: 92, fa: 0, lean: 18, dx: 14, th: 30, bth: -28 }], [48, {}], [60, null]] };
+function spawnBugs(f) { SFX.skill(); [0, 1, 2].forEach(i => spawnProj({ kind: 'bug', owner: f, x: f.x + f.facing * (60 + i * 30), y: -28, vx: f.facing * (7 + i * 1.6), vy: 0, g: 0, r: 28, life: 90, ground: true, m: { dmg: 5.5, lvl: 'low', hs: 14, bs: 8, push: 14, stop: 5, p: 1, kd: i === 2 ? 1 : 0 } })); }
+MV.sk2_bugs = { name: 'bugs', skill: 1, sk2: 1, limb: null, lvl: 'low', st: 14, ac: 1, rc: 18, p: 1.1, spawnAt: 14, spawn: spawnBugs,
+  kf: [[0, {}], [8, { ...CROUCH, ua: 40, fa: 30 }], [14, { ...CROUCH, ua: 80, fa: 10, lean: 30 }], [20, {}], [32, null]] };
+SKILL_IDS[CODER] = 'sk_zap'; SKILL_NAMES[CODER] = 'صاعقة الكود';
+SKILL2[CODER] = 'sk2_bugs'; SKILL2_LINE[CODER] = 'انطلقوا يا البقّات!'; SKILL2_NAMES[CODER] = 'جيش البقّات';
+COMBOS[CODER] = {
+  '12': ['لكمة كهربا', M({ st: 10, ac: 4, rc: 18, limb: 'fH', r: 46, dmg: 13, p: 1.4, stop: 10, mvx: [[4, 14, 7]], onStep: f => { if (f.mt === 10) { SFX.zap(); const w = f.toWorld(f.J.fH); finBurst(w[0], w[1], 12, ['#ff3040', '#ffffff'], 8, 5); } }, kf: [[0, {}], [7, { ua: 30, fa: 130, lean: -10, dx: -6 }], [10, PZ.punch], [16, {}], [32, null]] })],
+  '23': ['كيبورد طاير', projMove(12, 20, PZ.windup, PZ.release, f => { SFX.throw(); shoot(f, { kind: 'keyboard', sp: 19, r: 36, dmg: 12, vr: 0.35, life: 80, p: 1.3 }); })],
+  '24': ['شبكة الكود', projMove(14, 20, { ...PZ.windup, ua: 120 }, { ...PZ.release, ua: 90 }, f => { SFX.zap(); shoot(f, { kind: 'code', sp: 12, r: 40, dmg: 12, launch: 1, life: 70, vr: 0.1 }); })],
+  '13': ['لابتوب من السما', projMove(16, 24, PZ.summon, { ...PZ.summon, lean: -22 }, f => { SFX.skill(); shoot(f, { kind: 'laptop', from: 'sky', vy: 5, g: 0.65, r: 58, dmg: 17, kd: 1, p: 1.7, vr: 0.06, life: 160 }); })],
+  '14': ['كتابة سريعة', flurryMove({ st: 6, ac: 30, rc: 16, multi: 5, dmg: 2.6, hs: 14, bs: 7, push: 3, stop: 2, r: 36, mvx: [[6, 36, 2]] })],
+  '34': ['ركلة الريستارت', M({ st: 12, ac: 4, rc: 20, limb: 'fT', r: 42, dmg: 13, push: 60, kick: 1, p: 1.5, kf: [[0, {}], [8, PZ.stompUp], [12, { th: 90, sh: 0, ft: -40, ffl: 0, lean: -14, dx: 10 }], [16, {}], [36, null]] })],
+};
 const COMBO_NAME = {};
 COMBOS.forEach((set, ci) => { for (const k of COMBO_KEYS) { const [name, mv] = set[k]; const id = `cb${ci}_${k}`; MV[id] = mv; mv.cname = name; COMBO_NAME[id] = name; set[k] = id; } });
 COMBOS[NOKH] = COMBOS[9]; COMBOS[RAIS] = COMBOS[1]; COMBOS[RAIS2] = COMBOS[1];
@@ -1992,13 +2044,14 @@ PERSONA.push(
   { vo: 'roar', intro: ['كلكم شغالين عندي!'], skill: ['حس بالخاتم!'], win: ['الكأس لي… للأبد!'], st: { lean: 10, ua: 4, bua: 4, th: 8, bth: -10 }, br: 0.05, ba: 2 },
   { vo: 'roar', intro: ['الحين… تشوف قوتي!'], skill: ['شوف عيوني!'], win: ['ما في أحد يوقف الرئيس!'], st: { lean: 14, ua: 8, bua: 8, th: 10, bth: -12 }, br: 0.05, ba: 2.6 },
 );
+PERSONA[CODER] = { vo: 'laugh', intro: ['خلني أكتب الكود…'], skill: ['كهربا!'], win: ['صلّحت البق… وأنت كنت البق!'], st: { lean: -2, fa: 12, bfa: 10 }, br: 0.1 };
 PERSONA[CHEF] = { vo: 'roar', intro: ['جاهز للطبخة؟'], skill: ['نار!'], win: ['الأكل جاهز… وأنت الطبق!'], st: { lean: 12, ua: 6, bua: 6, th: 10, bth: -12 }, br: 0.06, ba: 2.2 };
-if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 15: [0.82, 0.95], 16: [0.6, 0.86], 17: [0.42, 0.8], 18: [0.45, 0.88] });
+if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 15: [0.82, 0.95], 16: [0.6, 0.86], 17: [0.42, 0.8], 18: [0.45, 0.88], 19: [0.9, 1.0] });
 const pickLine = a => a[(Math.random() * a.length) | 0];
 // ---- Arabic voices: the browser's Arabic voice when it has one, otherwise the built-in recorded lines ----
 const VOX = { clips: window.VOICE_CLIPS || {}, txt: window.VOICE_TXT || {}, bufs: {}, tbufs: {}, last: {}, voices: null, cur: [] };
 // ---- recorded neural Arabic voice (Piper «Kareem»): every sentence recorded once, names recorded separately ----
-const VOICE_RATE = { 18: 0.9, 0: 1.1, 1: 0.88, 5: 0.87, 6: 1.12, 8: 1.13, 11: 1.13, 15: 0.93, 16: 0.9, 17: 0.82, 99: 0.96 };
+const VOICE_RATE = { 19: 1.0, 18: 0.9, 0: 1.1, 1: 0.88, 5: 0.87, 6: 1.12, 8: 1.13, 11: 1.13, 15: 0.93, 16: 0.9, 17: 0.82, 99: 0.96 };
 function voiceNorm(t) { return t.replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF\uFE0F]/gu, '').replace(/[!؟?.,،:؛—"«»]/g, ' ').replace(/\s+/g, ' ').trim(); }
 let VNAMES = null;
 function voiceSegs(text) {
@@ -2360,6 +2413,8 @@ function updProj(F) {
     if (p.kind === 'egg' && p.y >= -p.r * 0.6 && p.vy > 0) { p.y = -4; eggSplat(p); p.dead = true; continue; }
     if (p.kind === 'bike' && p.y >= -p.r * 0.55 && p.vy > 0) { bikeCrash(p); p.dead = true; continue; }
     if (p.kind === 'flame' && p.t % 2 === 0) FX.push({ t: 'p', x: p.x + rnd(-30, 30), y: p.y + rnd(-30, 30), vx: -Math.sign(p.vx) * rnd(1, 3), vy: -rnd(1, 4), life: 16, max: 16, c: p.t % 4 ? '#ff8a2a' : '#ffd34d', sz: rnd(4, 9) });
+    if (p.kind === 'laptop' && !p.noHit && p.y >= -p.r * 0.5 && p.vy > 0) { SFX.thud(); SFX.rattle(); dust(p.x, 16); finBurst(p.x, -20, 16, ['#ff2a3a', '#ffffff', '#555b66'], 8, 5); if (G.fight) G.fight.shake(12); p.dead = true; continue; }
+    if (p.kind === 'code' && p.t % 3 === 0) FX.push({ t: 'p', x: p.x, y: p.y + rnd(-20, 20), vx: -Math.sign(p.vx) * 2, vy: rnd(-1, 1), life: 12, max: 12, c: '#ff3040', sz: rnd(3, 6) });
     if (p.kind === 'tomato' && p.y >= -p.r * 0.6 && p.vy > 0) { SFX.splat(); finBurst(p.x, -8, 14, ['#e8231c', '#ff6a50', '#2f8f2a'], 6, 5); p.dead = true; continue; }
     if (p.kind === 'plate' && p.y >= -10 && p.vy > 0) { SFX.rattle(); finBurst(p.x, -8, 12, ['#ffffff', '#3a6fd1'], 7, 4); p.dead = true; continue; }
     if (p.kind === 'pot' && !p.noHit && p.y >= -p.r * 0.6 && p.vy > 0) { SFX.thud(); SFX.rattle(); dust(p.x, 20); if (G.fight) G.fight.shake(14); p.dead = true; continue; }
@@ -2601,6 +2656,10 @@ function drawProj(p) {
   else if (p.kind === 'rock') drawRock(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'cartire') drawCarTire(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'tomato') drawTomato(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'keyboard') drawKeyboard(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'laptop') drawLaptop(p.x, p.y + p.r * 0.5, p.rot, p.r);
+  else if (p.kind === 'bug') drawBug(p);
+  else if (p.kind === 'code') drawCodeGlyph(p);
   else if (p.kind === 'plate') drawPlate(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'pot') drawPot(p.x, p.y + p.r * 0.5, p.r * 0.8, 1);
   else if (p.kind === 'flame') drawFlame(p);
@@ -2639,6 +2698,7 @@ function drawHeld(f) {
   if (m.eat) drawEatProps(f);
   if (m.id === 'sk_cards' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); for (let i = 0; i < 3; i++) drawCard(w[0] + f.facing * (i - 1) * 6, w[1] - 8, f.facing * (i - 1) * 0.35, 1, '♠♥♦'[i], 0.8); }
   if (m.id === 'sk2_tire' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawCarTire(w[0], w[1] - 10, 0, 34); }
+  if (m.zap && f.mt >= m.st && f.mt < m.st + m.ac) { const w = f.toWorld(f.J.fH); drawBolt(w[0], w[1], w[0] + f.facing * 640, w[1] + Math.sin(f.mt) * 6, 7, f.mt); drawBolt(w[0], w[1], w[0] + f.facing * 600, w[1] + Math.cos(f.mt * 1.3) * 14, 3, f.mt + 9); }
   if (m.pan && f.mt < (m.spawnAt || m.st + m.ac + 6)) { const w = f.toWorld(f.J.fH); drawPan(w[0], w[1] - 10, -f.facing * (1.2 - Math.min(1, f.mt / (m.st || 10)) * 1.6), 32); }
   if (m.id === 'sk2_pan' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawPan(w[0], w[1] - 10, -f.facing * 1.2, 30); }
   if (m.id === 'sk2_mouse' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawMouse(w[0], w[1] - 6, 0, 20, -f.facing, f.mt); }
@@ -3147,6 +3207,33 @@ const FIN = [
     front(F, a, d, t) { const P = a.finProp;
       if (P && P.k === 'pot' && t >= 100) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 7; i++) { const x = P.x - 150 + i * 50, h = 46 + 22 * Math.sin(t * 0.9 + i * 1.3); const g = ctx.createLinearGradient(0, 0, 0, -h); g.addColorStop(0, 'rgba(255,110,20,0.95)'); g.addColorStop(1, 'rgba(255,230,90,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 24, 0); ctx.quadraticCurveTo(x, -h * 1.5, x + 24, 0); ctx.fill(); } ctx.restore(); ctx.fillStyle = '#2b2f36'; ctx.fillRect(P.x - 170, -14, 340, 12); }
       if (P && P.k === 'pot') drawPot(P.x, P.y, 175, 1, P.sh || 0); if (a.finHeld === 'pan') { const w = a.toWorld(a.J.fH); drawPan(w[0], w[1] - 10, -a.facing * 1.1 + Math.sin(t * 0.5) * 0.3, 36); } } },
+  // 19 المبرمج — code rain freezes you, lightning strikes, the giant </> slams, then Ctrl+Alt+Delete: a full lightning beam
+  { name: 'كنترول ألت ديليت', line: 'ديليت!', col: '#ff2a3a',
+    run(F, a, d, t) {
+      const f = a.facing; if (t < 150) finHold(d, a.x + f * 300);
+      if (t < 14) { a.rageP = FPZ.point; if (t === 2) SFX.zap(); finCam(F, (a.x + d.x) / 2, -240, 1.1); return; }
+      if (t < 44) { a.rageP = FPZ.armsUp; d.finP = FPZ.hurt({ lean: -6 + Math.sin(t * 2) * 6 }); if (t % 6 === 0) SFX.zap(); finCam(F, d.x, -260, 1.05); return; }
+      if (t < 84) { const k = t - 44; a.rageP = k % 10 < 5 ? G2({ ua: 175, fa: 10, bua: 30, bfa: 120, lean: -8 }) : G2({ ua: 120, fa: 20, lean: 6 }); d.finP = FPZ.hurt({ lean: -16 - (k % 10 < 3 ? 10 : 0) });
+        if (k % 10 === 0) { finHit(F, a, d, 5, finChest(d), 6); F.shake(14); SFX.zap(); SFX.thud(); finBurst(d.x, -150, 18, ['#ff3040', '#ffffff'], 9, 5); F.fin.bolt = t; }
+        finCam(F, d.x, -280, 1.0); return; }
+      if (t < 104) { const u = finSeg(t, 84, 104); a.rageP = FPZ.armsUp; F.fin.glyph = { x: d.x, y: lerp(-760, finChest(d)[1], u * u), s: lerp(0.4, 1.6, u) }; if (t === 84) SFX.skill(); finCam(F, d.x, -300, 0.95); return; }
+      if (t === 104) { finHit(F, a, d, 8, finChest(d), 12); F.shake(28); SFX.thud(); SFX.rock(); finRing(d.x, -150, '#ff2a3a', 280, 18); F.fin.glyph = null; popText('DELETE', d.x, -420, '#ff3040', 64); return; }
+      if (t < 120) { a.rageP = G2({ ua: 60, fa: 70, bua: 56, bfa: 74, lean: 10, dx: 8 }); if (t % 3 === 0) SFX.move(); d.finP = FPZ.hurt({ lean: -24 }); finCam(F, (a.x + d.x) / 2, -230, 1.1); return; }
+      if (t < 140) { a.rageP = G2({ ua: 92, fa: 0, lean: 22, dx: 18, th: 34, bth: -30 }); if (t % 3 === 0) { SFX.zap(); F.shake(8); } F.fin.beam = true; finCam(F, (a.x + d.x) / 2, -230, 1.0);
+        if (t === 139) { const c = finChest(d); F.fin.beam = false; finHit(F, a, d, 26, c, 20, true); finLaunch(d, f * 16, -20); F.shake(44); SFX.thud(); SFX.rock(); for (let i = 0; i < 3; i++) finRing(c[0], c[1], i % 2 ? '#ff2a3a' : '#ffffff', 240 + i * 140, 18 + i * 6); finBurst(c[0], c[1], 80, ['#ff2a3a', '#ffffff', '#ff8a8a'], 15, 8); }
+        return; }
+      if (t < 175) { a.rageP = FPZ.point; F.fin.beam = false; finCam(F, lerp(a.x, d.x, 0.5), -220, 1.0); return; }
+      return true;
+    },
+    back(F, a, d, t) {
+      if (t >= 14 && t < 110) { ctx.save(); ctx.font = `700 22px ${FE}`; ctx.textAlign = 'center'; ctx.direction = 'ltr'; const ch = '01{}<>/;=()[]#'; for (let i = 0; i < 26; i++) { const x = d.x - 260 + (i * 97) % 520, y = -760 + ((t * (9 + i % 5) + i * 131) % 820); ctx.fillStyle = i % 4 ? 'rgba(255,60,70,0.75)' : 'rgba(255,255,255,0.8)'; for (let k = 0; k < 4; k++) ctx.fillText(ch[(i * 7 + k * 3 + (t >> 2)) % ch.length], x, y - k * 24); } ctx.restore(); }
+    },
+    front(F, a, d, t) {
+      const fn = F.fin; if (!fn) return;
+      if (fn.bolt !== undefined && t - fn.bolt < 6) { drawBolt(d.x + Math.sin(fn.bolt) * 60, -900, d.x, -140, 9, fn.bolt); drawBolt(d.x - 40, -900, d.x + 20, -200, 5, fn.bolt + 3); }
+      if (fn.glyph) drawCodeGlyph({ x: fn.glyph.x, y: fn.glyph.y, r: 90 * fn.glyph.s, rot: 0 });
+      if (fn.beam) { const w = a.toWorld(a.J.fH); for (let i = 0; i < 3; i++) drawBolt(w[0], w[1], d.x + a.facing * 40, finChest(d)[1] + (i - 1) * 30, 10 - i * 2, t + i * 5); }
+    } },
 ];
 
 // ================= FIGHT =================
