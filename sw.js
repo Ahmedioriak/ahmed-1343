@@ -1,5 +1,5 @@
 // معركة الشلة — تشغيل بدون إنترنت (النسخة الأساسية فقط؛ معركة الشلة 2 ما تتأثر)
-const V = 'shilla-v1-20';
+const V = 'shilla-v1-21';
 const CORE = ['./', './mobile', './firebase-config.js', './manifest.webmanifest', './manifest-mobile.webmanifest',
   './icons/icon-32.png', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-192.png', './icons/icon-maskable-512.png'];
 const SCOPE = new URL(self.registration.scope);
@@ -33,19 +33,26 @@ self.addEventListener('activate', e => e.waitUntil((async () => {
   await self.clients.claim();
 })()));
 async function notify() { for (const c of await self.clients.matchAll({ type: 'window' })) c.postMessage({ t: 'upd' }); }
+const WAIT = 2500; // كل ما تفتح اللعبة: يتأكد من آخر تحديث (أقصى شي ثانيتين ونص)، وبعدها يفتح
+const sig = r => r && (r.headers.get('etag') || r.headers.get('last-modified') || r.headers.get('content-length'));
 self.addEventListener('fetch', e => {
   const r = e.request; if (r.method !== 'GET') return;
   const k = keyOf(new URL(r.url)); if (!k) return;
+  const page = k === './' || k === './mobile';
   e.respondWith((async () => {
     const c = await caches.open(V), hit = await c.match(k);
+    let late = false;
     const net = grab(k).then(async res => {
       if (!res) return null;
-      const page = k === './' || k === './mobile', a = hit && hit.headers.get('etag'), b = res.headers.get('etag');
+      const changed = hit && sig(hit) !== sig(res);
       await c.put(k, res.clone());
-      if (page && a && b && a !== b) notify();
+      if (page && late && changed) notify();   // وصل التحديث بعد ما فتحت اللعبة: اللعبة تعيد تحميل نفسها
       return res;
     });
-    if (hit) { e.waitUntil(net); return hit; }       // افتح بسرعة من الجهاز، وحدّث بالخلفية
-    return (await net) || new Response('غير متصل', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    if (!hit) return (await net) || new Response('غير متصل', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    if (!page) { e.waitUntil(net); return hit; }
+    const first = await Promise.race([net, new Promise(ok => setTimeout(() => ok(null), WAIT))]);
+    if (first) return first;                      // آخر نسخة من الموقع
+    late = true; e.waitUntil(net); return hit;    // النت بطيء أو مقطوع: افتح النسخة المحفوظة
   })());
 });

@@ -200,7 +200,7 @@ const CHARS = [
   { name: 'الطالب', en: 'THE STUDENT', h: 0.76, tag: 'شنطته مليانة مفاجآت', hp: 0.9, dmg: 0.95, spd: 1.12, color: '#3a56c8', stats: [3, 5, 3], quote: 'رحت المدرسة… ورجعت فايز!' },
   { name: 'العبد', en: 'AL-ABD', h: 0.93, eat: 1, tag: 'كاراتيه… وبعدها خبز وماي', hp: 0.98, dmg: 1.08, spd: 1.06, color: '#f2f2f2', stats: [5, 4, 2], quote: 'خلني أكمل خبزتي بعدين نتفاهم' },
   { name: 'القيمر', en: 'THE GAMER', h: 0.9, tag: 'جاب سلاحه من اللعبة', hp: 0.96, dmg: 1.0, spd: 1.08, color: '#e01b30', stats: [4, 4, 3], quote: 'GG… حظ أوفر المرة الجاية' },
-  { name: 'السوّاق', en: 'THE DRIVER', h: 0.92, tag: 'سيارته سلاحه', hp: 1.04, dmg: 1.05, spd: 1.02, color: '#ff3347', stats: [4, 4, 4], quote: 'اربط الحزام… وصلت محطتك!' },
+  { name: 'وحش التيرسل', en: 'TERCEL BEAST', h: 0.92, tag: 'سيارته سلاحه', hp: 1.04, dmg: 1.05, spd: 1.02, color: '#ff3347', stats: [4, 4, 4], quote: 'اربط الحزام… وصلت محطتك!' },
 ];
 const NCH = CHARS.length;
 
@@ -298,6 +298,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
+const GAME_VER = '1.21';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -305,8 +306,14 @@ addEventListener('beforeinstallprompt', e => { e.preventDefault(); PWA.evt = e; 
 addEventListener('appinstalled', () => { PWA.evt = null; PWA.standalone = true; toast('تم تثبيت اللعبة ✓ تلقاها في الشاشة الرئيسية'); });
 try {
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !netEmbedded()) {
-    addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { }));
-    navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.t === 'upd') toast('نزل تحديث جديد للعبة ✨ سكّرها وافتحها من جديد'); });
+    // every launch the service worker checks the site for a newer version (≤2.5 s) before opening the cached copy;
+    // if the newer version arrives later, the game reloads itself on the title screen (or as soon as you return to it)
+    const updNow = () => { if (window.__updReloading) return; window.__updReloading = true; toast('جاري تحميل التحديث الجديد…'); setTimeout(() => location.reload(), 600); };
+    window.__updReady = () => { let sc = null; try { sc = G.scene; } catch (e) { } if (!sc || sc === 'boot' || sc === 'title') updNow(); else { window.__updPending = true; toast('نزل تحديث جديد ✨ يتحمّل لما ترجع للقائمة'); } };
+    addEventListener('load', () => navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => { try { reg.update(); } catch (e) { } }).catch(() => { }));
+    navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.t === 'upd') window.__updReady(); });
+    let hadCtl = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl) window.__updReady(); hadCtl = true; });
   }
 } catch (e) { }
 function pwaInstall() {
@@ -1154,7 +1161,7 @@ const COMBOS = [
 ];
 // ================= STORY BOSSES =================
 // 14 النوخذة — sea captain (ship, speedboat, wave) · 15 الرئيس — the mastermind · 16 الرئيس متحوّل — wings, red aura, eye lasers, red blast
-// ================= السوّاق — his white sedan, its doors and its tyres =================
+// ================= وحش التيرسل — his white sedan, its doors and its tyres =================
 function drawCarTire(x, y, rot, r) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
   ctx.fillStyle = '#121316'; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
@@ -1248,7 +1255,7 @@ MV.sk2_tire = { name: 'tire', skill: 1, sk2: 1, limb: null, lvl: 'mid', st: 15, 
   kf: [[0, {}], [9, { ua: 210, fa: 50, lean: -18, bua: 30, bfa: 120, th: 30, sh: 20, bth: -26, bsh: 10 }], [15, { ua: 80, fa: 6, lean: 26, dx: 14, th: 44, bth: -34 }], [21, {}], [36, null]] };
 SKILL2[14] = 'sk2_tire'; SKILL2_LINE[14] = 'خذ التاير!'; SKILL2_NAMES[14] = 'رمية التاير';
 COMBOS.push(
-  // 14 السوّاق — car doors, tyres and the bonnet
+  // 14 وحش التيرسل — car doors, tyres and the bonnet
   { '12': ['رمية الباب', projMove(12, 18, PZ.windup, PZ.release, f => { SFX.throw(); shoot(f, { kind: 'door', sp: 18, r: 42, dmg: 13, vr: 0.4, life: 80, p: 1.4, push: 34 }); })],
     '23': ['التاير المتدحرج', projMove(14, 20, { ...CROUCH, ua: 10, fa: 20, lean: 40 }, { ua: 75, fa: 5, lean: 30, dx: 10, th: 50, bth: -40 }, f => { SFX.roll(); shoot(f, { kind: 'cartire', from: 'ground', gx: 80, r: 38, sp: 13, ground: 1, lvl: 'low', dmg: 12, kd: 1, vr: 0.3, life: 110 }); })],
     '24': ['دفشة الكبوت', dashMove({ st: 10, ac: 14, rc: 20, sp: 16, hitboxFn: bodyHB(70, -230, 60), dmg: 13, kd: 1, push: 55, pose: PZ.shoulder })],
@@ -3020,7 +3027,7 @@ const FIN = [
     front(F, a, d, t) { if (a.finProp && a.finProp.k === 'gun') drawBlaster(a);
       if (t >= 76 && t < 104) { const u = finSeg(t, 76, 100), c = finChest(d); finReticle(c[0], c[1], lerp(200, 70, u), Math.min(1, u * 3)); }
       if (t >= 100 && t < 136) { const a2 = t < 128 ? Math.min(1, (t - 100) / 6) : 1 - (t - 128) / 8; finBeam(d.x, a2, 90 + Math.sin(t * 0.8) * 10, 'rgba(120,240,255,0.95)', 'rgba(255,60,240,0.5)'); } } },
-  // 14 السوّاق — rams you twice, rips off the door and a tyre and throws them, then the full-speed crash
+  // 14 وحش التيرسل — rams you twice, rips off the door and a tyre and throws them, then the full-speed crash
   { name: 'الحادث الكبير', line: 'اربط الحزام!', col: '#ff3347',
     run(F, a, d, t) {
       const f = a.facing;
@@ -4235,7 +4242,7 @@ function drawStory() {
 // ================= SCENES =================
 const G = {
   scene: 'boot', frame: 0, mode: '2p', menuIdx: 0, debug: false, fight: null, sel: null, vs: null, res: null, t: 0,
-  toTitle() { this.scene = 'title'; this.t = 0; this.fight = null; this.story = null; this.storyPick = false; this.storyMap = null; if (AC) Music.intensity = 0; },
+  toTitle() { if (window.__updPending) { window.__updPending = false; location.reload(); } this.scene = 'title'; this.t = 0; this.fight = null; this.story = null; this.storyPick = false; this.storyMap = null; if (AC) Music.intensity = 0; },
   toSelect() {
     this.story = null; this.storyPick = false;
     const prev = this.sel ? this.sel.cur.slice() : [0, 1];
@@ -4330,6 +4337,7 @@ function drawTitle() {
   ctx.save(); ctx.rotate(-0.04); ctx.fillStyle = 'rgba(220,20,40,0.9)'; ctx.fillRect(-380, 50, 760, 10); ctx.restore();
   txt('معركة الشلة', 0, -8, { size: 128, weight: 900, color: '#ffffff', stroke: '#1a0004', sw: 14, glow: '#ff1030', glowBlur: 40 });
   txt('SHILLA FIGHT', 0, 92, { size: 52, font: FE, weight: 700, color: '#ff2a3a', italic: true, rtl: false, stroke: '#000', sw: 6 });
+  txt('v' + GAME_VER, 560, 120, { size: 18, font: FE, weight: 700, color: 'rgba(255,255,255,0.45)', rtl: false });
   ctx.restore();
   // menu
   const opts = ['لاعب ضد لاعب', 'ضد الكمبيوتر', 'القصة 📖', 'أونلاين 🌐', 'الإعدادات'];
