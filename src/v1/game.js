@@ -144,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.31';
+const GAME_VER = '1.32';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1523,6 +1523,54 @@ COMBOS[TAMER] = {
   '14': ['لكمات المروض', flurryMove({ st: 6, ac: 30, rc: 16, multi: 5, dmg: 2.6, hs: 14, bs: 7, push: 3, stop: 2, r: 36, mvx: [[6, 36, 2]] })],
   '34': ['ركلة المروض', M({ st: 12, ac: 4, rc: 20, limb: 'fT', r: 42, dmg: 13, push: 60, kick: 1, p: 1.5, kf: [[0, {}], [8, PZ.stompUp], [12, { th: 90, sh: 0, ft: -40, ffl: 0, lean: -14, dx: 10 }], [16, {}], [36, null]] })],
 };
+// ================= الصياد — البلدوزر's fishing outfit: a giant grouper, the rod and hook, nets and a shark =================
+const FISHER = CHARS.length;
+CHARS.push({ name: 'الصياد', en: 'THE FISHERMAN', tag: 'البحر صديقه', hp: 1.1, dmg: 1.08, spd: 0.92, color: '#2f86d6', stats: [5, 2, 5], quote: 'صيد ثقيل… بس سهل!', hidden: 1 });
+OUTFITS[5] = [{ id: '', name: 'الأساسي' }, { id: 'fisher', name: 'الصياد', as: FISHER }];
+SFX.splash = () => { if (!SET.fx) return; nz(0.35, 'bandpass', 900, 0.7, 0.14, 0, 300); nz(0.25, 'highpass', 2500, 0.6, 0.05, 0.05); };
+SFX.reel = () => { if (!SET.fx) return; for (let i = 0; i < 4; i++) tn('square', 1400, 1300, 0.02, 0.025, i * 0.04); };
+function drawGrouper(x, y, rot, L) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); const H = L * 0.36;
+  ctx.fillStyle = '#9a5a2c'; ctx.beginPath(); ctx.moveTo(-L * 0.42, 0); ctx.lineTo(-L * 0.62, -H * 0.7); ctx.lineTo(-L * 0.58, 0); ctx.lineTo(-L * 0.62, H * 0.7); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-L * 0.25, -H * 0.42); ctx.quadraticCurveTo(0, -H * 1.0, L * 0.25, -H * 0.45); ctx.fill();
+  const g = ctx.createLinearGradient(0, -H / 2, 0, H / 2); g.addColorStop(0, '#8a5326'); g.addColorStop(0.6, '#c98a4a'); g.addColorStop(1, '#ead2a8');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, L * 0.46, H * 0.52, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(70,35,15,0.6)'; for (let i = 0; i < 26; i++) { const a = Math.sin(i * 12.9) * 0.5 + 0.5, b = Math.cos(i * 7.3) * 0.5 + 0.5; ctx.beginPath(); ctx.arc(-L * 0.38 + a * L * 0.74, -H * 0.38 + b * H * 0.6, 2 + (i % 3), 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#7a3e1c'; ctx.beginPath(); ctx.ellipse(L * 0.44, H * 0.06, L * 0.08, H * 0.2, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.arc(L * 0.32, -H * 0.16, H * 0.1, 0, 7); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(L * 0.33, -H * 0.16, H * 0.05, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function drawShark(x, y, rot, s) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+  ctx.fillStyle = '#5f7486'; ctx.beginPath(); ctx.moveTo(-130, 0); ctx.lineTo(-180, -50); ctx.lineTo(-165, 0); ctx.lineTo(-180, 46); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-20, -40); ctx.lineTo(10, -100); ctx.lineTo(40, -38); ctx.fill();
+  const g = ctx.createLinearGradient(0, -45, 0, 45); g.addColorStop(0, '#6d8396'); g.addColorStop(0.55, '#8ea4b5'); g.addColorStop(1, '#eef2f4');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, 150, 46, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#7a0f18'; ctx.beginPath(); ctx.moveTo(150, -4); ctx.lineTo(96, 6); ctx.lineTo(148, 34); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fff'; for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.moveTo(104 + i * 8, 7 + i * 1.5); ctx.lineTo(108 + i * 8, 15 + i * 1.5); ctx.lineTo(112 + i * 8, 7 + i * 1.5); ctx.fill(); }
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(110, -16, 6, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(40,50,60,0.6)'; ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(70 - i * 9, -18); ctx.lineTo(66 - i * 9, 14); ctx.stroke(); }
+  ctx.restore();
+}
+function drawNet(x, y, r, a = 1) { ctx.save(); ctx.globalAlpha *= a; ctx.strokeStyle = '#c9b48a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke(); for (let i = -4; i <= 4; i++) { const o = i * r / 4.5, h = Math.sqrt(Math.max(0, r * r - o * o)); ctx.beginPath(); ctx.moveTo(x + o, y - h); ctx.lineTo(x + o, y + h); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - h, y + o); ctx.lineTo(x + h, y + o); ctx.stroke(); } ctx.restore(); }
+function drawHook(x, y) { ctx.save(); ctx.strokeStyle = '#d8dde4'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y - 14); ctx.lineTo(x, y + 4); ctx.arc(x - 7, y + 4, 7, 0, Math.PI * 0.9); ctx.stroke(); ctx.fillStyle = '#e8231c'; ctx.beginPath(); ctx.arc(x, y - 18, 6, 0, 7); ctx.fill(); ctx.restore(); }
+function splash(x, n = 20) { SFX.splash(); for (let i = 0; i < n; i++) FX.push({ t: 'p', x: x + rnd(-60, 60), y: -rnd(0, 20), vx: rnd(-5, 5), vy: -rnd(6, 15), life: rnd(22, 36), max: 36, c: i % 3 ? '#7fd6ff' : '#ffffff', sz: rnd(3, 8) }); }
+MV.sk_fishslap = { name: 'fishslap', skill: 1, limb: 'fH', lvl: 'mid', st: 14, ac: 6, rc: 24, dmg: 18, hs: 0, bs: 16, push: 70, stop: 14, p: 1.8, kd: 1, r: 80, fish: 1, mvx: [[6, 18, 9]],
+  onStep: f => { if (f.mt === 6) SFX.whoosh(1); if (f.mt === 14) splash(f.toWorld(f.J.fH)[0] + f.facing * 60, 12); },
+  hitboxFn: f => { if (!f.active()) return null; const w = f.toWorld(f.J.fH); return { x: w[0] + f.facing * 90, y: w[1], r: 80 }; },
+  kf: [[0, {}], [8, { ua: 200, fa: 60, bua: 196, bfa: 60, lean: -18, dx: -8, th: 20, bth: -16 }], [14, { ua: 80, fa: 0, bua: 84, bfa: 6, lean: 30, dx: 22, th: 46, bth: -40 }], [24, {}], [44, null]] };
+MV.sk2_hook = { name: 'hook', skill: 1, sk2: 1, limb: null, lvl: 'mid', st: 14, ac: 1, rc: 22, p: 1.1, spawnAt: 14, spawn: f => { SFX.whoosh(1); SFX.reel(); const w = f.toWorld(f.J.fH); spawnProj({ kind: 'hook', owner: f, x: w[0], y: w[1] - 20, vx: f.facing * 20, vy: -3, g: 0.12, r: 22, life: 50, line: 1, m: { dmg: 11, lvl: 'mid', hs: 18, bs: 10, push: -60, stop: 8, p: 1.2 } }); },
+  kf: [[0, {}], [8, { ua: 200, fa: 40, lean: -14 }], [14, { ua: 90, fa: 10, lean: 18, dx: 10 }], [24, {}], [36, null]] };
+SKILL_IDS[FISHER] = 'sk_fishslap'; SKILL_NAMES[FISHER] = 'صفعة الهامور';
+SKILL2[FISHER] = 'sk2_hook'; SKILL2_LINE[FISHER] = 'علقت في السنارة!'; SKILL2_NAMES[FISHER] = 'السنارة';
+COMBOS[FISHER] = {
+  '12': ['سمكة طايرة', projMove(12, 20, PZ.windup, PZ.release, f => { SFX.throw(); shoot(f, { kind: 'fish', sp: 18, ang: -0.1, g: 0.2, r: 30, dmg: 12, vr: 0.4, life: 80 }); })],
+  '23': ['شبكة الصياد', projMove(12, 22, { ...PZ.windup, ua: 150 }, PZ.release, f => { SFX.throw(); shoot(f, { kind: 'net', sp: 12, r: 46, dmg: 11, launch: 1, life: 50, vr: 0 }); })],
+  '24': ['رمية الطعوم', projMove(10, 22, PZ.windup, PZ.release, f => { SFX.throw(); [-0.15, 0, 0.15].forEach(a => shoot(f, { kind: 'lure', sp: 19, ang: a, r: 14, dmg: 4.5, vr: 0.4, life: 60 })); })],
+  '13': ['قرش من البحر', projMove(14, 22, PZ.summon, { ...PZ.summon, lean: -22 }, f => { const o = G.fight.f[1 - f.slot]; splash(o.x, 26); spawnProj({ kind: 'shark', owner: f, x: o.x - f.facing * 60, y: 20, vx: f.facing * 3, vy: -21, g: 0.75, r: 70, life: 60, dir: f.facing, big: 1, m: { dmg: 18, lvl: 'mid', hs: 0, bs: 16, push: 30, stop: 10, p: 1.7, kd: 1, launchHit: 1 } }); })],
+  '14': ['ضربات الصياد', flurryMove({ st: 6, ac: 30, rc: 16, multi: 5, dmg: 2.8, hs: 14, bs: 7, push: 3, stop: 2, r: 38, mvx: [[6, 36, 2]] })],
+  '34': ['ركلة البحّار', M({ st: 12, ac: 4, rc: 20, limb: 'fT', r: 42, dmg: 14, push: 60, kick: 1, p: 1.5, kf: [[0, {}], [8, PZ.stompUp], [12, { th: 90, sh: 0, ft: -40, ffl: 0, lean: -14, dx: 10 }], [16, {}], [36, null]] })],
+};
 const COMBO_NAME = {};
 COMBOS.forEach((set, ci) => { for (const k of COMBO_KEYS) { const [name, mv] = set[k]; const id = `cb${ci}_${k}`; MV[id] = mv; mv.cname = name; COMBO_NAME[id] = name; set[k] = id; } });
 COMBOS[NOKH] = COMBOS[9]; COMBOS[RAIS] = COMBOS[1]; COMBOS[RAIS2] = COMBOS[1];
@@ -2118,15 +2166,16 @@ PERSONA.push(
   { vo: 'roar', intro: ['كلكم شغالين عندي!'], skill: ['حس بالخاتم!'], win: ['الكأس لي… للأبد!'], st: { lean: 10, ua: 4, bua: 4, th: 8, bth: -10 }, br: 0.05, ba: 2 },
   { vo: 'roar', intro: ['الحين… تشوف قوتي!'], skill: ['شوف عيوني!'], win: ['ما في أحد يوقف الرئيس!'], st: { lean: 14, ua: 8, bua: 8, th: 10, bth: -12 }, br: 0.05, ba: 2.6 },
 );
+PERSONA[FISHER] = { vo: 'deep', intro: ['اليوم صيدي أنت!'], skill: ['هامور!'], win: ['صيد ثقيل… بس سهل!'], st: { lean: 10, th: 8 }, br: 0.05, ba: 2.6 };
 PERSONA[TAMER] = { vo: 'shout', intro: ['الحيوانات معي!'], skill: ['هجوم!'], win: ['حتى القطو أقوى منك!'], st: { lean: 8, th: 6, bth: -6 }, br: 0.12, bob: 4 };
 PERSONA[CODER] = { vo: 'laugh', intro: ['خلني أكتب الكود…'], skill: ['كهربا!'], win: ['صلّحت البق… وأنت كنت البق!'], st: { lean: -2, fa: 12, bfa: 10 }, br: 0.1 };
 PERSONA[CHEF] = { vo: 'roar', intro: ['جاهز للطبخة؟'], skill: ['نار!'], win: ['الأكل جاهز… وأنت الطبق!'], st: { lean: 12, ua: 6, bua: 6, th: 10, bth: -12 }, br: 0.06, ba: 2.2 };
-if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 15: [0.82, 0.95], 16: [0.6, 0.86], 17: [0.42, 0.8], 18: [0.45, 0.88], 19: [0.9, 1.0], 20: [1.0, 1.05] });
+if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 15: [0.82, 0.95], 16: [0.6, 0.86], 17: [0.42, 0.8], 18: [0.45, 0.88], 19: [0.9, 1.0], 20: [1.0, 1.05], 21: [0.5, 0.85] });
 const pickLine = a => a[(Math.random() * a.length) | 0];
 // ---- Arabic voices: the browser's Arabic voice when it has one, otherwise the built-in recorded lines ----
 const VOX = { clips: window.VOICE_CLIPS || {}, txt: window.VOICE_TXT || {}, bufs: {}, tbufs: {}, last: {}, voices: null, cur: [] };
 // ---- recorded neural Arabic voice (Piper «Kareem»): every sentence recorded once, names recorded separately ----
-const VOICE_RATE = { 20: 1.02, 19: 1.0, 18: 0.9, 0: 1.1, 1: 0.88, 5: 0.87, 6: 1.12, 8: 1.13, 11: 1.13, 15: 0.93, 16: 0.9, 17: 0.82, 99: 0.96 };
+const VOICE_RATE = { 21: 0.88, 20: 1.02, 19: 1.0, 18: 0.9, 0: 1.1, 1: 0.88, 5: 0.87, 6: 1.12, 8: 1.13, 11: 1.13, 15: 0.93, 16: 0.9, 17: 0.82, 99: 0.96 };
 function voiceNorm(t) { return t.replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF\uFE0F]/gu, '').replace(/[!؟?.,،:؛—"«»]/g, ' ').replace(/\s+/g, ' ').trim(); }
 let VNAMES = null;
 function voiceSegs(text) {
@@ -2488,6 +2537,8 @@ function updProj(F) {
     if (p.kind === 'egg' && p.y >= -p.r * 0.6 && p.vy > 0) { p.y = -4; eggSplat(p); p.dead = true; continue; }
     if (p.kind === 'bike' && p.y >= -p.r * 0.55 && p.vy > 0) { bikeCrash(p); p.dead = true; continue; }
     if (p.kind === 'flame' && p.t % 2 === 0) FX.push({ t: 'p', x: p.x + rnd(-30, 30), y: p.y + rnd(-30, 30), vx: -Math.sign(p.vx) * rnd(1, 3), vy: -rnd(1, 4), life: 16, max: 16, c: p.t % 4 ? '#ff8a2a' : '#ffd34d', sz: rnd(4, 9) });
+    if (p.kind === 'shark' && p.t === 1) splash(p.x, 18);
+    if (p.kind === 'fish' && p.y >= -12 && p.vy > 0) { SFX.splat(); splash(p.x, 8); p.dead = true; continue; }
     if (p.kind === 'dog' && p.t % 3 === 0) dust(p.x - Math.sign(p.vx) * 50, 2, -Math.sign(p.vx));
     if (p.kind === 'cat' && p.y >= -10 && p.vy > 0) { p.y = -10; p.vy = 0; p.g = 0; p.vx *= 0.3; p.life = Math.min(p.life, 14); }
     if (p.kind === 'falcon' && p.y >= -40 && p.vy > 0) { p.vy = -2; p.g = -0.4; p.vx = (Math.sign(p.vx) || p.dir || 1) * 12; }
@@ -2734,6 +2785,11 @@ function drawProj(p) {
   else if (p.kind === 'rock') drawRock(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'cartire') drawCarTire(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'tomato') drawTomato(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'fish') drawGrouper(p.x, p.y, p.rot, p.r * 4);
+  else if (p.kind === 'lure') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = ['#ff3b30', '#ffd34d', '#2fd67a'][Math.abs(Math.round(p.x)) % 3]; ctx.beginPath(); ctx.ellipse(0, 0, p.r, p.r * 0.45, 0, 0, 7); ctx.fill(); ctx.restore(); drawHook(p.x + 6, p.y + 10); }
+  else if (p.kind === 'net') drawNet(p.x, p.y, p.r * Math.min(1.6, 0.6 + p.t / 18));
+  else if (p.kind === 'shark') drawShark(p.x, p.y, (p.dir > 0 ? -1.2 : Math.PI + 1.2) + p.t * 0.04 * (p.dir || 1), 0.75);
+  else if (p.kind === 'hook') { const o = p.owner, w = o && o.J ? o.toWorld(o.J.fH) : [p.x, p.y]; ctx.save(); ctx.strokeStyle = 'rgba(240,240,240,0.85)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(w[0], w[1] - 40); ctx.quadraticCurveTo((w[0] + p.x) / 2, Math.max(w[1], p.y) + 30, p.x, p.y); ctx.stroke(); ctx.restore(); drawHook(p.x, p.y); }
   else if (p.kind === 'dog') drawDog(p.x, p.y + p.r, p.dir || Math.sign(p.vx) || 1, p.t, 1, p.sub || 'golden', p.t > 10);
   else if (p.kind === 'cat') drawCat(p.x, p.y + 26, p.dir || Math.sign(p.vx) || 1, p.t, 1, true);
   else if (p.kind === 'parrot' || p.kind === 'falcon') drawBirdA(p.x, p.y, p.dir || Math.sign(p.vx) || 1, p.t, 1.15, p.kind, p.kind === 'falcon' && p.vy > 2 ? 0.7 : 0);
@@ -2782,6 +2838,7 @@ function drawHeld(f) {
   if (m.id === 'sk_cards' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); for (let i = 0; i < 3; i++) drawCard(w[0] + f.facing * (i - 1) * 6, w[1] - 8, f.facing * (i - 1) * 0.35, 1, '♠♥♦'[i], 0.8); }
   if (m.id === 'sk2_tire' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawCarTire(w[0], w[1] - 10, 0, 34); }
   if (m.zap && f.mt >= m.st && f.mt < m.st + m.ac) { const w = f.toWorld(f.J.fH); drawBolt(w[0], w[1], w[0] + f.facing * 640, w[1] + Math.sin(f.mt) * 6, 7, f.mt); drawBolt(w[0], w[1], w[0] + f.facing * 600, w[1] + Math.cos(f.mt * 1.3) * 14, 3, f.mt + 9); }
+  if (m.fish && f.mt < m.st + m.ac + 10) { const w = f.toWorld(f.J.fH), u = Math.min(1, f.mt / m.st); drawGrouper(w[0] + f.facing * 50, w[1] - 10, f.facing > 0 ? lerp(-1.4, 0.1, u) : Math.PI - lerp(-1.4, 0.1, u), 150); }
   if (m.pan && f.mt < (m.spawnAt || m.st + m.ac + 6)) { const w = f.toWorld(f.J.fH); drawPan(w[0], w[1] - 10, -f.facing * (1.2 - Math.min(1, f.mt / (m.st || 10)) * 1.6), 32); }
   if (m.id === 'sk2_pan' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawPan(w[0], w[1] - 10, -f.facing * 1.2, 30); }
   if (m.id === 'sk2_mouse' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawMouse(w[0], w[1] - 6, 0, 20, -f.facing, f.mt); }
@@ -3340,6 +3397,35 @@ const FIN = [
     front(F, a, d, t) { const S = a.finS; if (!S) return;
       if (S.dogs) for (const g of S.dogs) if (g.x !== undefined && t >= g.t0) { drawDog(g.x, 0, a.facing, t, 1.25, g.k, Math.abs(g.x - d.x) < 120); if (t % 3 === 0) dust(g.x - a.facing * 60, 2, -a.facing); }
       if (S.leap && t >= S.leap && t < S.leap + 24) { const u = (t - S.leap) / 24; drawDog(lerp(d.x - a.facing * 80, d.x + a.facing * 260, u), -Math.sin(u * Math.PI) * 220, a.facing, t, 1.5, 'golden', true); }
+    } },
+  // 21 الصياد — hooks you, reels you in, grouper slaps, the net, then a giant shark leaps out of the floor
+  { name: 'صيد العمر', line: 'صيد العمر!', col: '#2f86d6',
+    run(F, a, d, t) {
+      const f = a.facing; if (!a.finS || a.finS.fin !== F.fin) a.finS = { fin: F.fin, d0: clamp(a.x + f * 520, -STAGE + 60, STAGE - 60) };
+      const S = a.finS;
+      if (t < 12) { finHold(d, S.d0); a.rageP = G2({ ua: 200, fa: 40, lean: -14 }); finCam(F, (a.x + d.x) / 2, -240, 1.0); return; }
+      if (t < 26) { finHold(d, S.d0); a.rageP = G2({ ua: 90, fa: 10, lean: 18, dx: 10 }); S.line = 1; S.hk = lerp(a.toWorld(a.J.fH)[0], d.x, finSeg(t, 12, 24)); if (t === 12) { SFX.whoosh(1); SFX.reel(); } if (t === 24) { finHit(F, a, d, 3, finHead(d), 4); popText('علق!', d.x, -440, '#7fd6ff', 40); } finCam(F, (a.x + d.x) / 2, -240, 0.95); return; }
+      if (t < 54) { const u = finSeg(t, 26, 54); finHold(d, lerp(S.d0, a.x + f * 170, ease(u))); S.hk = d.x; a.rageP = G2({ ua: 70, fa: 90, bua: 60, bfa: 100, lean: -18, dx: -6 }); d.finP = FPZ.hurt({ lean: 26 }); if (t % 4 === 0) SFX.reel(); finCam(F, (a.x + d.x) / 2, -240, 1.0); return; }
+      S.line = 0; finHold(d, a.x + f * 170);
+      if (t < 90) { const k = (t - 54) % 12, u = k < 5 ? k / 5 : 1 - (k - 5) / 7; S.fish = 1; a.rageP = G2({ ua: lerp(205, 80, u), fa: lerp(50, 0, u), bua: lerp(200, 84, u), bfa: lerp(50, 6, u), lean: lerp(-16, 28, u), dx: lerp(-8, 20, u), th: 40, bth: -34 });
+        if (k === 5) { const c = finHead(d); finHit(F, a, d, 5, c, 7); SFX.splat(); SFX.hit(1.6); splash(c[0], 10); popText('طراخ! 🐟', c[0], c[1] - 50, '#ffd34d', 38); d.finP = FPZ.hurt({ lean: -34 }); }
+        finCam(F, (a.x + d.x) / 2, -250, 1.15); return; }
+      S.fish = 0;
+      if (t < 106) { const u = finSeg(t, 90, 106); S.net = { y: lerp(-760, -200, u * u), r: lerp(60, 170, u) }; a.rageP = FPZ.armsUp; finCam(F, d.x, -280, 1.0); return; }
+      if (t === 106) { finHit(F, a, d, 6, finChest(d), 10); SFX.thud(); F.shake(16); d.finP = FPZ.hurt({ lean: -10 }); return; }
+      if (t < 116) { a.rageP = FPZ.point; if (t === 110) splash(d.x, 40); finCam(F, d.x, -260, 0.95); return; }
+      if (t < 136) { const u = finSeg(t, 116, 136); S.net = null; S.shark = { y: lerp(120, -330, Math.sin(u * Math.PI * 0.62)), r: lerp(-1.1, -0.6, u) }; if (t === 116) { SFX.splash(); F.shake(22); } if (t % 3 === 0) splash(d.x, 6); finCam(F, d.x, -300, 0.9);
+        if (t === 128) { const c = finChest(d); finHit(F, a, d, 28, c, 18, true); finLaunch(d, f * 10, -26); F.shake(44); SFX.thud(); SFX.rock(); finBurst(c[0], c[1], 60, ['#7fd6ff', '#ffffff', '#2f86d6'], 15, 8); for (let i = 0; i < 3; i++) finRing(c[0], c[1], i % 2 ? '#2f86d6' : '#ffffff', 220 + i * 140, 18 + i * 6); }
+        return; }
+      S.shark = null;
+      if (t < 168) { a.rageP = FPZ.armsUp; finCam(F, lerp(a.x, d.x, 0.5), -220, 1.0); return; }
+      return true;
+    },
+    front(F, a, d, t) { const S = a.finS; if (!S) return; const w = a.toWorld(a.J.fH);
+      if (S.line) { const hx = S.hk, hy = t < 24 ? -300 : finHead(d)[1]; ctx.save(); ctx.strokeStyle = 'rgba(240,240,240,0.85)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(w[0], w[1] - 60); ctx.quadraticCurveTo((w[0] + hx) / 2, Math.max(w[1], hy) + 40, hx, hy); ctx.stroke(); ctx.restore(); drawHook(hx, hy); ctx.strokeStyle = '#2b2f36'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(w[0], w[1]); ctx.lineTo(w[0] - a.facing * 20, w[1] - 80); ctx.stroke(); }
+      if (S.fish) drawGrouper(w[0] + a.facing * 60, w[1] - 10, a.facing > 0 ? -0.3 : Math.PI + 0.3, 170);
+      if (S.net) drawNet(d.x, S.net.y, S.net.r);
+      if (S.shark) drawShark(d.x, S.shark.y, a.facing > 0 ? S.shark.r : Math.PI - S.shark.r, 1.4);
     } },
 ];
 
