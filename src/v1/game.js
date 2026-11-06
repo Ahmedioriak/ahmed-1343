@@ -44,6 +44,7 @@ const CHARS = [
   { name: 'الطالب', en: 'THE STUDENT', h: 0.76, tag: 'شنطته مليانة مفاجآت', hp: 0.9, dmg: 0.95, spd: 1.12, color: '#3a56c8', stats: [3, 5, 3], quote: 'رحت المدرسة… ورجعت فايز!' },
   { name: 'العبد', en: 'AL-ABD', h: 0.93, eat: 1, tag: 'كاراتيه… وبعدها خبز وماي', hp: 0.98, dmg: 1.08, spd: 1.06, color: '#f2f2f2', stats: [5, 4, 2], quote: 'خلني أكمل خبزتي بعدين نتفاهم' },
   { name: 'القيمر', en: 'THE GAMER', h: 0.9, tag: 'جاب سلاحه من اللعبة', hp: 0.96, dmg: 1.0, spd: 1.08, color: '#e01b30', stats: [4, 4, 3], quote: 'GG… حظ أوفر المرة الجاية' },
+  { name: 'السوّاق', en: 'THE DRIVER', h: 0.92, tag: 'سيارته سلاحه', hp: 1.04, dmg: 1.05, spd: 1.02, color: '#ff3347', stats: [4, 4, 4], quote: 'اربط الحزام… وصلت محطتك!' },
 ];
 const NCH = CHARS.length;
 
@@ -614,8 +615,8 @@ const MOVESET = {
 const MOVE_AR = { lp: 'جاب سريع', rp: 'لكمة مستقيمة', lk: 'ركلة واطية', rk: 'ركلة عالية', f1: 'ضربة كوع', hook: 'هوك', fkick: 'ركلة دفع', spin: 'ركلة دائرية',
   k1: 'ظهر اليد', k2: 'دفعة الكفين', k3: 'ركبة', k4: 'ركلة خلفية', dp: 'لكمة واطية', upper: 'أبركت', dk: 'ركلة الساق', sweep: 'كسحة',
   u1: 'لكمة صاعدة', u2: 'المطرقة', u3: 'ركبة طايرة', u4: 'ركلة الشقلبة', jp: 'لكمة جوية', jp2: 'مطرقة جوية', jk: 'ركلة جوية', jk2: 'ركلة طايرة' };
-const SKILL_IDS = ['sk_rush', 'sk_barrage', 'sk_slide', 'sk_cards', 'sk_hball', 'sk_rock', 'sk_roll', 'sk_cart', 'sk_chicken', 'sk_bike', 'sk_bob', 'sk_school', 'sk_karate', 'sk_blaster'];
-const SKILL_NAMES = ['نطة الزعيم', 'القبضات العملاقة', 'السلايد', 'أوراق اللعب', 'كرة اليد', 'رمية الحجر', 'الكرة المتدحرجة', 'عربة السوبرماركت', 'جيش الدجاج', 'رمية السيكل', 'صاروخ البوب', 'هجوم الأدوات', 'إعصار الكاراتيه', 'سلاح القيمر'];
+const SKILL_IDS = ['sk_rush', 'sk_barrage', 'sk_slide', 'sk_cards', 'sk_hball', 'sk_rock', 'sk_roll', 'sk_cart', 'sk_chicken', 'sk_bike', 'sk_bob', 'sk_school', 'sk_karate', 'sk_blaster', 'sk_car'];
+const SKILL_NAMES = ['نطة الزعيم', 'القبضات العملاقة', 'السلايد', 'أوراق اللعب', 'كرة اليد', 'رمية الحجر', 'الكرة المتدحرجة', 'عربة السوبرماركت', 'جيش الدجاج', 'رمية السيكل', 'صاروخ البوب', 'هجوم الأدوات', 'إعصار الكاراتيه', 'سلاح القيمر', 'صدمة السيارة'];
 const PZ_SUMMON = { ua: 178, fa: 10, bua: 176, bfa: 10, lean: -12 };
 const mixPose = (a, b, u) => { const o = {}; for (const k of PK) o[k] = lerp(a[k], b[k], u); return o; };
 function barragePose(f, mt) {
@@ -997,7 +998,110 @@ const COMBOS = [
 ];
 // ================= STORY BOSSES =================
 // 14 النوخذة — sea captain (ship, speedboat, wave) · 15 الرئيس — the mastermind · 16 الرئيس متحوّل — wings, red aura, eye lasers, red blast
-const NOKH = 14, RAIS = 15, RAIS2 = 16;
+// ================= السوّاق — his white sedan, its doors and its tyres =================
+function drawCarTire(x, y, rot, r) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.fillStyle = '#121316'; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#2c2e34'; ctx.lineWidth = r * 0.1; for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(Math.cos(a) * r * 0.8, Math.sin(a) * r * 0.8); ctx.lineTo(Math.cos(a) * r * 0.97, Math.sin(a) * r * 0.97); ctx.stroke(); }
+  const g = ctx.createRadialGradient(-r * 0.15, -r * 0.15, r * 0.05, 0, 0, r * 0.6); g.addColorStop(0, '#f4f6f9'); g.addColorStop(0.6, '#b8bec8'); g.addColorStop(1, '#6a707b');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r * 0.58, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#59606b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, r * 0.44, 0, 7); ctx.stroke();
+  ctx.fillStyle = '#3a3f48'; for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2 + 0.4; ctx.beginPath(); ctx.arc(Math.cos(a) * r * 0.3, Math.sin(a) * r * 0.3, r * 0.065, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#dde1e7'; ctx.beginPath(); ctx.arc(0, 0, r * 0.13, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function drawDoor(x, y, rot, r) { // the white front door: glass on top, black trim strip, handle
+  const W = r * 1.45, H = r * 1.5;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  const g = ctx.createLinearGradient(0, -H * 0.1, 0, H); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#c6cbd1');
+  ctx.fillStyle = g; ctx.strokeStyle = '#8b9199'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(-W, -H * 0.05); ctx.lineTo(W, -H * 0.05); ctx.lineTo(W * 0.96, H); ctx.lineTo(-W * 0.92, H); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#e9ebee'; ctx.beginPath(); ctx.moveTo(-W, -H * 0.05); ctx.lineTo(-W * 0.86, -H); ctx.lineTo(W * 0.3, -H * 0.98); ctx.lineTo(W, -H * 0.05); ctx.closePath(); ctx.fill(); ctx.stroke();
+  const wg = ctx.createLinearGradient(0, -H, 0, 0); wg.addColorStop(0, '#a4c4dc'); wg.addColorStop(1, '#3c5a76');
+  ctx.fillStyle = wg; ctx.beginPath(); ctx.moveTo(-W * 0.88, -H * 0.12); ctx.lineTo(-W * 0.78, -H * 0.88); ctx.lineTo(W * 0.26, -H * 0.86); ctx.lineTo(W * 0.86, -H * 0.12); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.moveTo(-W * 0.5, -H * 0.12); ctx.lineTo(-W * 0.3, -H * 0.86); ctx.lineTo(-W * 0.1, -H * 0.86); ctx.lineTo(-W * 0.3, -H * 0.12); ctx.fill();
+  ctx.fillStyle = '#1b1c20'; ctx.fillRect(-W * 0.96, H * 0.42, W * 1.92, H * 0.07);
+  ctx.fillStyle = '#2a2c31'; rrect(W * 0.45, H * 0.16, W * 0.32, H * 0.07, 3); ctx.fill();
+  ctx.fillStyle = '#f2f3f5'; ctx.strokeStyle = '#6f757d'; ctx.lineWidth = 2; rrect(W * 0.78, -H * 0.42, W * 0.36, H * 0.3, 6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#2b3a48'; rrect(W * 0.84, -H * 0.37, W * 0.24, H * 0.2, 4); ctx.fill();
+  ctx.strokeStyle = '#8b9199'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-W * 0.92, H); ctx.lineTo(-W * 1.05, H * 0.82); ctx.moveTo(-W * 0.95, H * 0.3); ctx.lineTo(-W * 1.08, H * 0.2); ctx.stroke();
+  ctx.restore();
+}
+// side view, ground at y=0, front towards dir. o: driver, sp (speed lines), rev (reverse lights), noDoor, noTire, crack
+function drawCar(x, dir, t, o = {}) {
+  ctx.save(); ctx.translate(x, 0); ctx.scale(dir * 0.92, 0.92);
+  ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.beginPath(); ctx.ellipse(0, 4, 305, 22, 0, 0, 7); ctx.fill();
+  if (o.sp) { ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 4; ctx.lineCap = 'round'; for (let i = 0; i < 6; i++) { const yy = -36 - i * 34, xx = -300 - ((t * 37 + i * 53) % 170); ctx.beginPath(); ctx.moveTo(xx, yy); ctx.lineTo(xx - 130, yy); ctx.stroke(); } }
+  if (o.noTire) ctx.rotate(0.045);
+  // body
+  const g = ctx.createLinearGradient(0, -232, 0, -40); g.addColorStop(0, '#ffffff'); g.addColorStop(0.55, '#eff1f3'); g.addColorStop(1, '#c3c8ce');
+  ctx.fillStyle = g; ctx.strokeStyle = '#8b9199'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(-276, -44); ctx.lineTo(-284, -112); ctx.quadraticCurveTo(-282, -138, -252, -144); ctx.lineTo(-178, -150);
+  ctx.quadraticCurveTo(-140, -206, -108, -222); ctx.quadraticCurveTo(-20, -232, 52, -226); ctx.quadraticCurveTo(110, -200, 150, -152);
+  ctx.quadraticCurveTo(232, -142, 266, -128); ctx.quadraticCurveTo(286, -120, 286, -96); ctx.lineTo(282, -44); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#17181b'; for (const wx of [-172, 176]) { ctx.beginPath(); ctx.arc(wx, -42, 58, Math.PI, 0); ctx.closePath(); ctx.fill(); }
+  // windows + driver
+  const win = () => { ctx.beginPath(); ctx.moveTo(-164, -154); ctx.quadraticCurveTo(-132, -200, -104, -212); ctx.quadraticCurveTo(-20, -220, 46, -214); ctx.quadraticCurveTo(96, -192, 134, -154); ctx.closePath(); };
+  const wg = ctx.createLinearGradient(0, -222, 0, -150); wg.addColorStop(0, '#a4c4dc'); wg.addColorStop(1, '#3c5a76');
+  win(); ctx.fillStyle = wg; ctx.fill();
+  const im = o.driver && IMG['face' + (o.driver.ci + 1)];
+  if (im) { ctx.save(); win(); ctx.clip(); ctx.translate(58, -186); ctx.scale(dir, 1); ctx.drawImage(im, -40, -40, 80, 80); ctx.restore(); }
+  win(); ctx.fillStyle = 'rgba(160,200,230,0.22)'; ctx.fill();
+  ctx.save(); win(); ctx.clip(); ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.beginPath(); ctx.moveTo(-120, -150); ctx.lineTo(-70, -230); ctx.lineTo(-40, -230); ctx.lineTo(-90, -150); ctx.fill(); ctx.restore();
+  ctx.fillStyle = '#e8eaee'; ctx.fillRect(-30, -218, 12, 66);
+  if (o.noDoor) { ctx.fillStyle = '#1d1e23'; ctx.beginPath(); ctx.moveTo(-18, -214); ctx.quadraticCurveTo(20, -218, 46, -214); ctx.quadraticCurveTo(96, -192, 134, -154); ctx.lineTo(130, -58); ctx.lineTo(-22, -58); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#5a3a2e'; rrect(-6, -150, 70, 22, 6); ctx.fill(); rrect(-14, -196, 22, 70, 6); ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = '#111'; ctx.beginPath(); ctx.arc(96, -150, 18, 0, 7); ctx.stroke();
+    if (im) { ctx.save(); ctx.translate(30, -186); ctx.scale(dir, 1); ctx.drawImage(im, -34, -34, 68, 68); ctx.restore(); } }
+  // windscreen edge, crack
+  ctx.strokeStyle = 'rgba(70,100,130,0.9)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(56, -224); ctx.quadraticCurveTo(110, -198, 148, -154); ctx.stroke();
+  if (o.crack) { ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.6; for (let i = 0; i < 7; i++) { const a = -2.6 + i * 0.5; ctx.beginPath(); ctx.moveTo(112, -190); ctx.lineTo(112 + Math.cos(a) * 34, -190 + Math.sin(a) * 34); ctx.stroke(); } }
+  // trim, doors, handles, mirror
+  ctx.fillStyle = '#1b1c20'; ctx.fillRect(-268, -102, 540, 8); ctx.fillRect(-232, -54, 464, 10);
+  ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-24, -150); ctx.lineTo(-26, -56); ctx.moveTo(136, -150); ctx.lineTo(130, -60); ctx.moveTo(-170, -148); ctx.lineTo(-168, -100); ctx.stroke();
+  ctx.fillStyle = '#2a2c31'; rrect(-74, -132, 26, 7, 3); ctx.fill(); if (!o.noDoor) { rrect(84, -132, 26, 7, 3); ctx.fill(); }
+  ctx.fillStyle = '#f2f3f5'; ctx.strokeStyle = '#7f858d'; rrect(128, -170, 22, 16, 4); ctx.fill(); ctx.stroke();
+  // lights
+  ctx.fillStyle = '#ffd9a0'; rrect(262, -126, 22, 18, 4); ctx.fill();
+  ctx.fillStyle = o.rev ? '#ffffff' : '#d4142a'; rrect(-288, -130, 18, 22, 4); ctx.fill();
+  if (o.rev || o.sp) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const lx = o.rev ? -290 : 290, lg = ctx.createRadialGradient(lx, -117, 2, lx, -117, 70); lg.addColorStop(0, o.rev ? 'rgba(255,255,255,0.6)' : 'rgba(255,240,190,0.7)'); lg.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = lg; ctx.fillRect(lx - 70, -187, 140, 140); ctx.restore(); }
+  // black bumpers like the real one
+  const bump = (bx, w) => { const bg = ctx.createLinearGradient(0, -100, 0, -40); bg.addColorStop(0, '#3a3d44'); bg.addColorStop(1, '#0c0c0e'); ctx.fillStyle = bg; rrect(bx, -100, w, 58, 10); ctx.fill(); };
+  bump(-294, 52); bump(240, 54);
+  // wheels
+  const wr = (o.sp ? t * 0.55 : t * 0.08) * (o.rev ? -1 : 1);
+  drawCarTire(-172, -46, wr, 46);
+  if (!o.noTire) drawCarTire(176, -46, wr, 46);
+  else { ctx.fillStyle = '#6b707a'; ctx.beginPath(); ctx.arc(176, -30, 20, 0, 7); ctx.fill(); ctx.fillStyle = '#3a3e45'; ctx.beginPath(); ctx.arc(176, -30, 9, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+SFX.horn = () => { if (!SET.fx) return; tn('square', 415, 410, 0.26, 0.05); tn('square', 523, 518, 0.26, 0.04); tn('square', 415, 410, 0.18, 0.05, 0.3); tn('square', 523, 518, 0.18, 0.04, 0.3); };
+SFX.engine = () => { if (!SET.fx) return; tn('sawtooth', 55, 170, 0.45, 0.07); nz(0.35, 'lowpass', 320, 0.8, 0.09); };
+function carStep(f) {
+  const m = f.mv, d = f.facing;
+  if (f.mt === m.st - 3) { poof(f.x, -120); SFX.engine(); }
+  if (f.mt === m.st) SFX.horn();
+  if (f.mt >= m.st && f.mt < m.st + m.ac && f.mt % 2 === 0) dust(f.x - d * 240, 2, -d);
+  if (f.mt === m.st + m.ac + 2) { poof(f.x, -120); SFX.rattle(); }
+}
+MV.sk_car = { name: 'car', skill: 1, limb: null, lvl: 'mid', st: 10, ac: 30, rc: 18, dmg: 17, hs: 0, bs: 16, push: 70, stop: 12, p: 1.8, kd: 1, car: 1, mvx: [[10, 40, 19]], onStep: carStep,
+  hitboxFn: f => f.active() ? { x: f.x + f.facing * 225, y: -110, r: 100 } : null,
+  kf: [[0, {}], [8, { ...CROUCH }], [42, { ...CROUCH }], [50, {}], [58, null]] };
+function spawnCarTire(f) { const w = f.toWorld(f.J.fH); SFX.throw();
+  spawnProj({ kind: 'cartire', owner: f, x: w[0] + f.facing * 20, y: w[1] - 10, vx: f.facing * 15, vy: -6, g: 0.42, r: 36, life: 140, vr: f.facing * 0.32, bounce: 0.5, m: { dmg: 15, lvl: 'mid', hs: 0, bs: 14, push: 40, stop: 10, p: 1.5, kd: 1 } }); }
+MV.sk2_tire = { name: 'tire', skill: 1, sk2: 1, limb: null, lvl: 'mid', st: 15, ac: 1, rc: 20, p: 1.5, spawnAt: 15, spawn: spawnCarTire,
+  kf: [[0, {}], [9, { ua: 210, fa: 50, lean: -18, bua: 30, bfa: 120, th: 30, sh: 20, bth: -26, bsh: 10 }], [15, { ua: 80, fa: 6, lean: 26, dx: 14, th: 44, bth: -34 }], [21, {}], [36, null]] };
+SKILL2[14] = 'sk2_tire'; SKILL2_LINE[14] = 'خذ التاير!'; SKILL2_NAMES[14] = 'رمية التاير';
+COMBOS.push(
+  // 14 السوّاق — car doors, tyres and the bonnet
+  { '12': ['رمية الباب', projMove(12, 18, PZ.windup, PZ.release, f => { SFX.throw(); shoot(f, { kind: 'door', sp: 18, r: 42, dmg: 13, vr: 0.4, life: 80, p: 1.4, push: 34 }); })],
+    '23': ['التاير المتدحرج', projMove(14, 20, { ...CROUCH, ua: 10, fa: 20, lean: 40 }, { ua: 75, fa: 5, lean: 30, dx: 10, th: 50, bth: -40 }, f => { SFX.roll(); shoot(f, { kind: 'cartire', from: 'ground', gx: 80, r: 38, sp: 13, ground: 1, lvl: 'low', dmg: 12, kd: 1, vr: 0.3, life: 110 }); })],
+    '24': ['دفشة الكبوت', dashMove({ st: 10, ac: 14, rc: 20, sp: 16, hitboxFn: bodyHB(70, -230, 60), dmg: 13, kd: 1, push: 55, pose: PZ.shoulder })],
+    '13': ['باب من السما', projMove(16, 24, PZ.summon, { ...PZ.summon, lean: -22 }, f => { SFX.skill(); shoot(f, { kind: 'door', from: 'sky', vy: 6, g: 0.6, r: 58, dmg: 17, kd: 1, p: 1.7, vr: 0.1, life: 160 }); })],
+    '14': ['لكمات القفاز', flurryMove({ st: 6, ac: 30, rc: 16, multi: 5, dmg: 2.6, hs: 14, bs: 7, push: 3, stop: 2, r: 36, mvx: [[6, 36, 2]] })],
+    '34': ['ركلة الشارع', M({ st: 12, ac: 4, rc: 20, limb: 'fT', r: 42, dmg: 14, push: 60, kick: 1, p: 1.5, kf: [[0, {}], [8, PZ.stompUp], [12, { th: 90, sh: 0, ft: -40, ffl: 0, lean: -14, dx: 10 }], [16, {}], [36, null]] })] },
+);
+
+const NOKH = 15, RAIS = 16, RAIS2 = 17;
 function spawnWave(f) { SFX.whoosh(1); SFX.rock(); if (G.fight) G.fight.shake(10);
   spawnProj({ kind: 'seawave', owner: f, x: f.x + f.facing * 120, y: -100, vx: f.facing * 10.5, vy: 0, g: 0, r: 100, life: 120, big: 1, m: { dmg: 17, lvl: 'mid', hs: 24, bs: 16, push: 70, stop: 10, p: 1.5, kdCH: 1 } }); }
 function spawnRedShot(f) { const w = f.toWorld(f.J.fH); SFX.zap(); SFX.throw();
@@ -1174,7 +1278,7 @@ SKILL_IDS.push('sk_wave', 'sk_ring', 'sk_redshot'); SKILL_NAMES.push('الموج
 const COMBO_NAME = {};
 COMBOS.forEach((set, ci) => { for (const k of COMBO_KEYS) { const [name, mv] = set[k]; const id = `cb${ci}_${k}`; MV[id] = mv; mv.cname = name; COMBO_NAME[id] = name; set[k] = id; } });
 COMBOS[NOKH] = COMBOS[9]; COMBOS[RAIS] = COMBOS[1]; COMBOS[RAIS2] = COMBOS[1];
-for (const id of ['spin', 'k4', 'sweep', 'hook', 'rage', 'sk_rush', 'sk_cart', 'sk_roll', 'sk_barrage', 'sk_ship', 'sk_boat', 'sk_ring']) MV[id].track = 1;
+for (const id of ['spin', 'k4', 'sweep', 'hook', 'rage', 'sk_rush', 'sk_cart', 'sk_roll', 'sk_barrage', 'sk_ship', 'sk_boat', 'sk_ring', 'sk_car']) MV[id].track = 1;
 for (const id in MV) {
   const m = MV[id]; m.id = id; m.total = m.st + m.ac + m.rc;
   const base = m.base === 'CROUCH' ? CROUCH : m.base === 'JUMP' ? JUMP : GUARD; m.B = base;
@@ -1759,13 +1863,14 @@ const PERSONA = [
   { vo: 'schoolbell', intro: ["عندي اختبار بعدين"], skill: ["الواجب كله عليك!"], win: ["رحت المدرسة… ورجعت فايز!"], st: { lean: 6 }, br: 0.2, bob: 6 },
   { vo: 'kiai', intro: ["أوس!"], skill: ["هاي!"], win: ["خلني أكمل خبزتي"], st: { th: 30, sh: 26, bth: -30, bsh: 30, lean: 2, ua: -6 }, br: 0.07, ba: 1 },
   { vo: 'gamer', intro: ["ريسبون… وجاي"], skill: ["جي جي!"], win: ["جي جي… حظ أوفر المرة الجاية"], st: { ua: -8, fa: -6 }, br: 0.08 },
+  { vo: 'shout', intro: ["اركب… ولا تخاف"], skill: ["وخّر… سيارة!"], win: ["اربط الحزام المرة الجاية"], st: { lean: 6, ua: -4, fa: 8 }, br: 0.1 },
 ];
 PERSONA.push(
   { vo: 'roar', intro: ['البحر ما يرحم!'], skill: ['البحر معي!'], win: ['ارجع للبر يا ولد!'], st: { lean: 6, th: 6, bth: -6 }, br: 0.08 },
   { vo: 'roar', intro: ['كلكم شغالين عندي!'], skill: ['حس بالخاتم!'], win: ['الكأس لي… للأبد!'], st: { lean: 10, ua: 4, bua: 4, th: 8, bth: -10 }, br: 0.05, ba: 2 },
   { vo: 'roar', intro: ['الحين… تشوف قوتي!'], skill: ['شوف عيوني!'], win: ['ما في أحد يوقف الرئيس!'], st: { lean: 14, ua: 8, bua: 8, th: 10, bth: -12 }, br: 0.05, ba: 2.6 },
 );
-if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 14: [0.82, 0.95], 15: [0.6, 0.86], 16: [0.42, 0.8] });
+if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 15: [0.82, 0.95], 16: [0.6, 0.86], 17: [0.42, 0.8] });
 const pickLine = a => a[(Math.random() * a.length) | 0];
 // ---- Arabic voices: the browser's Arabic voice when it has one, otherwise the built-in recorded lines ----
 const VOX = { clips: window.VOICE_CLIPS || {}, bufs: {}, last: {}, voices: null };
@@ -2041,6 +2146,7 @@ function drawFighter(f, opts = {}) {
   const R = f.R, J = f.J, k = R.k, p = f.pose;
   const mv = f.mv;
   if ((f.state === 'attack' && mv && mv.ball && f.mt >= mv.st && f.mt < mv.st + mv.ac) || (f.state === 'rageSeq' && f.finBall)) { if (!opts.refl) drawRollBall(f); return; }
+  if ((f.state === 'attack' && mv && mv.car && f.mt >= mv.st - 3 && f.mt <= mv.st + mv.ac + 2) || (f.state === 'rageSeq' && f.finCar)) { if (!opts.refl && !opts.ghost) drawCar(f.x, f.facing, G.frame, Object.assign({ driver: f, sp: f.state === 'attack' && f.mt >= mv.st && f.mt < mv.st + mv.ac ? 1 : 0 }, f.state === 'rageSeq' ? f.finCar : {})); return; }
   ctx.save();
   if (opts.ghost) { ctx.globalAlpha *= 0.32 / opts.ghost; ctx.translate(-f.facing * opts.ghost * 34, 0); }
   let jx = 0; if (f.shakeT > 0) jx = (Math.random() - 0.5) * 8;
@@ -2098,9 +2204,10 @@ function updProj(F) {
     if (p.kind === 'hball' && p.fire && p.t % 2 === 0) FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 20, y: p.y + rnd(-10, 10), vx: -Math.sign(p.vx) * 2, vy: rnd(-1, 1), life: 12, max: 12, c: '#ff8a2a', sz: rnd(4, 8) });
     if (p.kind === 'egg' && p.y >= -p.r * 0.6 && p.vy > 0) { p.y = -4; eggSplat(p); p.dead = true; continue; }
     if (p.kind === 'bike' && p.y >= -p.r * 0.55 && p.vy > 0) { bikeCrash(p); p.dead = true; continue; }
+    if (p.kind === 'door' && p.g && !p.noHit && p.y >= -p.r * 0.4 && p.vy > 0) { dust(p.x, 10); SFX.rattle(); SFX.thud(); if (G.fight) G.fight.shake(8); p.dead = true; continue; }
     if (p.kind === 'bikewreck' && p.y >= -30 && p.vy > 0) { p.y = -30; p.vy *= -0.35; p.vx *= 0.6; p.vr *= 0.5; if (Math.abs(p.vy) > 2) { dust(p.x, 5); SFX.rattle(); } }
     if (p.kind === 'chicken' && p.t % 9 === 0) { FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 20, y: p.y - 10, vx: -Math.sign(p.vx) * rnd(1, 3), vy: rnd(-2, 0), life: 18, max: 18, c: '#ffffff', sz: rnd(2, 4) }); if (p.t % 27 === 0) SFX.cluck(); }
-    if (p.kind === 'tire' && p.bounce && p.y >= -p.r - 1 && p.vy < 0 && p.t > 2 && p.vy < -2) SFX.boing();
+    if ((p.kind === 'tire' || p.kind === 'cartire') && p.bounce && p.y >= -p.r - 1 && p.vy < 0 && p.t > 2 && p.vy < -2) SFX.boing();
     if (p.kind === 'cartwreck' && p.y >= 0 && p.vy > 0) { p.y = 0; p.vy *= -0.35; p.vx *= 0.7; p.vr *= 0.5; if (Math.abs(p.vy) > 2) { dust(p.x, 6); SFX.rattle(); } }
     if (p.life <= 0 || Math.abs(p.x) > STAGE + 350 || p.y > 60) p.dead = true;
     if (p.noHit || p.dead) continue;
@@ -2332,6 +2439,8 @@ function drawRuler(f) {
 function drawProj(p) {
   if (p.kind === 'card') drawCard(p.x, p.y, p.rot * 0.3, Math.cos(p.t * 0.7), p.suit, p.sc || 1);
   else if (p.kind === 'rock') drawRock(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'cartire') drawCarTire(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'door') drawDoor(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'hball') { if (p.fire) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, p.r * 2); g.addColorStop(0, 'rgba(255,170,60,0.8)'); g.addColorStop(1, 'rgba(255,60,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2, 0, 7); ctx.fill(); ctx.restore(); } drawHandball(p.x, p.y, p.rot, p.r); }
   else if (p.kind === 'joker') drawCard(p.x, p.y, p.rot * 0.2, Math.cos(p.t * 0.3), 'J', 2.6);
   else if (p.kind === 'football') drawFootball(p.x, p.y, p.rot, p.r);
@@ -2363,6 +2472,7 @@ function drawHeld(f) {
   if (m.ruler && f.mt < m.total - 4) drawRuler(f);
   if (m.eat) drawEatProps(f);
   if (m.id === 'sk_cards' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); for (let i = 0; i < 3; i++) drawCard(w[0] + f.facing * (i - 1) * 6, w[1] - 8, f.facing * (i - 1) * 0.35, 1, '♠♥♦'[i], 0.8); }
+  if (m.id === 'sk2_tire' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawCarTire(w[0], w[1] - 10, 0, 34); }
   if (m.id === 'sk2_pan' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawPan(w[0], w[1] - 10, -f.facing * 1.2, 30); }
   if (m.id === 'sk2_mouse' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawMouse(w[0], w[1] - 6, 0, 20, -f.facing, f.mt); }
   if (m.id === 'sk_hball' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawHandball(w[0] + f.facing * 6, w[1] - 6, 0); }
@@ -2425,7 +2535,7 @@ function finQueue(F, a, d) {
   const q = F.fin && F.fin.q; if (!q) return;
   for (let i = 0; i < q.length; i++) { const e = q[i]; if (F.fin.t < e.at) continue; q.splice(i--, 1); e.p.dead = true; const xy = [e.p.x, e.p.y]; if (e.dmg) finHit(F, a, d, e.dmg, xy, e.fr); if (e.fx) e.fx(xy); if (!F.fin) return; }
 }
-function finEnd(a, d) { a.finBall = false; a.finTrail = false; a.finProp = null; if (d) d.finP = null; }
+function finEnd(a, d) { a.finCar = null; a.finHeld = null; a.finBall = false; a.finTrail = false; a.finProp = null; if (d) d.finP = null; }
 // glowing ball (handball / energy)
 function finOrb(x, y, r, c1, c2, rot = 0) {
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -2754,7 +2864,46 @@ const FIN = [
     front(F, a, d, t) { if (a.finProp && a.finProp.k === 'gun') drawBlaster(a);
       if (t >= 76 && t < 104) { const u = finSeg(t, 76, 100), c = finChest(d); finReticle(c[0], c[1], lerp(200, 70, u), Math.min(1, u * 3)); }
       if (t >= 100 && t < 136) { const a2 = t < 128 ? Math.min(1, (t - 100) / 6) : 1 - (t - 128) / 8; finBeam(d.x, a2, 90 + Math.sin(t * 0.8) * 10, 'rgba(120,240,255,0.95)', 'rgba(255,60,240,0.5)'); } } },
-  // 14 النوخذة — point-blank waves, then a tsunami carrying his ship
+  // 14 السوّاق — rams you twice, rips off the door and a tyre and throws them, then the full-speed crash
+  { name: 'الحادث الكبير', line: 'اربط الحزام!', col: '#ff3347',
+    run(F, a, d, t) {
+      const f = a.facing;
+      if (!a.finS || a.finS.fin !== F.fin) a.finS = { fin: F.fin, dx: clamp(a.x + f * 430, -STAGE + 140, STAGE - 140) };
+      const S = a.finS, X = S.dx, cam = (z = 1.0) => finCam(F, (a.x + X) / 2, -230, z);
+      if (t < 178) finHold(d, X);
+      if (t < 12) { a.rageP = FPZ.point; if (t === 2) SFX.horn(); cam(1.05); return; }
+      if (t === 12) { poof(a.x, -120); SFX.engine(); a.finCar = { sp: 1 }; S.cx = a.x; }
+      if (t < 36) { const u = finSeg(t, 12, 36); a.x = lerp(S.cx, X - f * 250, u * u); if (t % 2 === 0) dust(a.x - f * 240, 2, -f); cam(); return; }
+      if (t === 36) { finHit(F, a, d, 8, finChest(d), 10); F.shake(22); SFX.thud(); SFX.rattle(); finBurst(X - f * 20, -150, 26, ['#ffffff', '#9fd8ff', '#ffd34d'], 10, 5); d.finP = FPZ.hurt({ lean: -30 }); a.finCar = { crack: 1 }; return; }
+      if (t < 60) { const u = finSeg(t, 36, 60); a.x = lerp(X - f * 250, X - f * 560, ease(u)); a.finCar.rev = 1; d.finP = FPZ.hurt({ lean: -20 }); cam(0.95); return; }
+      if (t < 78) { const u = finSeg(t, 60, 78); a.finCar.rev = 0; a.finCar.sp = 1; if (t === 60) { SFX.engine(); SFX.horn(); } a.x = lerp(X - f * 560, X - f * 250, u * u); if (t % 2 === 0) dust(a.x - f * 240, 2, -f); cam(); return; }
+      if (t === 78) { finHit(F, a, d, 8, finChest(d), 10); F.shake(24); SFX.thud(); SFX.rattle(); finBurst(X - f * 20, -150, 30, ['#ffffff', '#9fd8ff', '#ffd34d'], 10, 5); d.finP = FPZ.hurt({ lean: -34 }); a.finCar.sp = 0; return; }
+      if (t < 90) { cam(); return; }
+      if (t === 90) { S.car = a.x - f * 70; a.finCar = null; a.finProp = { k: 'car', x: S.car, crack: 1 }; a.x = X - f * 200; poof(a.x, -150); SFX.land(); }
+      if (t < 100) { a.rageP = G2({ lean: 34, ua: 110, fa: 30, bua: 104, bfa: 34, th: 46, bth: -24, dx: -14 }); cam(1.05); return; }
+      if (t === 100) { a.finProp.noDoor = 1; a.finHeld = 'door'; SFX.rattle(); finBurst(S.car + f * 50, -130, 16, ['#2a2c31', '#8b9199', '#ffd34d'], 7, 5); }
+      if (t < 110) { a.rageP = G2({ ua: 205, fa: 40, bua: 190, bfa: 50, lean: -16, th: 24, bth: -20 }); cam(1.05); return; }
+      if (t === 110) { a.finHeld = null; const w = a.toWorld(a.J.fH); finThrow(F, a, d, { kind: 'door', from: w, to: finChest(d), T: 8, g: 0.3, r: 42, vr: f * 0.5, dmg: 7, fx: xy => { SFX.thud(); finBurst(xy[0], xy[1], 18, ['#2a2c31', '#ffb21a', '#ffffff'], 9, 6); finRing(xy[0], xy[1], '#ffb21a', 140, 12); } }); SFX.throw(); }
+      if (t < 120) { a.rageP = G2({ ua: 80, fa: 6, lean: 26, dx: 14, th: 44, bth: -34 }); cam(1.05); return; }
+      if (t < 128) { a.rageP = G2({ lean: 40, ua: 120, fa: 20, bua: 112, bfa: 26, th: 60, sh: 70, bth: -10, bsh: 60, dx: -20 }); cam(1.05); return; }
+      if (t === 128) { a.finProp.noTire = 1; a.finHeld = 'tire'; SFX.rattle(); finBurst(S.car + f * 162, -40, 16, ['#2a2c31', '#b8bec8'], 7, 5); }
+      if (t < 138) { a.rageP = G2({ ua: 200, fa: 50, bua: 196, bfa: 46, lean: -18, th: 26, bth: -22 }); cam(1.05); return; }
+      if (t === 138) { a.finHeld = null; const w = a.toWorld(a.J.fH); finThrow(F, a, d, { kind: 'cartire', from: w, to: finHead(d), T: 9, g: 0.5, r: 38, vr: f * 0.45, dmg: 7, fx: xy => { SFX.boing(); finBurst(xy[0], xy[1], 14, ['#2a2c31', '#ffffff'], 8, 5); spawnProj({ kind: 'cartire', noHit: true, owner: a, x: xy[0], y: xy[1], vx: -f * 5, vy: -10, g: 0.7, r: 38, vr: -f * 0.3, life: 50, bounce: 0.55 }); } }); SFX.throw(); }
+      if (t < 150) { const u = finSeg(t, 140, 150); a.rageP = t < 142 ? G2({ ua: 80, fa: 6, lean: 26, dx: 14 }) : FPZ.point; a.x = lerp(X - f * 200, S.car, u); cam(1.0); return; }
+      if (t === 150) { poof(S.car, -120); a.x = S.car; a.finProp = null; a.finCar = { noDoor: 1, noTire: 1, crack: 1, rev: 1 }; SFX.engine(); }
+      if (t < 162) { const u = finSeg(t, 150, 162); a.x = lerp(S.car, X - f * 620, ease(u)); cam(0.92); return; }
+      if (t < 178) { const u = finSeg(t, 162, 178); a.finCar.rev = 0; a.finCar.sp = 1; if (t === 162) { SFX.engine(); SFX.horn(); } a.x = lerp(X - f * 620, X - f * 230, u * u);
+        if (t % 2 === 0) { finBurst(a.x + f * 150, -8, 5, ['#ffd34d', '#ff8a2a', '#ffffff'], 7, 4); dust(a.x - f * 240, 3, -f); } cam(0.95); return; }
+      if (t === 178) { const c = finChest(d); finHit(F, a, d, 22, c, 18, true); finLaunch(d, f * 17, -20); F.shake(42); SFX.thud(); SFX.rock(); SFX.rattle();
+        finRing(c[0], c[1], '#ffffff', 340, 22); finRing(c[0], c[1], '#ff3347', 220, 16); finBurst(c[0], c[1], 70, ['#ffffff', '#9fd8ff', '#ff3347', '#ffd34d'], 15, 8); return; }
+      if (t < 200) { const u = finSeg(t, 178, 200); a.x = lerp(X - f * 230, X + f * 120, easeOut(u)); a.finCar.sp = u < 0.6 ? 1 : 0; if (t % 3 === 0) finBurst(a.x + f * 150, -8, 4, ['#ffd34d', '#ff8a2a'], 6, 4); finCam(F, lerp(a.x, d.x, 0.5), -240, 0.95); return; }
+      if (t === 200) { poof(a.x, -120); a.finCar = null; SFX.land(); }
+      if (t < 228) { a.rageP = FPZ.point; finCam(F, lerp(a.x, d.x, 0.5), -220, 1.0); return; }
+      return true;
+    },
+    back(F, a, d, t) { const P = a.finProp; if (P && P.k === 'car') drawCar(P.x, a.facing, 0, { noDoor: P.noDoor, noTire: P.noTire, crack: P.crack }); },
+    front(F, a, d, t) { if (a.finHeld) { const w = a.toWorld(a.J.fH); if (a.finHeld === 'door') drawDoor(w[0], w[1] - 6, a.facing * 0.3, 42); else drawCarTire(w[0], w[1] - 10, 0, 38); } } },
+  // 15 النوخذة — point-blank waves, then a tsunami carrying his ship
   { name: 'التسونامي', line: 'البحر… بياكلك!', col: '#3cb4ff',
     run(F, a, d, t) {
       const f = a.facing; if (t < 104) finHold(d, a.x + f * 230);
@@ -2772,7 +2921,7 @@ const FIN = [
         ctx.save(); ctx.globalAlpha *= al; ctx.translate(x, 0); ctx.scale(2.7, 2.7); drawSeaWave({ x: 0, vx: a.facing, t }); ctx.restore();
         ctx.save(); ctx.globalAlpha *= al; ctx.translate(x + a.facing * 40, -585 + Math.sin(t * 0.3) * 8); ctx.rotate(a.facing * -0.12); ctx.scale(0.85, 0.85); drawDhow(0, -60, a.facing, t); ctx.restore(); }
     } },
-  // 15 الرئيس — ring punches, lifts you up, slams you into the floor
+  // 16 الرئيس — ring punches, lifts you up, slams you into the floor
   { name: 'أمر الرئيس', line: 'انحني… للرئيس!', col: '#d4a640',
     run(F, a, d, t) {
       const f = a.facing; if (t < 70) finHold(d, a.x + f * 140);
@@ -2787,7 +2936,7 @@ const FIN = [
       return true;
     },
     back(F, a, d, t) { if (F.fin.crack) finCracks(F.fin.crackX, 8, 380, 1); } },
-  // 16 الرئيس المتحوّل — rises on his wings, burns you with eye lasers and red blasts, then dives
+  // 17 الرئيس المتحوّل — rises on his wings, burns you with eye lasers and red blasts, then dives
   { name: 'الجناح الأسود', line: 'هذي… نهايتك!', col: '#ff1030',
     run(F, a, d, t) {
       const f = a.facing; if (t < 100) finHold(d, a.x + f * 280);
@@ -4060,16 +4209,16 @@ function updSelect() {
     if (S.done[s]) { if (pd.p.back) { S.done[s] = false; SFX.move(); } continue; }
     if (pd.p.left) { S.cur[s] = (S.cur[s] + NCH - 1) % NCH; SFX.move(); }
     if (pd.p.right) { S.cur[s] = (S.cur[s] + 1) % NCH; SFX.move(); }
-    if (pd.p.up || pd.p.down) { S.cur[s] = (S.cur[s] + 7) % NCH; SFX.move(); }
+    if (pd.p.up || pd.p.down) { const c = S.cur[s]; S.cur[s] = c < 8 ? Math.min(c + 8, NCH - 1) : c - 8; SFX.move(); }
     if (pd.p.ok && S.t > 8) { S.done[s] = true; SFX.ok(); S.flash = [s, 14]; }
     else if (pd.p.back && cpu && s === 1) { S.done[0] = false; SFX.move(); }
     else if (pd.p.back && (!cpu || s === 0) && S.t > 8) { if (G.storyPick && G.storyMap) { SFX.move(); G.story = G.storyMap; G.storyMap = null; G.storyPick = false; storySelect(); return; } if (online) { netClose(); G.scene = 'online'; G.t = 0; return; } G.toTitle(); return; }
   }
   if (G.tap && S.t > 8) {
-    const tw = 80, gap = 8, x0 = VW / 2 - (7 * tw + 6 * gap) / 2, ty0 = 185, rowH = tw + 40;
+    const tw = 74, gap = 7, x0 = VW / 2 - (8 * tw + 7 * gap) / 2, ty0 = 185, rowH = tw + 40;
     const col = Math.floor((G.tap[0] - x0) / (tw + gap)), row = Math.floor((G.tap[1] - ty0) / rowH), s = online ? NET.slot : (cpu && S.done[0] ? 1 : 0);
-    if (col >= 0 && col < 7 && row >= 0 && row < 2 && !S.done[s] && row * 7 + col < NCH) {
-      const i = row * 7 + col;
+    if (col >= 0 && col < 8 && row >= 0 && row < 2 && !S.done[s] && row * 8 + col < NCH) {
+      const i = row * 8 + col;
       if (S.cur[s] === i) { S.done[s] = true; SFX.ok(); S.flash = [s, 14]; } else { S.cur[s] = i; SFX.move(); }
     }
   }
@@ -4112,8 +4261,8 @@ function drawSelect() {
     }
   }
   // tiles
-  const tw = 80, gap = 8, total = 7 * tw + 6 * gap, x0 = VW / 2 - total / 2, ty0 = 185, rowH = tw + 40;
-  const tpos = i => [x0 + (i % 7) * (tw + gap), ty0 + ((i / 7) | 0) * rowH];
+  const tw = 74, gap = 7, total = 8 * tw + 7 * gap, x0 = VW / 2 - total / 2, ty0 = 185, rowH = tw + 40;
+  const tpos = i => [x0 + (i % 8) * (tw + gap), ty0 + ((i / 8) | 0) * rowH];
   for (let i = 0; i < NCH; i++) {
     const [x, ty] = tpos(i);
     ctx.save();
