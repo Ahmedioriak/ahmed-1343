@@ -144,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.42';
+const GAME_VER = '1.43';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -355,7 +355,7 @@ function uiTapZone(gx, gy) {
     }
     if (G.scene === 'story' && G.story && G.story.step === 'select' && gy > 90) return true;
     if (G.scene === 'cup' || G.scene === 'shop') return true;
-    if (G.scene === 'world' && G.world && (G.world.phase === 'pick' || G.world.dlg || G.world.mapOpen)) return true;
+    if (G.scene === 'world' && G.world && (G.world.phase === 'pick' || G.world.dlg || G.world.mapOpen || G.world.menu || G.world.sleep)) return true;
     if (G.scene === 'title' && !G.settingsOpen && gx < 340 && gy > VH - 80) return true;   // your name/coins → wardrobe
   } catch (e) { }
   return false;
@@ -5340,12 +5340,40 @@ function wRack(x, y) { const o = wBox(x, y, 170, 40, 120, '#8a8f99', { wardrobe:
   c.fillStyle = '#c0c5cf'; c.fillRect(x, y - 120, 6, 160); c.fillRect(x + 164, y - 120, 6, 160); c.fillRect(x, y - 124, 170, 6);
   ['#1f4fd8', '#4a2f8a', '#5c5638', '#c8102e', '#121216', '#b8a27a'].forEach((col, i) => { const sx = x + 16 + i * 25; c.fillStyle = col; c.beginPath(); c.moveTo(sx, y - 112); c.lineTo(sx + 20, y - 112); c.lineTo(sx + 24, y - 44); c.lineTo(sx - 4, y - 44); c.closePath(); c.fill(); });
   wSign(c, x + 20, y - 168, 130, 34, '#e01428', 'الملابس 👕'); }; return o; }
+function wBed(x, y, col = '#3a6ad8') { return wBox(x, y, 230, 130, 46, '#8a5a32', { act: 'bed', draw(c) { const o = this; c.fillStyle = 'rgba(0,0,0,0.2)'; c.fillRect(x + 8, y + 126, 230, 12);
+  c.fillStyle = '#6a4220'; c.fillRect(x, y - 60, 230, 50); c.fillStyle = '#8a5a32'; c.fillRect(x, y + 130 - 46, 230, 46); c.fillStyle = '#f4f1ea'; c.fillRect(x + 6, y - 46, 218, 130);
+  c.fillStyle = '#ffffff'; rrect(x + 16, y - 40, 70, 40, 12); c.fill(); rrect(x + 96, y - 40, 70, 40, 12); c.fill();
+  c.fillStyle = col; rrect(x + 4, y + 8, 222, 82, 10); c.fill(); c.fillStyle = 'rgba(255,255,255,0.18)'; for (let i = 0; i < 5; i++) c.fillRect(x + 20 + i * 44, y + 12, 18, 74); void o; } }); }
+function wFridge(x, y) { return wBox(x, y, 90, 60, 170, '#e8ecef', { act: 'fridge', deco(c, o) { const fy = frontY(o); c.fillStyle = '#c8ced4'; c.fillRect(o.x + 6, fy + 60, 78, 3); c.fillStyle = '#7a8088'; c.fillRect(o.x + 72, fy + 14, 5, 36); c.fillRect(o.x + 72, fy + 74, 5, 60); } }); }
+function wCloset(x, y) { return wBox(x, y, 170, 50, 175, '#7a5232', { act: 'rack', deco(c, o) { const fy = frontY(o); c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 3; c.strokeRect(o.x + 8, fy + 8, 74, o.h - 16); c.strokeRect(o.x + 88, fy + 8, 74, o.h - 16); c.fillStyle = '#e8c45a'; c.fillRect(o.x + 76, fy + 80, 4, 20); c.fillRect(o.x + 90, fy + 80, 4, 20); wSign(c, o.x + 20, fy - 40, 130, 30, '#e01428', 'الملابس 👕'); } }); }
+function wTable(x, y) { return { x: x - 50, y: y - 26, w: 100, d: 52, sy: y + 26, solid: true, draw(c) { for (const [dx, dy] of [[-78, 0], [78, 0], [0, -46]]) { c.fillStyle = '#a0342a'; rrect(x + dx - 18, y + dy - 30, 36, 34, 8); c.fill(); c.fillStyle = '#7a2420'; c.fillRect(x + dx - 18, y + dy, 36, 10); }
+  c.fillStyle = 'rgba(0,0,0,0.2)'; c.beginPath(); c.ellipse(x + 6, y + 26, 60, 14, 0, 0, 7); c.fill(); c.fillStyle = '#6a4220'; c.fillRect(x - 6, y - 10, 12, 36); c.fillStyle = '#f4efe2'; c.beginPath(); c.ellipse(x, y - 14, 62, 30, 0, 0, 7); c.fill(); c.strokeStyle = '#c8b89a'; c.lineWidth = 2; c.stroke();
+  c.fillStyle = '#fff'; c.beginPath(); c.ellipse(x - 20, y - 16, 14, 7, 0, 0, 7); c.fill(); c.beginPath(); c.ellipse(x + 20, y - 12, 14, 7, 0, 0, 7); c.fill(); c.fillStyle = '#e8a040'; c.beginPath(); c.ellipse(x + 20, y - 13, 8, 4, 0, 0, 7); c.fill(); } }; }
+function drawJadd(c, x, y, s = 1, t = 0) {   // the grandfather: white thobe, red-and-white shemagh, grey beard, a cane
+  c.save(); c.translate(x, y); c.scale(s, s); const b = Math.sin(t * 0.05) * 1.5;
+  c.fillStyle = 'rgba(0,0,0,0.22)'; c.beginPath(); c.ellipse(0, 0, 60, 14, 0, 0, 7); c.fill();
+  c.fillStyle = '#7a1f2a'; rrect(-70, -36, 140, 40, 14); c.fill(); c.fillStyle = '#9a2a36'; rrect(-70, -90, 140, 56, 16); c.fill();
+  c.fillStyle = '#f8f6f0'; c.beginPath(); c.moveTo(-40, -6); c.quadraticCurveTo(-46, -70 + b, -26, -96 + b); c.lineTo(26, -96 + b); c.quadraticCurveTo(46, -70 + b, 40, -6); c.closePath(); c.fill(); c.strokeStyle = '#d8d2c4'; c.lineWidth = 2; c.stroke();
+  c.fillStyle = '#efe9dc'; rrect(-46, -24, 92, 26, 12); c.fill();
+  c.strokeStyle = '#6a4220'; c.lineWidth = 5; c.beginPath(); c.moveTo(52, 0); c.lineTo(40, -110); c.quadraticCurveTo(38, -124, 26, -120); c.stroke();
+  c.fillStyle = '#c89a74'; c.beginPath(); c.arc(0, -122 + b, 24, 0, 7); c.fill();
+  c.fillStyle = '#d8d8d8'; c.beginPath(); c.moveTo(-18, -118 + b); c.quadraticCurveTo(0, -84 + b, 18, -118 + b); c.quadraticCurveTo(0, -106 + b, -18, -118 + b); c.fill();
+  c.fillStyle = '#2a2018'; c.beginPath(); c.arc(-8, -128 + b, 2.6, 0, 7); c.arc(8, -128 + b, 2.6, 0, 7); c.fill(); c.strokeStyle = '#e8e8e8'; c.lineWidth = 3; c.beginPath(); c.moveTo(-14, -136 + b); c.lineTo(-3, -135 + b); c.moveTo(3, -135 + b); c.lineTo(14, -136 + b); c.stroke();
+  c.fillStyle = '#ffffff'; c.beginPath(); c.moveTo(-30, -126 + b); c.quadraticCurveTo(0, -168 + b, 30, -126 + b); c.lineTo(38, -84 + b); c.lineTo(22, -110 + b); c.lineTo(-22, -110 + b); c.lineTo(-38, -84 + b); c.closePath(); c.fill();
+  c.strokeStyle = '#d02030'; c.lineWidth = 2; for (let i = -24; i <= 24; i += 8) { c.beginPath(); c.moveTo(i, -146 + b); c.lineTo(i * 1.3, -100 + b); c.stroke(); }
+  c.strokeStyle = '#141414'; c.lineWidth = 5; c.beginPath(); c.ellipse(0, -142 + b, 24, 6, 0, 0, 7); c.stroke();
+  c.restore();
+}
+function wJadd(x, y) { return { x: x - 70, y: y - 40, w: 140, d: 46, sy: y + 6, solid: true, act: 'jadd', draw(c) { drawJadd(c, x, y, 1, G.frame); } }; }
+function wSufra(x, y, w, h) { return { decal: 1, act: 'sufra', x, y, w, d: h, draw(c) { c.fillStyle = '#e8d8b0'; rrect(x, y, w, h, 12); c.fill(); c.strokeStyle = '#b08a4a'; c.lineWidth = 4; rrect(x + 8, y + 8, w - 16, h - 16, 8); c.stroke();
+  const dish = (dx, dy, r, col) => { c.fillStyle = '#d8d8d8'; c.beginPath(); c.ellipse(x + dx, y + dy, r, r * 0.55, 0, 0, 7); c.fill(); c.fillStyle = col; c.beginPath(); c.ellipse(x + dx, y + dy - 2, r * 0.78, r * 0.4, 0, 0, 7); c.fill(); };
+  dish(w / 2, h / 2, 70, '#e8a040'); c.fillStyle = '#8a4a20'; c.beginPath(); c.ellipse(x + w / 2, y + h / 2 - 8, 30, 14, 0, 0, 7); c.fill(); dish(70, 50, 30, '#5aa04a'); dish(w - 70, 50, 30, '#d84030'); dish(70, h - 46, 28, '#f4e8c0'); dish(w - 70, h - 46, 28, '#c8b080'); } }; }
 // ---- the maps
 const WMAPS = {};
 function wMaps() {
   if (WMAPS.fareej) return WMAPS;
   // الفريج — the neighbourhood: the hub that leads everywhere
-  WMAPS.fareej = { name: 'الفريج', W: 2400, H: 1500, spawn: [1180, 760],
+  WMAPS.fareej = { name: 'الفريج', W: 3500, H: 1500, spawn: [1180, 760],
     floor(c, M) { c.fillStyle = '#d8c49c'; c.fillRect(0, 0, M.W, M.H);
       for (let i = 0; i < 2600; i++) { const x = (i * 7919) % M.W, y = (i * 104729) % M.H; c.fillStyle = i % 2 ? 'rgba(120,90,50,0.08)' : 'rgba(255,255,255,0.08)'; c.fillRect(x, y, 3, 3); }
       c.fillStyle = '#c8c4bc'; c.fillRect(0, 580, M.W, 40); c.fillRect(0, 820, M.W, 40);
@@ -5356,15 +5384,22 @@ function wMaps() {
     objs: [
       wBox(200, 300, 560, 230, 210, '#eadcc2', { deco(c, o) { const fy = frontY(o); wWin(c, o.x + 50, fy + 50, 90, 70); wWin(c, o.x + 420, fy + 50, 90, 70); wDoor(c, o.x + 230, fy + 70, 100, 140); wSign(c, o.x + 170, fy + 14, 220, 42, '#7a1f2a', 'الديوانية'); c.fillStyle = '#c8b08a'; c.fillRect(o.x, o.y - o.h - 18, o.w, 18); } }),
       wBox(980, 320, 480, 210, 190, '#f2efe8', { deco(c, o) { const fy = frontY(o); c.fillStyle = '#1f8a4a'; c.fillRect(o.x, fy, o.w, 48); txt('بقالة الشلة 🛒', o.x + o.w / 2, fy + 25, { size: 28, weight: 900, color: '#fff' }); wWin(c, o.x + 30, fy + 70, 150, 90); wWin(c, o.x + 300, fy + 70, 150, 90); wDoor(c, o.x + 195, fy + 70, 90, 120, '#2a6a8a'); } }),
-      wBox(1640, 260, 560, 260, 230, '#e4d4b4', { deco(c, o) { const fy = frontY(o); for (const wx of [40, 200, 360]) wWin(c, o.x + wx, fy + 60, 110, 80); wDoor(c, o.x + 470, fy + 100, 70, 130); c.fillStyle = '#d9dde3'; c.fillRect(o.x + 60, fy + 160, 70, 40); c.fillRect(o.x + 220, fy + 160, 70, 40); c.fillStyle = '#c8b08a'; c.fillRect(o.x, o.y - o.h - 18, o.w, 18); } }),
-      wPalm(130, 600), wPalm(880, 600), wPalm(1560, 600), wPalm(2280, 600), wPalm(420, 900), wPalm(980, 920), wPalm(2000, 1300),
+      wBox(1640, 260, 560, 260, 230, '#e4d4b4', { deco(c, o) { const fy = frontY(o); for (const wx of [40, 200, 360]) wWin(c, o.x + wx, fy + 60, 110, 80); wDoor(c, o.x + 470, fy + 100, 70, 130); wSign(c, o.x + 440, fy + 50, 130, 40, '#2a6a8a', 'بيتي 🏠'); c.fillStyle = '#d9dde3'; c.fillRect(o.x + 60, fy + 160, 70, 40); c.fillRect(o.x + 220, fy + 160, 70, 40); c.fillStyle = '#c8b08a'; c.fillRect(o.x, o.y - o.h - 18, o.w, 18); } }),
+      wBox(2380, 320, 460, 210, 190, '#f6e6c8', { deco(c, o) { const fy = frontY(o); c.fillStyle = '#e07a20'; c.fillRect(o.x, fy, o.w, 50); txt('مطعم الشلة 🍔', o.x + o.w / 2, fy + 26, { size: 28, weight: 900, color: '#fff' }); c.fillStyle = '#c8102e'; for (let i = 0; i < 9; i++) { c.beginPath(); c.moveTo(o.x + i * 52, fy + 50); c.lineTo(o.x + i * 52 + 26, fy + 66); c.lineTo(o.x + i * 52 + 52, fy + 50); c.fill(); } wWin(c, o.x + 30, fy + 80, 140, 80); wWin(c, o.x + 290, fy + 80, 140, 80); wDoor(c, o.x + 190, fy + 70, 80, 120, '#8a3a1a'); } }),
+      wBox(2960, 200, 500, 320, 270, '#e8d2a4', { deco(c, o) { const fy = frontY(o); c.fillStyle = '#c8a46a'; c.fillRect(o.x - 10, o.y - o.h - 26, o.w + 20, 26); for (let i = 0; i < 10; i++) { c.fillStyle = '#b8945a'; c.fillRect(o.x + i * 50 + 8, o.y - o.h - 44, 30, 20); }
+        for (const wx of [30, 380]) { c.fillStyle = '#6a4a2a'; c.beginPath(); c.moveTo(o.x + wx, fy + 160); c.lineTo(o.x + wx, fy + 80); c.arc(o.x + wx + 45, fy + 80, 45, Math.PI, 0); c.lineTo(o.x + wx + 90, fy + 160); c.fill(); c.fillStyle = '#9fd3ef'; c.fillRect(o.x + wx + 12, fy + 84, 66, 70); }
+        c.fillStyle = '#5a3a1a'; c.beginPath(); c.moveTo(o.x + 190, fy + 270); c.lineTo(o.x + 190, fy + 130); c.arc(o.x + 250, fy + 130, 60, Math.PI, 0); c.lineTo(o.x + 310, fy + 270); c.fill(); c.fillStyle = '#e8c45a'; c.beginPath(); c.arc(o.x + 295, fy + 205, 4, 0, 7); c.fill();
+        wSign(c, o.x + 150, fy + 22, 200, 42, '#6a2a1a', 'بيت الجد 🏡'); } }),
+      wPalm(2900, 600), wPalm(3440, 600), wPalm(2620, 920), wPalm(3150, 1250), wLamp(2680, 590), wLamp(3250, 880), wCar(2750, 1000, '#c8102e'),
+      wPalm(130, 600), wPalm(880, 600), wPalm(1560, 600), wPalm(2290, 600), wPalm(420, 900), wPalm(980, 920), wPalm(2000, 1300),
       wLamp(560, 590), wLamp(1500, 590), wLamp(860, 880), wLamp(1900, 880),
       wCar(1240, 980, '#f4f5f7', { tag: 'car' }), wCar(300, 1060, '#2a4a8a'),
-      wBox(560, 1020, 220, 110, 120, '#c8102e', { deco(c, o) { const fy = frontY(o); c.fillStyle = '#ffd34d'; c.fillRect(o.x - 10, fy - 20, o.w + 20, 26); txt('كرك ☕', o.x + o.w / 2, fy + 40, { size: 26, weight: 900, color: '#fff' }); } }),
+      wBox(560, 1020, 220, 110, 120, '#c8102e', { act: 'karak', deco(c, o) { const fy = frontY(o); c.fillStyle = '#ffd34d'; c.fillRect(o.x - 10, fy - 20, o.w + 20, 26); txt('كرك ☕', o.x + o.w / 2, fy + 40, { size: 26, weight: 900, color: '#fff' }); } }),
       wBox(1700, 1000, 150, 50, 40, '#8a6236'),
     ],
     exits: [{ x: 430, y: 530, w: 100, h: 50, to: 'diwan', at: [700, 760], label: 'الديوانية' }, { x: 1175, y: 530, w: 90, h: 50, to: 'shop', at: [650, 720], label: 'البقالة' },
-      { x: 2340, y: 620, w: 60, h: 200, to: 'beach', at: [140, 900], label: 'الكورنيش ➜' }, { x: 0, y: 620, w: 60, h: 200, to: 'pitch', at: [1860, 700], label: '⬅ الملعب' }] };
+      { x: 2095, y: 520, w: 100, h: 50, to: 'home', at: [600, 700], label: 'بيتي' }, { x: 2560, y: 530, w: 100, h: 50, to: 'rest', at: [650, 760], label: 'المطعم' }, { x: 3150, y: 520, w: 120, h: 50, to: 'jadd', at: [800, 880], label: 'بيت الجد' },
+      { x: 3440, y: 620, w: 60, h: 200, to: 'beach', at: [140, 900], label: 'الكورنيش ➜' }, { x: 0, y: 620, w: 60, h: 200, to: 'pitch', at: [1860, 700], label: '⬅ الملعب' }] };
   // الديوانية — the majlis
   WMAPS.diwan = { name: 'الديوانية', W: 1400, H: 900, spawn: [700, 760], wall: 150,
     floor(c, M) { c.fillStyle = '#b8875a'; c.fillRect(0, 0, M.W, M.H); c.strokeStyle = 'rgba(80,50,20,0.25)'; c.lineWidth = 2; for (let y = 0; y < M.H; y += 34) { c.beginPath(); c.moveTo(0, y); c.lineTo(M.W, y); c.stroke(); for (let x = (y / 34 % 2) * 90; x < M.W; x += 180) { c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 34); c.stroke(); } }
@@ -5384,7 +5419,7 @@ function wMaps() {
     objs: [
       wBox(60, 40, 520, 60, 0, '#fff', { solid: false, sy: 0, draw(c) { c.fillStyle = '#d9eef5'; c.fillRect(60, 20, 520, 110); c.strokeStyle = '#8aa'; c.lineWidth = 3; for (let i = 0; i < 4; i++) c.strokeRect(60 + i * 130, 20, 130, 110); for (let i = 0; i < 24; i++) { c.fillStyle = ['#e02020', '#1f6ae0', '#f2a020', '#2aa04a'][i % 4]; c.fillRect(74 + (i % 12) * 42, 34 + ((i / 12) | 0) * 50, 16, 36); } } }),
       ...[240, 420].map(y => wBox(120, y, 420, 70, 130, '#e8e2d4', { deco(c, o) { const fy = frontY(o); for (let r = 0; r < 3; r++) for (let i = 0; i < 12; i++) { c.fillStyle = ['#e02020', '#f2d24a', '#2aa04a', '#1f6ae0', '#ff8a2a', '#9a4ad8'][(i + r * 2) % 6]; c.fillRect(o.x + 10 + i * 34, fy + 10 + r * 40, 26, 30); } } })),
-      wBox(780, 560, 330, 80, 90, '#8a6236', { deco(c, o) { c.fillStyle = '#2a2c34'; c.fillRect(980, o.y - 110, 80, 50); c.fillStyle = '#7dffb0'; c.fillRect(992, o.y - 104, 56, 18); } }),
+      wBox(780, 560, 330, 80, 90, '#8a6236', { act: 'snack', deco(c, o) { c.fillStyle = '#2a2c34'; c.fillRect(980, o.y - 110, 80, 50); c.fillStyle = '#7dffb0'; c.fillRect(992, o.y - 104, 56, 18); } }),
       wRack(820, 250),
     ],
     exits: [{ x: 590, y: 810, w: 120, h: 50, to: 'fareej', at: [1220, 600], label: 'الفريج ⬇' }] };
@@ -5410,7 +5445,40 @@ function wMaps() {
       wPalm(260, 560), wPalm(1100, 560), wPalm(2050, 600), wPalm(700, 1200),
       wBox(1700, 900, 170, 80, 110, '#f2efe8', { deco(c, o) { const fy = frontY(o); c.fillStyle = '#ff6fb5'; c.fillRect(o.x - 8, fy - 16, o.w + 16, 22); txt('آيس كريم 🍦', o.x + o.w / 2, fy + 45, { size: 22, weight: 900, color: '#c8102e' }); } }),
     ],
-    exits: [{ x: 0, y: 800, w: 60, h: 200, to: 'fareej', at: [2260, 720], label: '⬅ الفريج' }] };
+    exits: [{ x: 0, y: 800, w: 60, h: 200, to: 'fareej', at: [3360, 720], label: '⬅ الفريج' }] };
+  // بيتي — my house: bed, fridge, closet
+  WMAPS.home = { name: 'بيتي', W: 1200, H: 820, spawn: [600, 700], wall: 140,
+    floor(c, M) { for (let y = 0; y < M.H; y += 60) for (let x = 0; x < M.W; x += 60) { c.fillStyle = ((x + y) / 60) % 2 ? '#e8e0d0' : '#ddd3c0'; c.fillRect(x, y, 60, 60); } c.fillStyle = '#c8dce8'; c.fillRect(0, 0, M.W, 140); c.fillStyle = '#a8bccc'; c.fillRect(0, 122, M.W, 18); },
+    decals: [wRug(560, 420, 460, 260, '#2a5a8a', '#e8e0d0')],
+    objs: [
+      { x: 0, y: 0, w: 0, d: 0, sy: 0, solid: false, draw(c) { wWin(c, 420, 24, 140, 90); c.fillStyle = '#16171c'; c.fillRect(700, 18, 230, 100); c.fillStyle = '#2a6aa8'; c.fillRect(710, 26, 210, 84); txt('⚽ 2 - 1', 815, 70, { size: 26, weight: 900, color: '#fff', rtl: false }); } },
+      wBed(80, 190), wCloset(380, 150), wFridge(1040, 150),
+      wBox(620, 560, 300, 70, 46, '#5a6a8a', { topCol: '#6a7a9a' }), wBox(1060, 640, 80, 60, 90, '#2f6a3a', { topCol: '#3f8a4a' }),
+    ],
+    exits: [{ x: 540, y: 770, w: 120, h: 50, to: 'fareej', at: [2145, 600], label: 'الفريج ⬇' }] };
+  // المطعم — the restaurant (الطباخ cooks)
+  WMAPS.rest = { name: 'المطعم', W: 1300, H: 880, spawn: [650, 760], wall: 150,
+    floor(c, M) { for (let y = 0; y < M.H; y += 44) for (let x = 0; x < M.W; x += 88) { c.fillStyle = ((x / 88 + y / 44) % 2) ? '#c88a5a' : '#b87a4a'; c.fillRect(x + ((y / 44) % 2) * 44, y, 88, 44); } c.fillStyle = '#f6e6c8'; c.fillRect(0, 0, M.W, 150); c.fillStyle = '#e07a20'; c.fillRect(0, 132, M.W, 18); },
+    objs: [
+      { x: 0, y: 0, w: 0, d: 0, sy: 0, solid: false, draw(c) { c.fillStyle = '#2a1a12'; rrect(380, 14, 540, 108, 10); c.fill(); c.strokeStyle = '#e8c45a'; c.lineWidth = 3; c.stroke(); txt('المنيو', 650, 36, { size: 20, weight: 900, color: '#ffd34d' }); txt('🌯 شاورما 10  ·  🍔 برجر 20  ·  🍛 كبسة 35  ·  🧃 عصير 5', 650, 82, { size: 19, weight: 800, color: '#fff' }); } },
+      wBox(300, 250, 700, 60, 70, '#8a5a32', { act: 'food', topCol: '#c8b8a0', deco(c, o) { c.fillStyle = '#d8d8d8'; for (const dx of [80, 240, 460, 620]) { c.beginPath(); c.ellipse(o.x + dx, o.y - 42, 34, 12, 0, 0, 7); c.fill(); } c.fillStyle = '#e8a040'; c.beginPath(); c.ellipse(o.x + 240, o.y - 44, 22, 7, 0, 0, 7); c.fill(); c.fillStyle = '#8a4a20'; c.fillRect(o.x + 450, o.y - 56, 20, 18); } }),
+      wTable(330, 470), wTable(970, 470), wTable(330, 680), wTable(970, 680),
+      wBox(1180, 640, 80, 60, 90, '#2f6a3a', { topCol: '#3f8a4a' }),
+    ],
+    exits: [{ x: 590, y: 830, w: 120, h: 50, to: 'fareej', at: [2610, 600], label: 'الفريج ⬇' }] };
+  // بيت الجد — grandpa's big house: the majlis, lunch on the sufra, a bed to rest
+  WMAPS.jadd = { name: 'بيت الجد', W: 1600, H: 1000, spawn: [800, 880], wall: 160,
+    floor(c, M) { c.fillStyle = '#a87850'; c.fillRect(0, 0, M.W, M.H); c.strokeStyle = 'rgba(70,40,20,0.25)'; c.lineWidth = 2; for (let y = 0; y < M.H; y += 40) { c.beginPath(); c.moveTo(0, y); c.lineTo(M.W, y); c.stroke(); }
+      c.fillStyle = '#f0e2c4'; c.fillRect(0, 0, M.W, 160); c.fillStyle = '#c8a46a'; c.fillRect(0, 140, M.W, 20); c.fillStyle = '#7a1f2a'; c.fillRect(1180, 160, 420, 330); c.strokeStyle = '#e8c45a'; c.lineWidth = 6; c.strokeRect(1192, 172, 396, 306); },
+    decals: [wRug(260, 330, 760, 380, '#6a1820', '#d8b45a'), wSufra(470, 460, 340, 170)],
+    objs: [
+      { x: 0, y: 0, w: 0, d: 0, sy: 0, solid: false, draw(c) { for (const wx of [120, 470, 820]) { c.fillStyle = '#6a4a2a'; c.beginPath(); c.moveTo(wx, 140); c.lineTo(wx, 70); c.arc(wx + 50, 70, 50, Math.PI, 0); c.lineTo(wx + 100, 140); c.fill(); c.fillStyle = '#9fd3ef'; c.fillRect(wx + 12, 74, 76, 64); }
+        c.fillStyle = '#8a5a32'; c.fillRect(1060, 70, 80, 70); c.fillStyle = '#3a2a1a'; c.beginPath(); c.arc(1100, 100, 20, 0, 7); c.fill(); c.fillStyle = '#d4a83c'; c.beginPath(); c.ellipse(1020, 120, 14, 22, 0, 0, 7); c.fill(); } },
+      wBox(60, 170, 1100, 60, 40, '#7a1f2a', { topCol: '#9a2a36' }), wBox(60, 230, 70, 600, 40, '#7a1f2a', { topCol: '#9a2a36' }),
+      wJadd(640, 300), wBed(1270, 220, '#8a1f2a'),
+      wBox(1220, 640, 90, 60, 100, '#2f6a3a', { topCol: '#3f8a4a' }), wBox(1450, 640, 90, 60, 100, '#2f6a3a', { topCol: '#3f8a4a' }),
+    ],
+    exits: [{ x: 740, y: 950, w: 120, h: 50, to: 'fareej', at: [3210, 600], label: 'الفريج ⬇' }] };
   return WMAPS;
 }
 // where each of the gang hangs out
@@ -5418,19 +5486,21 @@ const W_HOME = [
   [0, 'diwan', 700, 300, 'down', 'الديوانية ديوانيتي… حياك.'], [1, 'shop', 640, 380, 'up', 'جيت أشتري بروتين… وحلاو.'], [2, 'pitch', 760, 700, 'right', 'يلا مباراة؟ الفريق ناقص واحد.'],
   [3, 'diwan', 1000, 520, 'left', 'ضغطك عالي… من الحماس.'], [4, 'pitch', 330, 700, 'right', 'محد يسجل عليّ!'], [5, 'pitch', 1200, 540, 'left', 'تبي نتمرن شوي؟'],
   [6, 'diwan', 420, 540, 'right', 'اقعد اقعد… القهوة جاهزة.'], [7, 'fareej', 1700, 1120, 'left', 'الجو حلو اليوم.'], [8, 'fareej', 1880, 1100, 'up', 'شفت دياياتي؟'],
-  [9, 'shop', 1010, 548, 'down', 'الحساب عندي اليوم!'], [10, 'beach', 900, 1080, 'down', 'البحر يرد الروح.'], [11, 'fareej', 840, 960, 'down', 'عندي امتحان بكرة…'],
-  [12, 'fareej', 640, 1180, 'up', 'كرك واحد لو سمحت!'], [13, 'diwan', 720, 640, 'up', 'التحدي القادم لي!'], [14, 'fareej', 1500, 1060, 'left', 'شفت سيارتي؟ نظيفة صح؟'],
+  [9, 'shop', 1010, 548, 'down', 'الحساب عندي اليوم!', 'cashier'], [10, 'beach', 900, 1080, 'down', 'البحر يرد الروح.'], [11, 'fareej', 840, 960, 'down', 'عندي امتحان بكرة…'],
+  [12, 'fareej', 860, 1200, 'left', 'كرك واحد لو سمحت!'], [13, 'diwan', 720, 640, 'up', 'التحدي القادم لي!'], [14, 'fareej', 1500, 1060, 'left', 'شفت سيارتي؟ نظيفة صح؟'],
   [15, 'beach', 1640, 520, 'down', 'البحر بحري… تبي تجرب؟'],
+  [18, 'rest', 650, 222, 'down', 'هلا والله! جوعان؟ عندي أحلى كبسة.', 'cook'],
 ];
 // ---- state
-function worldSave() { const W = G.world; if (!W || W.phase !== 'walk') return; try { localStorage.setItem('shilla_world', JSON.stringify({ ci: W.P.base, o: W.P.o, map: W.map, x: Math.round(W.P.x), y: Math.round(W.P.y), min: W.min | 0 })); } catch (e) { } }
+function worldSave() { const W = G.world; if (!W || W.phase !== 'walk') return; try { localStorage.setItem('shilla_world', JSON.stringify({ ci: W.P.base, o: W.P.o, map: W.map, x: Math.round(W.P.x), y: Math.round(W.P.y), min: W.min | 0, en: Math.round(W.en), fr: W.fridge | 0, jd: W.jaddDay })); } catch (e) { } }
 function worldLoad() { try { return JSON.parse(localStorage.getItem('shilla_world')) || null; } catch (e) { return null; } }
 function worldOpen() { wMaps(); const sv = worldLoad(); G.world = { phase: 'pick', cur: sv ? sv.ci : 0, o: sv ? sv.o | 0 : 0, sv, t: 0, min: sv ? sv.min : 16 * 60, floors: {} }; G.scene = 'world'; G.t = 0; SFX.ok(); }
 function worldStart(ci, o) {
   const W = G.world, sv = W.sv, eff = (() => { const O = outfitOf(ci, o); return O && O.as !== undefined ? O.as : ci; })();
   const map = sv && sv.ci === ci && WMAPS[sv.map] ? sv.map : 'fareej', M = WMAPS[map];
   W.P = { fig: wMakeFig(eff, eqOfProf(profCur(), eff)), face: 1, base: ci, o, ci: eff, x: map === (sv && sv.map) && sv.ci === ci ? sv.x : M.spawn[0], y: map === (sv && sv.map) && sv.ci === ci ? sv.y : M.spawn[1], dir: 'down', ph: 0, moving: false };
-  W.npcs = W_HOME.filter(h => h[0] !== ci).map(([nci, mp, x, y, dir, line]) => ({ ci: nci, map: mp, x, y, hx: x, hy: y, dir, d0: dir, line, ph: Math.random() * 6, wait: 60 + Math.random() * 200, tx: null, ty: null, fig: wMakeFig(nci, null), face: dir === 'left' ? -1 : 1 }));
+  W.en = sv && sv.en !== undefined ? sv.en : 100; W.fridge = sv ? sv.fr | 0 : 0; W.jaddDay = sv ? sv.jd : -1;
+  W.npcs = W_HOME.filter(h => h[0] !== ci && h[0] !== eff).map(([nci, mp, x, y, dir, line, role]) => ({ ci: nci, map: mp, x, y, hx: x, hy: y, dir, d0: dir, line, role, ph: Math.random() * 6, wait: 60 + Math.random() * 200, tx: null, ty: null, fig: wMakeFig(nci, null), face: dir === 'left' ? -1 : 1 }));
   W.phase = 'walk'; W.map = map; W.cam = null; W.fade = 30; W.dlg = null; W.mapOpen = false; W.msg = { t: 'أهلاً في ' + M.name + ' 👋', k: 0 }; worldSave();
 }
 function worldGo(to, at) { const W = G.world; W.go = { to, at, k: 0 }; SFX.whoosh(0); }
@@ -5445,18 +5515,46 @@ function wFree(W, x, y, r, skip) {
 function wDirOf(vx, vy, d) { if (Math.abs(vx) < 0.01 && Math.abs(vy) < 0.01) return d; return Math.abs(vx) > Math.abs(vy) * 1.1 ? (vx > 0 ? 'right' : 'left') : (vy > 0 ? 'down' : 'up'); }
 function wNearNpc(W) { let best = null, bd = WD.NEAR; for (const n of W.npcs) if (n.map === W.map) { const d = Math.hypot(n.x - W.P.x, n.y - W.P.y); if (d < bd) { bd = d; best = n; } } return best; }
 function wNearRack(W) { const M = WMAPS[W.map]; for (const o of M.objs) if (o.wardrobe && W.P.x > o.x - 40 && W.P.x < o.x + o.w + 40 && W.P.y > o.y - 20 && W.P.y < o.y + o.d + 110) return o; return null; }
+const W_FOOD = {
+  rest: ['مطعم الشلة 🍔', [['🌯', 'شاورما', 10, 30], ['🍔', 'برجر', 20, 50], ['🍛', 'كبسة لحم', 35, 100], ['🧃', 'عصير', 5, 10]]],
+  snack: ['بقالة الشلة 🛒', [['🥔', 'شيبس', 6, 15], ['🍫', 'شوكولاتة', 8, 20], ['⚡', 'مشروب طاقة', 15, 40], ['💧', 'ماي', 2, 5]]],
+  karak: ['كشك الكرك ☕', [['☕', 'شاي كرك', 4, 15], ['🥟', 'سمبوسة', 6, 20], ['🫓', 'خبز رقاق', 5, 15]]],
+};
+const W_ACT = { rack: 'الملابس 👕', bed: 'نام 🛏️', fridge: 'الثلاجة 🧊', food: 'المنيو 🍔', snack: 'المتجر 🛒', karak: 'كرك ☕', jadd: 'كلّم الجد 👴', sufra: 'سفرة الجد 🍛' };
+const wHour = W => (W.min % 1440) / 60, wDay = W => Math.floor(W.min / 1440);
+function wNearAct(W) { const M = WMAPS[W.map]; let best = null, bd = 64;
+  for (const o of M.objs.concat(M.decals || [])) if (o.act) { const dx = Math.max(o.x - W.P.x, 0, W.P.x - (o.x + o.w)), dy = Math.max(o.y - W.P.y, 0, W.P.y - (o.y + o.d)), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = o; } } if (best) best.d0 = bd; return best; }
+function wEat(name, en, price) { const W = G.world, P0 = profCur();
+  if (price > P0.coins) { W.msg = { t: 'فلوسك ما تكفي 🪙', k: 0, c: '#ff8080' }; SFX.move(); return false; }
+  P0.coins -= price; profSave(); const before = W.en; W.en = Math.min(100, W.en + en); W.lowWarned = W.en < 20;
+  W.msg = { t: `😋 ${name}  +${Math.round(W.en - before)} ⚡` + (price ? `  (−${price} 🪙)` : ''), k: 0, c: '#7dffb0' }; SFX.ready(); worldSave(); return true; }
+function wMenu(key) { const [title, items] = W_FOOD[key], W = G.world; W.dlg = null; W.menu = { title, items, sel: 0, k: 0 }; SFX.ok(); }
+function wSleep(faint) { const W = G.world, hr = wHour(W); W.dlg = null; W.sleep = { k: 0, night: faint || hr >= 18 || hr < 5, faint }; SFX.move(); }
+function wDlg(o) { const W = G.world; W.dlg = Object.assign({ i: 0, k: 0, opt: 0 }, o); SFX.move(); }
+function wJaddTalk() { const W = G.world, day = wDay(W), lunch = W.jaddDay !== day;
+  wDlg({ name: 'الجد', jadd: 1, lines: ['يا هلا ومرحبا بولدي! نوّرت البيت.', lunch ? 'اقعد تغدّى معي… الأكل حار وجاهز 🍛' : 'تغدّينا اليوم الحمد لله… تعال بكرة نتغدّى سوا.'],
+    opts: lunch ? [['🍛 تغدّى مع الجد', () => { W.dlg = null; W.jaddDay = day; wEat('غدا الجد', 100, 0); profAward(PROF.cur, 20); W.msg = { t: '😋 غدا الجد: طاقتك مليانة + الجد عطاك 20 🪙', k: 0, c: '#ffd34d' }; worldSave(); }], ['👋 مع السلامة', 'bye']] : [['🛏️ ارتاح هني', () => wSleep(false)], ['👋 مع السلامة', 'bye']] }); }
+function wAct(o) { const W = G.world;
+  switch (o.act) {
+    case 'rack': worldSave(); shopOpen('world'); return;
+    case 'bed': { const hr = wHour(W), night = hr >= 18 || hr < 5; wDlg({ name: 'السرير', icon: '🛏️', lines: [night ? 'الوقت متأخر… تنام للصبح؟' : 'تاخذ لك قيلولة ساعتين؟'], opts: [['😴 نام', () => wSleep(false)], ['👋 لا', 'bye']] }); return; }
+    case 'fridge': if ((W.fridge | 0) < 3) { W.fridge = (W.fridge | 0) + 1; wEat('أكل البيت', 25, 0); } else { W.msg = { t: 'الثلاجة فاضية 😅 روح المطعم أو البقالة', k: 0, c: '#ffb070' }; SFX.move(); } return;
+    case 'food': wMenu('rest'); return; case 'snack': wMenu('snack'); return; case 'karak': wMenu('karak'); return;
+    case 'jadd': case 'sufra': wJaddTalk(); return;
+  } }
 function wTalk(n) {
   const W = G.world, C = CHARS[n.ci], Pz = PERSONA[n.ci] || {}, intro = (Pz.intro && Pz.intro[0]) || C.quote || '…';
-  const boss = n.ci >= NCH; W.dlg = { n, lines: [n.line, intro], i: 0, k: 0, opt: 0, opts: [['🥊 تحدّاه', 'fight'], ['👋 مع السلامة', 'bye']], boss };
+  const boss = n.ci >= NCH, extra = n.role === 'cook' ? [['🍔 المنيو', () => wMenu('rest')]] : n.role === 'cashier' ? [['🛒 المتجر', () => wMenu('snack')]] : [];
+  W.dlg = { n, lines: [n.line, intro], i: 0, k: 0, opt: 0, opts: extra.concat([['🥊 تحدّاه', 'fight'], ['👋 مع السلامة', 'bye']]), boss };
   n.dir = wDirOf(W.P.x - n.x, W.P.y - n.y, n.dir); n.face = W.P.x >= n.x ? 1 : -1; W.P.face = n.x >= W.P.x ? 1 : -1; SFX.move();
 }
 function wChallenge(n) {
-  const W = G.world; worldSave(); W.fightWith = n; W.dlg = null;
+  const W = G.world; if (W.en < 15) { W.dlg = null; W.msg = { t: 'تعبان ⚡ كل شي أو نام قبل القتال', k: 0, c: '#ff9a9a' }; SFX.move(); return; } worldSave(); W.fightWith = n; W.dlg = null;
   G.mode = 'cpu'; G.sel = { cur: [W.P.base, n.ci], done: [true, true], t: 0, readyT: 0, outfit: [W.P.o, 0] }; SFX.ok(); G.toVS();
 }
 function worldResult(w) {
   const W = G.world, n = W.fightWith; W.fightWith = null; G.scene = 'world'; G.fight = null; if (AC) Music.intensity = 0;
-  const win = w === 0, prize = win ? (n && n.ci >= NCH ? 100 : 30) : 5; profAward(PROF.cur, prize);
+  const win = w === 0, prize = win ? (n && n.ci >= NCH ? 100 : 30) : 5; profAward(PROF.cur, prize); W.en = Math.max(0, W.en - 15);
   W.msg = { t: win ? `فزت على ${CHARS[n.ci].name}! +${prize} 🪙` : `${CHARS[n.ci].name} فاز… خذ ${prize} 🪙 وحاول مرة ثانية`, k: 0, c: win ? '#ffd34d' : '#ff9a9a' };
   if (n) { const Pz = PERSONA[n.ci] || {}; W.dlg = { n, lines: [win ? 'ضربة معلم… المرة الجاية لي!' : ((Pz.win && Pz.win[0]) || 'قلت لك!')], i: 0, k: 0, opt: 0, opts: [['🥊 مرة ثانية', 'fight'], ['👋 مع السلامة', 'bye']] }; }
   W.fade = 20; SFX.ok();
@@ -5468,34 +5566,52 @@ function updWorld() {
   if (W.phase === 'pick') return updWorldPick(W, p, q, ok, back, tap);
   if (W.fade > 0) W.fade--;
   if (W.go) { W.go.k++; if (W.go.k === 14) { W.map = W.go.to; W.P.x = W.go.at[0]; W.P.y = W.go.at[1]; W.cam = null; W.msg = { t: WMAPS[W.map].name, k: 0 }; worldSave(); } if (W.go.k >= 28) W.go = null; return; }
-  W.min = (W.min + (G.frame % 10 === 0 ? 1 : 0)) % (24 * 60 * 7);
+  // sleeping: the screen goes dark, the night passes, you wake up in the morning
+  if (W.sleep) { const S = W.sleep; S.k++;
+    if (S.k === 45) { const hr = wHour(W), day = wDay(W);
+      if (S.night) { W.min = (((hr < 5 ? day : day + 1) * 1440) + 7 * 60) % (1440 * 7); W.en = S.faint ? 60 : 100; W.fridge = 0; if (S.faint) { W.map = 'home'; W.P.x = 200; W.P.y = 360; W.cam = null; } }
+      else { W.min = (W.min + 120) % (1440 * 7); W.en = Math.min(100, W.en + 40); } W.lowWarned = false; worldSave(); }
+    if (S.k >= 100) { W.sleep = null; W.msg = S.faint ? { t: '😵 تعبت ونمت برّا… صحيت في بيتك', k: 0, c: '#ffb070' } : S.night ? { t: '☀️ صباح الخير! طاقتك مليانة ⚡', k: 0, c: '#ffd34d' } : { t: '😌 ارتحت شوي  +40 ⚡', k: 0, c: '#7dffb0' }; }
+    return; }
+  W.min = (W.min + (G.frame % 12 === 0 ? 1 : 0)) % (24 * 60 * 7);
+  { const hr = wHour(W), day = wDay(W);
+    if (hr >= 21 && W.nightMsg !== day) { W.nightMsg = day; W.msg = { t: '🌙 الليل جا… روح بيتك أو بيت الجد ونام 🛏️', k: 0, c: '#9fd8ff' }; }
+    if (hr >= 3 && hr < 5 && !W.dlg && !W.menu) { wSleep(true); return; } }
   if (G.frame % 300 === 0) worldSave();
   W.solid = wSolids(W);
   const hud = wHud();
   // map overlay
   if (W.mapOpen) { const L = Object.keys(WMAPS); if (p.left || q.left || p.up || q.up) { W.mapSel = (W.mapSel + L.length - 1) % L.length; SFX.move(); } if (p.right || q.right || p.down || q.down) { W.mapSel = (W.mapSel + 1) % L.length; SFX.move(); }
-    if (tap) { let hit = -1; L.forEach((id, i) => { const [x, y] = W_MAPPOS[id]; if (Math.abs(tap[0] - x) < 150 && Math.abs(tap[1] - y) < 80) hit = i; }); if (hit >= 0) { if (W.mapSel === hit) { W.mapOpen = false; if (L[hit] !== W.map) worldGo(L[hit], WMAPS[L[hit]].spawn); } else { W.mapSel = hit; SFX.move(); } } else W.mapOpen = false; return; }
+    if (tap) { let hit = -1; L.forEach((id, i) => { const [x, y] = W_MAPPOS[id]; if (Math.abs(tap[0] - x) < 122 && Math.abs(tap[1] - y) < 62) hit = i; }); if (hit >= 0) { if (W.mapSel === hit) { W.mapOpen = false; if (L[hit] !== W.map) worldGo(L[hit], WMAPS[L[hit]].spawn); } else { W.mapSel = hit; SFX.move(); } } else W.mapOpen = false; return; }
     if (ok) { W.mapOpen = false; const id = L[W.mapSel]; if (id !== W.map) worldGo(id, WMAPS[id].spawn); } if (back || anyP('Tab') || p.b2) { W.mapOpen = false; SFX.move(); } return; }
+  // food menu
+  if (W.menu) { const Mn = W.menu, n = Mn.items.length, y0 = VH / 2 - n * 35 - 10; Mn.k++;
+    if (p.up || q.up) { Mn.sel = (Mn.sel + n - 1) % n; SFX.move(); } if (p.down || q.down) { Mn.sel = (Mn.sel + 1) % n; SFX.move(); }
+    const buy = i => { const [ic, nm, pr, en] = Mn.items[i]; Mn.sel = i; Mn.flash = { i, k: 0 }; wEat(ic + ' ' + nm, en, pr); };
+    if (Mn.flash) Mn.flash.k++;
+    if (tap) { if (Math.abs(tap[0] - VW / 2) < 330 && tap[1] > y0 && tap[1] < y0 + n * 70) buy(Math.floor((tap[1] - y0) / 70)); else if (Math.abs(tap[0] - VW / 2) > 340 || tap[1] < y0 - 90 || tap[1] > y0 + n * 70 + 80) { W.menu = null; SFX.move(); } return; }
+    if (ok && Mn.k > 6) buy(Mn.sel); if (back) { W.menu = null; SFX.move(); } return; }
   // dialogue
-  if (W.dlg) { const D = W.dlg; D.k++; const last = D.i >= D.lines.length - 1;
-    const choose = i => { const a = D.opts[i][1]; if (a === 'fight') wChallenge(D.n); else { W.dlg = null; SFX.move(); } };
-    if (last && (p.left || q.left || p.right || q.right || p.up || p.down)) { D.opt = 1 - D.opt; SFX.move(); }
-    if (tap) { if (!last) { D.i++; D.k = 0; SFX.move(); } else if (D.k > 8 && tap[1] > 625) choose(tap[0] > VW / 2 ? 0 : 1); return; }
+  if (W.dlg) { const D = W.dlg; D.k++; const last = D.i >= D.lines.length - 1, no = D.opts.length, ox = i => no === 2 ? [VW / 2 + 160, VW / 2 - 160][i] : VW / 2 + 300 - i * 300;
+    const choose = i => { const a = D.opts[i][1]; if (typeof a === 'function') a(); else if (a === 'fight') wChallenge(D.n); else { W.dlg = null; SFX.move(); } };
+    if (last && (p.left || q.left)) { D.opt = (D.opt + 1) % no; SFX.move(); } if (last && (p.right || q.right)) { D.opt = (D.opt + no - 1) % no; SFX.move(); }
+    if (tap) { if (!last) { D.i++; D.k = 0; SFX.move(); } else if (D.k > 8 && tap[1] > 625) { for (let i = 0; i < no; i++) if (Math.abs(tap[0] - ox(i)) < 145) { choose(i); break; } } return; }
     if (ok && D.k > 6) { if (!last) { D.i++; D.k = 0; SFX.move(); } else choose(D.opt); }
     if (back) { W.dlg = null; SFX.move(); } return; }
   // HUD buttons
   if (tap && hud.hit(tap)) return;
   if (esc) { worldSave(); G.world = null; G.toTitle(); return; }
   if (anyP('Tab') || p.b2) { W.mapOpen = true; W.mapSel = Object.keys(WMAPS).indexOf(W.map); SFX.ok(); return; }
-  // talk / wardrobe
-  const near = wNearNpc(W), rack = wNearRack(W);
+  // talk / use things
+  let near = wNearNpc(W), rack = wNearAct(W); if (near && rack && rack.d0 < 24 && Math.hypot(near.x - W.P.x, near.y - W.P.y) > 60) near = null; if (near) rack = null;
   if (ok || (tap && near && W.cam && Math.hypot(tap[0] - (near.x - W.cam.x), tap[1] - (near.y - 95 - W.cam.y)) < 100) || (tap && W.prompt && Math.abs(tap[0] - W.prompt[0]) < 120 && Math.abs(tap[1] - W.prompt[1]) < 40)) {
-    if (near) { wTalk(near); return; } if (rack) { worldSave(); shopOpen('world'); return; } }
+    if (near) { wTalk(near); return; } if (rack) { wAct(rack); return; } }
   // walk
   let vx = (h.right ? 1 : 0) - (h.left ? 1 : 0), vy = (h.down ? 1 : 0) - (h.up ? 1 : 0);
   if (TOUCH_ON && STK.id !== null) { const m = Math.hypot(STK.dx, STK.dy) / STK.R; if (m > 0.18) { vx = STK.dx / STK.R; vy = STK.dy / STK.R; } }
   const m = Math.hypot(vx, vy); const P = W.P;
-  if (m > 0.1) { const s = WD.SPD * Math.min(1, m) / Math.max(1, m); const nx = P.x + vx * s, ny = P.y + vy * s;
+  W.en = Math.max(0, W.en - (m > 0.1 ? 0.0075 : 0.0012)); if (W.en < 20 && !W.lowWarned) { W.lowWarned = true; W.msg = { t: '⚡ طاقتك قليلة… روح كُل شي 🍔', k: 0, c: '#ffb070' }; }
+  if (m > 0.1) { const s = WD.SPD * (W.en <= 0 ? 0.45 : W.en < 20 ? 0.65 : 1) * Math.min(1, m) / Math.max(1, m); const nx = P.x + vx * s, ny = P.y + vy * s;
     if (wFree(W, nx, P.y, WD.R, P)) P.x = nx; if (wFree(W, P.x, ny, WD.R, P)) P.y = ny; P.dir = wDirOf(vx, vy, P.dir); if (Math.abs(vx) > 0.15) P.face = vx > 0 ? 1 : -1; P.moving = true; P.ph += 0.2 * Math.min(1, m); }
   else { P.moving = false; P.ph += 0.05; }
   for (const e of WMAPS[W.map].exits) if (P.x > e.x && P.x < e.x + e.w && P.y > e.y && P.y < e.y + e.h) { worldGo(e.to, e.at); break; }
@@ -5510,7 +5626,7 @@ function updWorld() {
   const M = WMAPS[W.map], tx = clamp(P.x - VW / 2, 0, Math.max(0, M.W - VW)) - Math.max(0, (VW - M.W) / 2), ty = clamp(P.y - 70 - VH / 2, -200, Math.max(0, M.H - VH)) - Math.max(0, (VH - M.H) / 2);
   if (!W.cam) W.cam = { x: tx, y: ty }; W.cam.x = lerp(W.cam.x, tx, 0.14); W.cam.y = lerp(W.cam.y, ty, 0.14);
 }
-const W_MAPPOS = { fareej: [640, 400], diwan: [330, 210], shop: [950, 210], pitch: [250, 520], beach: [1030, 540] };
+const W_MAPPOS = { fareej: [640, 400], diwan: [190, 215], shop: [450, 215], home: [710, 215], rest: [970, 215], pitch: [200, 590], jadd: [640, 600], beach: [1080, 590] };
 function wHud() {
   const W = G.world, btns = [[70, 52, 'خروج', 'exit'], [190, 52, 'الخريطة 🗺️', 'map']];
   return { btns, hit(t) { for (const [x, y, , id] of btns) if (Math.abs(t[0] - x) < 62 && Math.abs(t[1] - y) < 34) { if (id === 'exit') { worldSave(); G.world = null; SFX.move(); G.toTitle(); } else { W.mapOpen = true; W.mapSel = Object.keys(WMAPS).indexOf(W.map); SFX.ok(); } return true; } return false; } };
@@ -5561,7 +5677,7 @@ function drawWorld() {
   L.push([P.y, () => drawFig(ctx, P)]);
   L.sort((a, b) => a[0] - b[0]); for (const [, f] of L) f();
   // speech bubbles + your marker
-  const near = !W.dlg && wNearNpc(W), rack = !W.dlg && !near && wNearRack(W); W.prompt = null;
+  let near = !W.dlg && !W.menu && wNearNpc(W), rack = !W.dlg && !W.menu && wNearAct(W); if (near && rack && rack.d0 < 24 && Math.hypot(near.x - P.x, near.y - P.y) > 60) near = null; if (near) rack = null; W.prompt = null;
   for (const n of W.npcs) if (n.map === W.map && Math.hypot(n.x - P.x, n.y - P.y) < WD.NEAR + 120) { const on = n === near, bx = n.x, by = n.y - 205;
     ctx.fillStyle = '#fff'; ctx.strokeStyle = '#222'; ctx.lineWidth = 2.5; rrect(bx - 30, by - 22, 60, 36, 16); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(bx - 6, by + 13); ctx.lineTo(bx, by + 24); ctx.lineTo(bx + 6, by + 13); ctx.fill();
     txt(on ? '💬' : '…', bx, by - 4, { size: on ? 20 : 26, weight: 900, color: '#222', rtl: false });
@@ -5574,38 +5690,49 @@ function drawWorld() {
   if (night > 0 && !M.wall) { ctx.fillStyle = `rgba(10,18,60,${0.5 * night})`; ctx.fillRect(0, 0, VW, VH); ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (const o of M.objs) if (o.lamp) { const x = o.lamp[0] - cam.x + 26, y = o.lamp[1] - cam.y + 4, g = ctx.createRadialGradient(x, y, 4, x, y + 80, 190); g.addColorStop(0, `rgba(255,220,140,${0.55 * night})`); g.addColorStop(1, 'rgba(255,200,100,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y + 80, 180, 140, 0, 0, 7); ctx.fill(); }
     ctx.restore(); }
-  if (W.prompt) { const [x, y] = W.prompt; ctx.fillStyle = 'rgba(0,0,0,0.7)'; rrect(x - 110, y - 20, 220, 40, 20); ctx.fill(); txt(near ? (TOUCH_ON ? '✕ أو المس: كلّمه' : 'Enter: كلّمه') : (TOUCH_ON ? '✕: الملابس 👕' : 'Enter: الملابس 👕'), x, y + 1, { size: 18, weight: 900, color: '#ffd34d' }); }
+  if (W.prompt) { const [x, y] = W.prompt; ctx.fillStyle = 'rgba(0,0,0,0.7)'; rrect(x - 110, y - 20, 220, 40, 20); ctx.fill(); txt(near ? (TOUCH_ON ? '✕ أو المس: كلّمه' : 'Enter: كلّمه') : (TOUCH_ON ? '✕: ' : 'Enter: ') + W_ACT[rack.act], x, y + 1, { size: 18, weight: 900, color: '#ffd34d' }); }
   // HUD
   const P0 = profCur(), dd = Math.floor(W.min / (24 * 60)) % 7, hh = Math.floor(hr), mm = W.min % 60;
-  ctx.fillStyle = 'rgba(10,30,70,0.82)'; rrect(VW - 300, 14, 284, 104, 16); ctx.fill(); ctx.strokeStyle = 'rgba(160,210,255,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = 'rgba(10,30,70,0.82)'; rrect(VW - 300, 14, 284, 136, 16); ctx.fill(); ctx.strokeStyle = 'rgba(160,210,255,0.6)'; ctx.lineWidth = 2; ctx.stroke();
   txt(W_DAYS[dd] + ' · ' + M.name, VW - 158, 40, { size: 20, weight: 900, color: '#fff' });
   txt(String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0'), VW - 230, 82, { size: 34, font: FE, weight: 700, color: '#ffd34d', rtl: false });
   txt('🪙 ' + P0.coins, VW - 95, 82, { size: 24, weight: 900, color: '#ffd34d', rtl: false });
+  { const e = clamp(W.en / 100, 0, 1), col = e > 0.5 ? '#5be37d' : e > 0.2 ? '#ffd34d' : '#ff4a4a'; txt('⚡', VW - 274, 125, { size: 20, rtl: false }); ctx.fillStyle = 'rgba(0,0,0,0.5)'; rrect(VW - 256, 115, 224, 20, 10); ctx.fill(); ctx.fillStyle = col; rrect(VW - 256, 115, Math.max(10, 224 * e), 20, 10); ctx.fill(); txt('طاقة ' + Math.round(W.en), VW - 144, 126, { size: 14, weight: 900, color: '#111' }); }
   for (const [x, y, label] of wHud().btns) { ctx.fillStyle = 'rgba(0,0,0,0.6)'; rrect(x - 58, y - 26, 116, 52, 14); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.stroke(); txt(label, x, y + 1, { size: 19, weight: 900, color: '#fff' }); }
   if (W.msg && W.msg.k < 150) { ctx.save(); ctx.globalAlpha = Math.min(1, (150 - W.msg.k) / 25); ctx.fillStyle = 'rgba(0,0,0,0.7)'; rrect(VW / 2 - 300, 120, 600, 50, 25); ctx.fill(); txt(W.msg.t, VW / 2, 146, { size: 24, weight: 900, color: W.msg.c || '#fff' }); ctx.restore(); }
   if (!TOUCH_ON && W.t < 400) txt('WASD / الأسهم: تمشي · Enter: تكلّم · Tab: الخريطة · Esc: خروج', VW / 2, VH - 22, { size: 17, weight: 800, color: 'rgba(255,255,255,0.8)', stroke: '#000', sw: 4 });
   if (W.dlg) drawWorldDlg(W);
+  if (W.menu) { const Mn = W.menu, n = Mn.items.length, y0 = VH / 2 - n * 35 - 10, P1 = profCur(); ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, VW, VH);
+    ctx.fillStyle = 'rgba(16,18,32,0.97)'; rrect(VW / 2 - 340, y0 - 90, 680, n * 70 + 160, 22); ctx.fill(); ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 3; ctx.stroke();
+    txt(Mn.title, VW / 2, y0 - 52, { size: 32, weight: 900, color: '#fff' }); txt('🪙 ' + P1.coins + '   ⚡ ' + Math.round(W.en), VW / 2, y0 - 16, { size: 19, weight: 900, color: '#ffd34d' });
+    Mn.items.forEach(([ic, nm, pr, en], i) => { const y = y0 + i * 70, on = i === Mn.sel, fl = Mn.flash && Mn.flash.i === i && Mn.flash.k < 10;
+      ctx.fillStyle = fl ? 'rgba(125,255,176,0.35)' : on ? 'rgba(255,211,77,0.18)' : 'rgba(255,255,255,0.05)'; rrect(VW / 2 - 320, y + 4, 640, 62, 14); ctx.fill();
+      txt(ic + '  ' + nm, VW / 2 + 290, y + 36, { size: 26, weight: 900, color: '#fff', align: 'right' }); txt('+' + en + ' ⚡', VW / 2 - 10, y + 36, { size: 22, weight: 900, color: '#7dffb0' });
+      txt(pr ? pr + ' 🪙' : 'مجاناً', VW / 2 - 230, y + 36, { size: 22, weight: 900, color: pr > P1.coins ? '#ff7070' : '#ffd34d' }); });
+    txt(TOUCH_ON ? 'المس الأكل تشتريه · المس برّا للرجوع' : '▲ ▼ اختيار · Enter اشتري · Esc رجوع', VW / 2, y0 + n * 70 + 40, { size: 17, weight: 800, color: 'rgba(255,255,255,0.6)' }); }
+  if (W.sleep) { const k = W.sleep.k, a = k < 30 ? k / 30 : k < 70 ? 1 : (100 - k) / 30; ctx.fillStyle = `rgba(2,4,14,${clamp(a, 0, 1)})`; ctx.fillRect(0, 0, VW, VH);
+    if (k > 20 && k < 85) { ctx.save(); ctx.globalAlpha = clamp(a, 0, 1); for (let i = 0; i < 3; i++) txt('z', VW / 2 - 30 + i * 34, VH / 2 - i * 30 - (k % 30), { size: 40 + i * 12, weight: 900, color: '#9fd8ff', rtl: false }); txt(W.sleep.night ? '💤 تصبح على خير…' : '💤 قيلولة…', VW / 2, VH / 2 + 80, { size: 30, weight: 900, color: '#fff' }); ctx.restore(); } }
   if (W.mapOpen) drawWorldMap(W);
   const fd = W.go ? (W.go.k < 14 ? W.go.k / 14 : (28 - W.go.k) / 14) : W.fade / 30; if (fd > 0) { ctx.fillStyle = `rgba(0,0,0,${clamp(fd, 0, 1)})`; ctx.fillRect(0, 0, VW, VH); }
 }
 function drawWorldDlg(W) {
-  const D = W.dlg, n = D.n, last = D.i >= D.lines.length - 1, text = D.lines[D.i], shown = text.slice(0, Math.floor(D.k * 1.4));
+  const D = W.dlg, n = D.n, last = D.i >= D.lines.length - 1, text = D.lines[D.i], shown = text.slice(0, Math.floor(D.k * 1.4)), no = D.opts.length;
   ctx.fillStyle = 'rgba(8,10,22,0.92)'; rrect(150, 470, VW - 300, 160, 20); ctx.fill(); ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 3; ctx.stroke();
-  const f = IMG['face' + (n.ci + 1)]; if (f) { ctx.save(); rrect(VW - 290, 400, 120, 120, 18); ctx.clip(); ctx.drawImage(f, VW - 290, 400, 120, 120); ctx.restore(); ctx.strokeStyle = '#ffd34d'; rrect(VW - 290, 400, 120, 120, 18); ctx.stroke(); }
-  txt(CHARS[n.ci].name, VW - 320, 500, { size: 26, weight: 900, color: '#ffd34d', align: 'right' });
+  const f = n && IMG['face' + (n.ci + 1)]; ctx.save(); rrect(VW - 290, 400, 120, 120, 18); ctx.fillStyle = '#2a2c3a'; ctx.fill(); ctx.clip(); if (f) ctx.drawImage(f, VW - 290, 400, 120, 120); else if (D.jadd) drawJadd(ctx, VW - 230, 600, 0.9, G.frame); else txt(D.icon || '💬', VW - 230, 462, { size: 64, rtl: false }); ctx.restore(); ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 3; rrect(VW - 290, 400, 120, 120, 18); ctx.stroke();
+  txt(n ? CHARS[n.ci].name : D.name, VW - 320, 500, { size: 26, weight: 900, color: '#ffd34d', align: 'right' });
   txt(shown, VW - 180, 560, { size: 30, weight: 800, color: '#fff', align: 'right' });
-  if (last && D.k > 8) D.opts.forEach(([label], i) => { const x = i === 0 ? VW / 2 + 160 : VW / 2 - 160, on = i === D.opt; ctx.fillStyle = on ? (i === 0 ? 'rgba(230,20,40,0.95)' : 'rgba(255,255,255,0.25)') : 'rgba(255,255,255,0.08)'; rrect(x - 140, 645, 280, 58, 16); ctx.fill(); if (on) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); } txt(label, x, 675, { size: 24, weight: 900, color: '#fff' }); });
+  if (last && D.k > 8) D.opts.forEach(([label], i) => { const x = no === 2 ? [VW / 2 + 160, VW / 2 - 160][i] : VW / 2 + 300 - i * 300, on = i === D.opt; ctx.fillStyle = on ? (i < no - 1 ? 'rgba(230,20,40,0.95)' : 'rgba(255,255,255,0.25)') : 'rgba(255,255,255,0.08)'; rrect(x - 140, 645, 280, 58, 16); ctx.fill(); if (on) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); } txt(label, x, 675, { size: 24, weight: 900, color: '#fff' }); });
   else if (G.frame % 50 < 34) txt('▼', 190, 600, { size: 22, color: '#ffd34d', rtl: false });
 }
 function drawWorldMap(W) {
   ctx.fillStyle = 'rgba(4,6,16,0.9)'; ctx.fillRect(0, 0, VW, VH); txt('🗺️ الخريطة', VW / 2, 60, { size: 42, weight: 900, color: '#fff' });
   const L = Object.keys(WMAPS);
-  ctx.strokeStyle = 'rgba(255,211,77,0.4)'; ctx.lineWidth = 6; ctx.setLineDash([12, 10]); for (const id of ['diwan', 'shop', 'pitch', 'beach']) { const [x, y] = W_MAPPOS[id], [cx, cy] = W_MAPPOS.fareej; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke(); } ctx.setLineDash([]);
+  ctx.strokeStyle = 'rgba(255,211,77,0.4)'; ctx.lineWidth = 6; ctx.setLineDash([12, 10]); for (const id of ['diwan', 'shop', 'home', 'rest', 'pitch', 'jadd', 'beach']) { const [x, y] = W_MAPPOS[id], [cx, cy] = W_MAPPOS.fareej; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke(); } ctx.setLineDash([]);
   L.forEach((id, i) => { const [x, y] = W_MAPPOS[id], M = WMAPS[id], on = i === W.mapSel, here = id === W.map;
-    ctx.fillStyle = on ? 'rgba(230,20,40,0.9)' : 'rgba(20,24,44,0.95)'; rrect(x - 140, y - 70, 280, 140, 18); ctx.fill(); ctx.strokeStyle = here ? '#7dffb0' : on ? '#fff' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = here || on ? 3 : 1.5; ctx.stroke();
-    txt(M.name + (here ? ' 📍' : ''), x, y - 40, { size: 26, weight: 900, color: '#fff' });
-    const who = W.npcs.filter(n => n.map === id); who.slice(0, 6).forEach((n, j) => { const fx = x - 115 + j * 46, f = IMG['face' + (n.ci + 1)]; ctx.save(); ctx.beginPath(); ctx.arc(fx + 20, y + 20, 20, 0, 7); ctx.clip(); if (f) ctx.drawImage(f, fx, y, 40, 40); ctx.restore(); });
-    if (!who.length) txt('ما في أحد', x, y + 20, { size: 16, color: 'rgba(255,255,255,0.5)' }); });
+    ctx.fillStyle = on ? 'rgba(230,20,40,0.9)' : 'rgba(20,24,44,0.95)'; rrect(x - 120, y - 60, 240, 120, 16); ctx.fill(); ctx.strokeStyle = here ? '#7dffb0' : on ? '#fff' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = here || on ? 3 : 1.5; ctx.stroke();
+    txt(M.name + (here ? ' 📍' : ''), x, y - 32, { size: 23, weight: 900, color: '#fff' });
+    const who = W.npcs.filter(n => n.map === id); if (id === 'jadd') txt('👴 الجد', x, y + 20, { size: 18, weight: 800, color: '#ffd34d' }); who.slice(0, 5).forEach((n, j) => { const fx = x - 108 + j * 44, f = IMG['face' + (n.ci + 1)]; ctx.save(); ctx.beginPath(); ctx.arc(fx + 20, y + 20, 20, 0, 7); ctx.clip(); if (f) ctx.drawImage(f, fx, y, 40, 40); ctx.restore(); });
+    if (!who.length && id !== 'jadd') txt('ما في أحد', x, y + 20, { size: 16, color: 'rgba(255,255,255,0.5)' }); });
   txt(TOUCH_ON ? 'المس منطقة مرتين عشان تروح لها · المس برّا للرجوع' : 'الأسهم للاختيار · Enter تروح · Tab رجوع', VW / 2, VH - 30, { size: 18, weight: 800, color: 'rgba(255,255,255,0.7)' });
 }
 // ================= الدوري — 8-fighter knockout cup: quarter-finals → semi-finals → final, random draw =================
