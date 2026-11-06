@@ -144,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.26';
+const GAME_VER = '1.27';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -500,12 +500,30 @@ function tinted(img, color, alpha) {
   return c;
 }
 const PARTS = ['torso', 'uarm', 'farm', 'thigh', 'shin', 'foot'];
-const RIGS = [];
-function buildRig(ci) {
+const RIGS = [], RIGSK = {};
+// ---- outfits: switch on the character-select screen (★ / E / U / L1-R1, or tap the outfit button) ----
+const OUTFITS = { 1: [{ id: '', name: 'الأساسي' }, { id: 'chef', name: 'طبّاخ', hat: 1 }] };
+function outfitOf(ci, i) { const L = OUTFITS[ci]; return (L && L[(i | 0) % L.length]) || null; }
+function rigFor(ci, skin) { if (!skin) return RIGS[ci]; return RIGSK[ci + skin] || (RIGSK[ci + skin] = buildRig(ci, skin)); }
+function imgOf(kind, ci, skin) { return (skin && IMG[kind + (ci + 1) + skin]) || IMG[kind + (ci + 1)]; }
+function drawChefHat(f) {
+  const J = f.J; if (!J) return;
+  const hx = J.hd[0] + J.hr * 0.18, c = f.toWorld([hx, J.hd[1] - J.hr * 0.5]), up = f.toWorld([hx, J.hd[1] - J.hr * 1.5]), side = f.toWorld([J.hd[0] + J.hr, J.hd[1]]), mid = f.toWorld(J.hd);
+  const rw = Math.hypot(side[0] - mid[0], side[1] - mid[1]), ang = Math.atan2(up[1] - c[1], up[0] - c[0]) + Math.PI / 2;
+  ctx.save(); ctx.translate(c[0], c[1]); ctx.rotate(ang);
+  const w = rw * 1.12, bh = w * 0.3;
+  ctx.fillStyle = '#f7f8fa'; ctx.strokeStyle = '#a9afba'; ctx.lineWidth = 2;
+  for (const [dx, dy, r] of [[-0.32, -1.05, 0.55], [0.32, -1.05, 0.55], [0, -1.25, 0.6]]) { ctx.beginPath(); ctx.arc(dx * w, dy * w, r * w, 0, 7); ctx.fill(); ctx.stroke(); }
+  ctx.fillRect(-w * 0.46, -w * 0.95, w * 0.92, w * 0.6);
+  ctx.strokeStyle = '#d3d7de'; for (const dx of [-0.22, 0, 0.22]) { ctx.beginPath(); ctx.moveTo(dx * w, -w * 0.9); ctx.lineTo(dx * w, -bh); ctx.stroke(); }
+  ctx.fillStyle = '#eef0f4'; ctx.strokeStyle = '#a9afba'; rrect(-w / 2, -bh, w, bh + 4, 6); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function buildRig(ci, skin = '') {
   const m = RIG[String(ci + 1)];
   const P = {};
   for (const part of PARTS.concat(m.parts.skirt ? ['skirt'] : [])) {
-    const im = IMG[`c${ci + 1}_${part}`]; const o = m.parts[part];
+    const im = IMG[`c${ci + 1}${skin}_${part}`] || IMG[`c${ci + 1}_${part}`]; const o = m.parts[part];
     P[part] = { img: im, shadow: tinted(im, '#1e0430', 0.8), dark: tinted(im, '#0b0d1a', 0.45), flash: tinted(im, '#ffffff', 0.42), rage: tinted(im, '#ff1020', 0.35), ox: o[0], oy: o[1], hull: m.hull[part] };
   }
   const ang = (p, q) => Math.atan2(q[1] - p[1], q[0] - p[0]), dist = (p, q) => Math.hypot(q[0] - p[0], q[1] - p[1]);
@@ -3019,6 +3037,7 @@ class Fight {
     this.mode = mode; this.cis = [c1, c2]; this.stage = G.stageId || 'arena';
     this.pads = [pads[0], mode === 'cpu' ? new CPUPad(1) : pads[1]];
     this.f = [new Fighter(0, c1, this.pads[0]), new Fighter(1, c2, this.pads[1])];
+    this.f.forEach((f, s) => { const O = outfitOf(f.ci, G.sel && G.sel.outfit && G.sel.outfit[s]); if (O && O.id) { f.outfit = O.id; f.hat = O.hat; f.R = rigFor(f.ci, O.id); } });
     if (mode === 'cpu') { this.pads[1].me = this.f[1]; this.pads[1].op = this.f[0]; }
     this.wins = [0, 0]; this.round = 1; this.cam = { x: 0, y: 0, z: 1, sh: 0, yaw: 0 };
     this.freeze = 0; this.slow = 0; this.msgs = []; this.zoomT = 0; this.dim = 0; this.paused = false; this.pidx = 0;
@@ -3324,7 +3343,7 @@ class Fight {
     for (const f of order) withDepth(f, cam.z, () => drawAura(f));
     for (const f of order) withDepth(f, cam.z, () => {
       if ((f.state === 'attack' && f.mv && f.mv.trail && f.mt >= f.mv.st && f.mt < f.mv.st + f.mv.ac) || (f.state === 'dodge' && f.t < 12) || (f.state === 'rageSeq' && f.finTrail)) for (let g = 3; g >= 1; g--) drawFighter(f, { ghost: g });
-      if (f.C.awake) drawWings(f); drawFighter(f); drawRide(f); drawHeld(f); if (f.C.awake) drawAwakeFront(f); if (window.__caps) drawCaps(f);
+      if (f.C.awake) drawWings(f); drawFighter(f); if (f.hat && !(f.state === 'attack' && f.mv && (f.mv.ball || f.mv.car))) drawChefHat(f); drawRide(f); drawHeld(f); if (f.C.awake) drawAwakeFront(f); if (window.__caps) drawCaps(f);
     });
     for (const pr of this.proj) drawProj(pr);
     if (this.fin && FIN[this.fin.ci].front) FIN[this.fin.ci].front(this, this.fin.a, this.fin.d, this.fin.t);
@@ -3744,10 +3763,10 @@ function netRx(d) {
   switch (d.t) {
     case 'ping': netSend({ t: 'pong', a: d.a }); break;
     case 'pong': { const r = performance.now() - d.a; if (r >= 0 && r < 5000) NET.rtt = NET.rtt * 0.7 + r * 0.3; break; }
-    case 'sel': NET.remote.sel = { c: clamp(d.c | 0, 0, NCH - 1), rd: !!d.rd }; break;
+    case 'sel': NET.remote.sel = { c: clamp(d.c | 0, 0, NCH - 1), rd: !!d.rd, o: d.o | 0 }; break;
     case 'go':
       if (NET.slot === 1 && G.scene === 'select' && d.m > NET.m) {
-        NET.m = d.m; NET.seed = d.seed | 0; netMatchReset(); if (STAGE_DEFS[d.st]) G.stageId = d.st; G.sel.cur = [clamp(d.c0 | 0, 0, NCH - 1), clamp(d.c1 | 0, 0, NCH - 1)]; G.sel.done = [true, true]; G.toVS();
+        NET.m = d.m; NET.seed = d.seed | 0; netMatchReset(); if (STAGE_DEFS[d.st]) G.stageId = d.st; G.sel.cur = [clamp(d.c0 | 0, 0, NCH - 1), clamp(d.c1 | 0, 0, NCH - 1)]; G.sel.outfit = [d.o0 | 0, d.o1 | 0]; G.sel.done = [true, true]; G.toVS();
       }
       break;
     case 'in':
@@ -3835,13 +3854,14 @@ function drawOnline() {
 // ---- character select sync ----
 function netSelSync() {
   const S = G.sel, me = NET.slot, op = 1 - me, r = NET.remote.sel;
-  if (r) { S.cur[op] = r.c; S.done[op] = r.rd; } else S.done[op] = false;
-  const k = S.cur[me] + ':' + S.done[me];
-  if (k !== NET.sentSel || G.frame % 60 === 0) { NET.sentSel = k; netSend({ t: 'sel', c: S.cur[me], rd: S.done[me] }); }
+  if (!S.outfit) S.outfit = [0, 0];
+  if (r) { S.cur[op] = r.c; S.done[op] = r.rd; S.outfit[op] = r.o | 0; } else S.done[op] = false;
+  const k = S.cur[me] + ':' + S.done[me] + ':' + S.outfit[me];
+  if (k !== NET.sentSel || G.frame % 60 === 0) { NET.sentSel = k; netSend({ t: 'sel', c: S.cur[me], rd: S.done[me], o: S.outfit[me] | 0 }); }
 }
 function netMatchReset() { NET.rin = []; NET.rmax = -1; NET.rH = {}; NET.myH = {}; NET.res = null; NET.remote.sel = null; NET.desync = false; }
 function netLocalPad() { const a = pads[0], b = pads[1], o = { h: {}, p: {} }; for (const k of PADKEYS) { o.h[k] = a.h[k] || b.h[k]; o.p[k] = a.p[k] || b.p[k]; } return window.__netBot ? window.__netBot(o) : o; }
-function netStartMatch() { NET.m++; netMatchReset(); NET.seed = (RR() * 2147483647) | 0; G.stageId = STAGE_POOL[(RR() * STAGE_POOL.length) | 0]; netSend({ t: 'go', m: NET.m, seed: NET.seed, c0: G.sel.cur[0], c1: G.sel.cur[1], st: G.stageId }); }
+function netStartMatch() { NET.m++; netMatchReset(); NET.seed = (RR() * 2147483647) | 0; G.stageId = STAGE_POOL[(RR() * STAGE_POOL.length) | 0]; netSend({ t: 'go', m: NET.m, seed: NET.seed, c0: G.sel.cur[0], c1: G.sel.cur[1], o0: (G.sel.outfit || [0, 0])[0] | 0, o1: (G.sel.outfit || [0, 0])[1] | 0, st: G.stageId }); }
 // ---- lockstep fight ----
 function netFightInit(F) {
   NET.D = clamp(Math.ceil((NET.rtt / 2 + 24) / 16.7), 3, 14); NET.tkWin = 0; NET.stWin = 0;
@@ -3985,7 +4005,7 @@ function storySpeak() { const S = G.story, L = S && S.lines[S.li]; if (!L || !SE
 function storyTalk(phase) { const S = G.story; S.step = 'talk'; S.phase = phase; S.lines = storyScript(S.ch, phase); S.li = 0; S.ct = 0; S.t = 0; G.scene = 'story'; G.stageId = CH_STAGE[S.ch]; storySpeak(); }
 function storyFight() {
   voiceStop(); const S = G.story; G.mode = 'cpu'; G.stageId = CH_STAGE[S.ch];
-  G.sel = { cur: [S.pc, storyOpp(S.ch)], done: [true, true], t: 0, readyT: 0 };
+  G.sel = { cur: [S.pc, storyOpp(S.ch)], done: [true, true], t: 0, readyT: 0, outfit: [S.pcOutfit | 0, 0] };
   G.toVS();
 }
 function storySetupFight(F) {
@@ -4114,9 +4134,9 @@ function drawStory() {
   }
   // dialogue
   const L = S.lines[S.li] || ['N', ''], who = L[0], role = CH_ROLE[S.ch], boss = role === 'shadow', big = role !== 'reg', bcol = CH_GLOW[role], oc = storyOpp(S.ch);
-  const pimg = IMG['vs' + (S.pc + 1)], oimg0 = IMG['vs' + (oc + 1)], oimg = boss ? shadowOf(oimg0) : oimg0;
-  const drawP = (im, cx, flip, on) => { const h = 560, w = im.width * h / im.height; ctx.save(); ctx.globalAlpha = on ? 1 : 0.38; if (flip) { ctx.translate(cx * 2, 0); ctx.scale(-1, 1); } ctx.drawImage(im, cx - w / 2, VH - h - (on ? 6 : 0), w, h); ctx.restore(); };
-  drawP(pimg, 300, false, who === 'P'); drawP(oimg, VW - 300, true, who === 'O');
+  const OFs = outfitOf(S.pc, S.pcOutfit), pimg = imgOf('vs', S.pc, OFs && OFs.id), oimg0 = IMG['vs' + (oc + 1)], oimg = boss ? shadowOf(oimg0) : oimg0;
+  const drawP = (im, cx, flip, on, hh = 560) => { const h = hh, w = im.width * h / im.height; ctx.save(); ctx.globalAlpha = on ? 1 : 0.38; if (flip) { ctx.translate(cx * 2, 0); ctx.scale(-1, 1); } ctx.drawImage(im, cx - w / 2, VH - h - (on ? 6 : 0), w, h); ctx.restore(); };
+  drawP(pimg, 300, false, who === 'P', 560 * pimg.height / IMG['vs' + (S.pc + 1)].height); drawP(oimg, VW - 300, true, who === 'O');
   if (big) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(VW - 300, 380, 30, VW - 300, 380, 330); g.addColorStop(0, bcol + (role === 'rais2' ? '77' : '44')); g.addColorStop(1, bcol + '00'); ctx.fillStyle = g; ctx.fillRect(VW - 640, 40, 640, 680); ctx.restore(); }
   const bx = 150, by = 500, bw = VW - 300, bh = 190;
   ctx.save(); ctx.fillStyle = 'rgba(6,8,16,0.92)'; ctx.strokeStyle = big && who === 'O' ? bcol : '#ff2a3a'; ctx.lineWidth = 3; rrect(bx, by, bw, bh, 16); ctx.fill(); ctx.stroke(); ctx.restore();
@@ -4138,7 +4158,8 @@ const G = {
   toSelect() {
     this.story = null; this.storyPick = false;
     const prev = this.sel ? this.sel.cur.slice() : [0, 1];
-    this.scene = 'select'; this.t = 0; this.fight = null; this.sel = { cur: prev, done: [false, false], t: 0, readyT: 0 };
+    const pout = this.sel && this.sel.outfit ? this.sel.outfit.slice() : [0, 0];
+    this.scene = 'select'; this.t = 0; this.fight = null; this.sel = { cur: prev, done: [false, false], t: 0, readyT: 0, outfit: pout };
     if (AC) Music.intensity = 0;
   },
   toVS() { this.scene = 'vs'; this.t = 0; if (!this.story && this.mode !== 'online') this.stageId = STAGE_POOL[(RR() * STAGE_POOL.length) | 0]; },
@@ -4268,9 +4289,14 @@ function updSelect() {
     if (pd.p.left) { S.cur[s] = (S.cur[s] + NCH - 1) % NCH; SFX.move(); }
     if (pd.p.right) { S.cur[s] = (S.cur[s] + 1) % NCH; SFX.move(); }
     if (pd.p.up || pd.p.down) { const c = S.cur[s]; S.cur[s] = c < 8 ? Math.min(c + 8, NCH - 1) : c - 8; SFX.move(); }
+    if ((pd.p.sp || pd.p.c12 || pd.p.c13) && OUTFITS[S.cur[s]]) { if (!S.outfit) S.outfit = [0, 0]; S.outfit[s] = ((S.outfit[s] | 0) + 1) % OUTFITS[S.cur[s]].length; SFX.ok(); S.flash = [s, 8]; }
     if (pd.p.ok && S.t > 8) { S.done[s] = true; SFX.ok(); S.flash = [s, 14]; }
     else if (pd.p.back && cpu && s === 1) { S.done[0] = false; SFX.move(); }
     else if (pd.p.back && (!cpu || s === 0) && S.t > 8) { if (G.storyPick && G.storyMap) { SFX.move(); G.story = G.storyMap; G.storyMap = null; G.storyPick = false; storySelect(); return; } if (online) { netClose(); G.scene = 'online'; G.t = 0; return; } G.toTitle(); return; }
+  }
+  if (G.tap && S.t > 8) {
+    const so = online ? NET.slot : (cpu && S.done[0] ? 1 : 0), ocx = so === 0 ? 200 : VW - 200;
+    if (OUTFITS[S.cur[so]] && !S.done[so] && Math.abs(G.tap[0] - ocx) < 125 && Math.abs(G.tap[1] - 574) < 26) { if (!S.outfit) S.outfit = [0, 0]; S.outfit[so] = ((S.outfit[so] | 0) + 1) % OUTFITS[S.cur[so]].length; SFX.ok(); S.flash = [so, 8]; G.tap = null; return; }
   }
   if (G.tap && S.t > 8) {
     const tw = 74, gap = 7, x0 = VW / 2 - (8 * tw + 7 * gap) / 2, ty0 = 185, rowH = tw + 40;
@@ -4281,7 +4307,7 @@ function updSelect() {
     }
   }
   if (online) { if (!NET.on) { G.scene = 'online'; G.t = 0; return; } netSelSync(); }
-  if (G.storyPick && S.done[0]) { G.storyPick = false; storyStart(S.cur[0]); return; }
+  if (G.storyPick && S.done[0]) { G.storyPick = false; const po = (S.outfit || [0])[0] | 0; storyStart(S.cur[0]); if (G.story) G.story.pcOutfit = po; return; }
   if (S.done[0] && S.done[1]) { S.readyT++; if (S.readyT > 40 && (!online || NET.slot === 0)) { if (online) netStartMatch(); G.toVS(); } } else S.readyT = 0;
   if (S.flash) { S.flash[1]--; if (S.flash[1] <= 0) S.flash = null; }
 }
@@ -4296,17 +4322,22 @@ function drawSelect() {
   else if (cpu) txt(S.done[0] ? 'اختر خصمك (الكمبيوتر)' : 'اختر شخصيتك', VW / 2, 106, { size: 24, weight: 700, color: '#ffd34d' });
   // big previews
   for (let s = 0; s < 2; s++) {
-    const ci = S.cur[s], im = IMG['front' + (ci + 1)], C = CHARS[ci];
-    const hgt = 470, w = im.width * hgt / im.height, cx = s === 0 ? 200 : VW - 200;
+    const ci = S.cur[s], OF = outfitOf(ci, S.outfit && S.outfit[s]), base = IMG['front' + (ci + 1)], im = imgOf('front', ci, OF && OF.id), C = CHARS[ci];
+    const sc = 470 / base.height, hgt = im.height * sc, w = im.width * sc, cx = s === 0 ? 200 : VW - 200;
     const slide = S.done[s] ? 0 : Math.sin(G.frame * 0.05) * 3;
     ctx.save();
     const glow = ctx.createRadialGradient(cx, 420, 20, cx, 420, 300); glow.addColorStop(0, s === 0 ? 'rgba(40,120,255,0.35)' : 'rgba(255,40,60,0.35)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow; ctx.fillRect(cx - 300, 120, 600, 600);
     if (S.flash && S.flash[0] === s) { ctx.filter = 'brightness(2)'; }
     if (s === 1) { ctx.translate(cx * 2, 0); ctx.scale(-1, 1); }
-    ctx.drawImage(im, cx - w / 2, 150 + slide, w, hgt);
+    ctx.drawImage(im, cx - w / 2, 150 + 470 - hgt + slide, w, hgt);
     ctx.restore();
     const ny = 640;
+    if (OUTFITS[ci]) { // outfit switch button
+      const py = 574, on = OF && OF.id; ctx.save(); ctx.fillStyle = on ? 'rgba(255,211,77,0.95)' : 'rgba(10,12,22,0.85)'; ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 2; rrect(cx - 118, py - 19, 236, 38, 19); ctx.fill(); ctx.stroke(); ctx.restore();
+      const kh = G.mode === 'online' ? (TOUCH_ON ? 'المس' : 'E') : TOUCH_ON ? 'المس' : (gpSlotKind(s) ? 'L1' : s === 0 ? 'E' : 'U');
+      txt('👕 ' + OF.name + '  ⇄ ' + kh, cx, py + 1, { size: 20, weight: 900, color: on ? '#1a1206' : '#ffd34d' });
+    }
     ctx.save(); ctx.fillStyle = s === 0 ? 'rgba(30,100,230,0.85)' : 'rgba(220,30,50,0.85)';
     ctx.beginPath(); ctx.moveTo(cx - 170, ny - 34); ctx.lineTo(cx + 185, ny - 34); ctx.lineTo(cx + 170, ny + 30); ctx.lineTo(cx - 185, ny + 30); ctx.closePath(); ctx.fill(); ctx.restore();
     txt(C.name, cx, ny - 4, { size: 44, weight: 900, color: '#fff', stroke: '#000', sw: 4 });
@@ -4389,8 +4420,9 @@ function drawVS() {
   ctx.restore();
   for (let s = 0; s < 2; s++) {
     const bossVS = s === 1 && G.story && G.story.ch === 4;
-    const im = bossVS ? shadowOf(IMG['vs' + (S.cur[s] + 1)]) : IMG['vs' + (S.cur[s] + 1)]; const u = easeOut(clamp(t / 30, 0, 1));
-    const hgt = 600, w = im.width * hgt / im.height;
+    const OFv = outfitOf(S.cur[s], S.outfit && S.outfit[s]), vb = IMG['vs' + (S.cur[s] + 1)], vi = imgOf('vs', S.cur[s], OFv && OFv.id);
+    const im = bossVS ? shadowOf(vb) : vi; const u = easeOut(clamp(t / 30, 0, 1));
+    const hgt = im.height * 600 / vb.height, w = im.width * hgt / im.height;
     ctx.save();
     // clip each portrait to its own half so it never covers the opponent
     ctx.beginPath();
@@ -4437,7 +4469,7 @@ function drawResult() {
   const R = G.res, C = CHARS[R.ci], t = G.t;
   drawStage({ x: 0, z: 1 }, G.frame, G.stageId);
   ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, VW, VH);
-  const im = IMG['vs' + (R.ci + 1)], hgt = 640, w = im.width * hgt / im.height, u = easeOut(clamp(t / 30, 0, 1));
+  const OFr = outfitOf(R.ci, G.sel && G.sel.outfit && G.sel.outfit[R.w]), rb = IMG['vs' + (R.ci + 1)], im = imgOf('vs', R.ci, OFr && OFr.id), hgt = im.height * 640 / rb.height, w = im.width * hgt / im.height, u = easeOut(clamp(t / 30, 0, 1));
   ctx.save(); ctx.globalAlpha = u; ctx.drawImage(im, lerp(-200, 0, u) + 380 - w / 2, VH - hgt, w, hgt); ctx.restore();
   const col = R.w === 0 ? '#3ea0ff' : '#ff3b4a';
   ctx.save(); ctx.globalAlpha = u;
