@@ -144,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.28';
+const GAME_VER = '1.29';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -524,7 +524,7 @@ function drawOutfitPanel(S, s) {
   txt('👕 مظاهر ' + CHARS[ci].name, cx, 172, { size: 26, weight: 900, color: '#fff' });
   txt(L.length > 1 ? L.length + ' مظاهر' : 'ما عنده مظاهر ثانية للحين', cx, 204, { size: 17, weight: 700, color: '#ffd34d' });
   opanelCards(s, L.length).forEach(([x, y], i) => {
-    const on = i === cur, im = imgOf('front', ci, L[i].id);
+    const on = i === cur, im = L[i].as !== undefined ? IMG['front' + (L[i].as + 1)] : imgOf('front', ci, L[i].id);
     ctx.save(); ctx.fillStyle = on ? 'rgba(255,211,77,0.18)' : 'rgba(255,255,255,0.05)'; ctx.strokeStyle = on ? '#ffd34d' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = on ? 4 : 2; rrect(x, y, OCW, OCH, 12); ctx.fill(); ctx.stroke();
     const h = OCH - 46, w = im.width * h / im.height, sc = Math.min(1, (OCW - 10) / w); ctx.drawImage(im, x + OCW / 2 - w * sc / 2, y + 6 + (h - h * sc), w * sc, h * sc); ctx.restore();
     txt(L[i].name, x + OCW / 2, y + OCH - 20, { size: 19, weight: 900, color: on ? '#ffd34d' : '#fff' });
@@ -532,6 +532,7 @@ function drawOutfitPanel(S, s) {
   });
   txt(TOUCH_ON ? 'المس المظهر للاختيار · المس برّا للرجوع' : '◀ ▶ تنقّل  ·  ✕ تأكيد  ·  ○ رجوع', cx, 536, { size: 16, weight: 700, color: 'rgba(255,255,255,0.7)' });
 }
+function selCI(S, s) { const c = S.cur[s], O = outfitOf(c, S.outfit && S.outfit[s]); return O && O.as !== undefined ? O.as : c; } // an outfit can turn a fighter into another character (الوحش → الطباخ)
 function outfitOf(ci, i) { const L = OUTFITS[ci]; return (L && L[(i | 0) % L.length]) || null; }
 function rigFor(ci, skin) { if (!skin) return RIGS[ci]; return RIGSK[ci + skin] || (RIGSK[ci + skin] = buildRig(ci, skin)); }
 function imgOf(kind, ci, skin) { return (skin && IMG[kind + (ci + 1) + skin]) || IMG[kind + (ci + 1)]; }
@@ -1343,6 +1344,59 @@ CHARS.push(
   { name: 'الرئيس', en: 'AL-RAEES', h: 0.97, tag: 'الجناح الأسود', hp: 1.45, dmg: 1.22, spd: 1.0, color: '#ff1030', stats: [5, 4, 5], quote: 'الحين… تشوف قوتي الحقيقية!', boss: 2, awake: 1 },
 );
 SKILL_IDS.push('sk_wave', 'sk_ring', 'sk_redshot'); SKILL_NAMES.push('الموجة', 'ضربة الخاتم', 'الطلقة الحمراء');
+// ================= الطباخ — الوحش's chef outfit, a character of its own =================
+const CHEF = CHARS.length;
+CHARS.push({ name: 'الطباخ', en: 'THE CHEF', h: 1.11, tag: 'مقلاته ما ترحم', hp: 1.0, dmg: 1.22, spd: 0.95, color: '#f2f2f2', stats: [5, 3, 4], quote: 'الأكل جاهز… وأنت الطبق!', hidden: 1 });
+OUTFITS[1] = [{ id: '', name: 'الأساسي' }, { id: 'chef', name: 'الطباخ', as: CHEF }];
+function drawTomato(x, y, rot, r) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  const g = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.1, 0, 0, r); g.addColorStop(0, '#ff8a7a'); g.addColorStop(0.5, '#e8231c'); g.addColorStop(1, '#9a0d0a');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.88, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#2f8f2a'; for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; ctx.beginPath(); ctx.ellipse(Math.cos(a) * r * 0.22, -r * 0.8 + Math.sin(a) * r * 0.1, r * 0.22, r * 0.08, a, 0, 7); ctx.fill(); }
+  ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.beginPath(); ctx.ellipse(-r * 0.38, -r * 0.3, r * 0.18, r * 0.1, -0.6, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function drawPlate(x, y, rot, r) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(1, 0.42);
+  ctx.fillStyle = '#f4f6f8'; ctx.strokeStyle = '#8f98a6'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#3a6fd1'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, r * 0.82, 0, 7); ctx.stroke();
+  ctx.fillStyle = '#e3e7ec'; ctx.beginPath(); ctx.arc(0, 0, r * 0.55, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function drawPot(x, y, r, lid = 1, shake = 0) {
+  ctx.save(); ctx.translate(x + shake, y);
+  const g = ctx.createLinearGradient(-r, 0, r, 0); g.addColorStop(0, '#5d636e'); g.addColorStop(0.35, '#d8dde4'); g.addColorStop(0.6, '#9aa2ae'); g.addColorStop(1, '#4a4f58');
+  ctx.fillStyle = g; ctx.strokeStyle = '#2b2f36'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(-r, -r * 1.1); ctx.lineTo(r, -r * 1.1); ctx.lineTo(r * 0.94, 0); ctx.quadraticCurveTo(0, r * 0.18, -r * 0.94, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#2b2f36'; rrect(-r * 1.28, -r * 0.95, r * 0.3, r * 0.16, 6); ctx.fill(); rrect(r * 0.98, -r * 0.95, r * 0.3, r * 0.16, 6); ctx.fill();
+  if (lid) { ctx.fillStyle = '#b8bfca'; ctx.beginPath(); ctx.ellipse(0, -r * 1.12, r * 1.05, r * 0.2, 0, Math.PI, 0); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#2b2f36'; rrect(-r * 0.14, -r * 1.42, r * 0.28, r * 0.16, 6); ctx.fill(); }
+  ctx.restore();
+}
+function drawFlame(p) {
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 6; i++) { const ph = p.t * 0.6 + i * 1.7, rr = p.r * (0.55 + 0.15 * Math.sin(ph)), ox = -Math.sign(p.vx || 1) * i * p.r * 0.22, oy = -i * p.r * 0.14 + Math.sin(ph) * 6;
+    const g = ctx.createRadialGradient(p.x + ox, p.y + oy, 2, p.x + ox, p.y + oy, rr * 1.4); g.addColorStop(0, 'rgba(255,250,200,0.95)'); g.addColorStop(0.35, 'rgba(255,170,40,0.85)'); g.addColorStop(1, 'rgba(255,40,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x + ox, p.y + oy, rr * 1.4, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+function spawnFlambe(f) { const w = f.toWorld(f.J.fH); SFX.whoosh(1); SFX.zap(); if (G.fight) G.fight.shake(8);
+  spawnProj({ kind: 'flame', owner: f, x: w[0] + f.facing * 60, y: Math.min(-90, w[1]), vx: f.facing * 13, vy: 0, g: 0, r: 58, life: 48, big: 1, m: { dmg: 18, lvl: 'mid', hs: 0, bs: 16, push: 50, stop: 10, p: 1.6, kd: 1 } }); }
+MV.sk_flambe = { name: 'flambe', skill: 1, limb: null, lvl: 'mid', st: 16, ac: 1, rc: 22, p: 1.4, spawnAt: 16, spawn: spawnFlambe, pan: 1,
+  kf: [[0, {}], [10, { ua: 200, fa: 40, lean: -16, th: 24, bth: -20 }], [16, { ua: 90, fa: 0, lean: 28, dx: 16, th: 46, bth: -38 }], [26, {}], [40, null]] };
+function spawnPlates(f) { const w = f.toWorld(f.J.fH); SFX.throw();
+  [-0.12, 0, 0.12].forEach((a, i) => spawnProj({ kind: 'plate', owner: f, x: w[0], y: w[1] - 6, vx: f.facing * 21 * Math.cos(a), vy: 21 * Math.sin(a), g: 0, r: 22, life: 60, vr: f.facing * 0.5, m: { dmg: 6, lvl: 'mid', hs: 16, bs: 10, push: 18, stop: 6, p: 1, kd: i === 1 ? 1 : 0 } })); }
+MV.sk2_plates = { name: 'plates', skill: 1, sk2: 1, limb: null, lvl: 'mid', st: 13, ac: 1, rc: 18, p: 1.2, spawnAt: 13, spawn: spawnPlates,
+  kf: [[0, {}], [7, { ua: 150, fa: 120, lean: -10, bua: 30, bfa: 120 }], [13, { ua: 96, fa: 4, lean: 18, dx: 10, th: 34, bth: -28 }], [18, {}], [31, null]] };
+SKILL_IDS[CHEF] = 'sk_flambe'; SKILL_NAMES[CHEF] = 'نار المقلاة';
+SKILL2[CHEF] = 'sk2_plates'; SKILL2_LINE[CHEF] = 'خذ الصحون!'; SKILL2_NAMES[CHEF] = 'رمية الصحون';
+COMBOS[CHEF] = {
+  '12': ['ضربة المقلاة', M({ st: 12, ac: 5, rc: 20, limb: 'fH', r: 52, dmg: 15, kd: 1, p: 1.6, stop: 12, pan: 1, mvx: [[6, 16, 6]], kf: [[0, {}], [8, { ua: 210, fa: 60, lean: -14, dx: -6, th: 20, bth: -16 }], [12, { ua: 70, fa: 10, lean: 26, dx: 18, th: 40, bth: -34 }], [20, {}], [37, null]] })],
+  '23': ['طماطم طايرة', projMove(12, 22, PZ.windup, PZ.release, f => { SFX.throw(); shoot(f, { kind: 'tomato', sp: 18, ang: -0.12, g: 0.25, r: 18, dmg: 7, vr: 0.3, life: 80 }); }, { onStep: f => { if (f.mt === 18) { SFX.throw(); shoot(f, { kind: 'tomato', sp: 20, ang: -0.05, g: 0.2, r: 18, dmg: 7, vr: 0.3, life: 80 }); } } })],
+  '24': ['رشة البهارات', projMove(10, 18, { ...PZ.windup, ua: 120 }, { ...PZ.release, ua: 90 }, f => { SFX.whoosh(0); shoot(f, { kind: 'spice', sp: 9, r: 46, dmg: 11, launch: 1, life: 32, vr: 0 }); })],
+  '13': ['قدر من السما', projMove(16, 24, PZ.summon, { ...PZ.summon, lean: -22 }, f => { SFX.skill(); shoot(f, { kind: 'pot', from: 'sky', vy: 5, g: 0.65, r: 62, dmg: 18, kd: 1, p: 1.7, vr: 0, life: 160 }); })],
+  '14': ['تقطيع سريع', flurryMove({ st: 6, ac: 30, rc: 16, multi: 5, dmg: 2.8, hs: 14, bs: 7, push: 3, stop: 2, r: 38, mvx: [[6, 36, 2]] })],
+  '34': ['ركلة الشيف', M({ st: 12, ac: 4, rc: 20, limb: 'fT', r: 42, dmg: 14, push: 60, kick: 1, p: 1.5, kf: [[0, {}], [8, PZ.stompUp], [12, { th: 90, sh: 0, ft: -40, ffl: 0, lean: -14, dx: 10 }], [16, {}], [36, null]] })],
+};
 const COMBO_NAME = {};
 COMBOS.forEach((set, ci) => { for (const k of COMBO_KEYS) { const [name, mv] = set[k]; const id = `cb${ci}_${k}`; MV[id] = mv; mv.cname = name; COMBO_NAME[id] = name; set[k] = id; } });
 COMBOS[NOKH] = COMBOS[9]; COMBOS[RAIS] = COMBOS[1]; COMBOS[RAIS2] = COMBOS[1];
@@ -1938,16 +1992,17 @@ PERSONA.push(
   { vo: 'roar', intro: ['كلكم شغالين عندي!'], skill: ['حس بالخاتم!'], win: ['الكأس لي… للأبد!'], st: { lean: 10, ua: 4, bua: 4, th: 8, bth: -10 }, br: 0.05, ba: 2 },
   { vo: 'roar', intro: ['الحين… تشوف قوتي!'], skill: ['شوف عيوني!'], win: ['ما في أحد يوقف الرئيس!'], st: { lean: 14, ua: 8, bua: 8, th: 10, bth: -12 }, br: 0.05, ba: 2.6 },
 );
-if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 15: [0.82, 0.95], 16: [0.6, 0.86], 17: [0.42, 0.8] });
+PERSONA[CHEF] = { vo: 'roar', intro: ['جاهز للطبخة؟'], skill: ['نار!'], win: ['الأكل جاهز… وأنت الطبق!'], st: { lean: 12, ua: 6, bua: 6, th: 10, bth: -12 }, br: 0.06, ba: 2.2 };
+if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 15: [0.82, 0.95], 16: [0.6, 0.86], 17: [0.42, 0.8], 18: [0.45, 0.88] });
 const pickLine = a => a[(Math.random() * a.length) | 0];
 // ---- Arabic voices: the browser's Arabic voice when it has one, otherwise the built-in recorded lines ----
 const VOX = { clips: window.VOICE_CLIPS || {}, txt: window.VOICE_TXT || {}, bufs: {}, tbufs: {}, last: {}, voices: null, cur: [] };
 // ---- recorded neural Arabic voice (Piper «Kareem»): every sentence recorded once, names recorded separately ----
-const VOICE_RATE = { 0: 1.1, 1: 0.88, 5: 0.87, 6: 1.12, 8: 1.13, 11: 1.13, 15: 0.93, 16: 0.9, 17: 0.82, 99: 0.96 };
+const VOICE_RATE = { 18: 0.9, 0: 1.1, 1: 0.88, 5: 0.87, 6: 1.12, 8: 1.13, 11: 1.13, 15: 0.93, 16: 0.9, 17: 0.82, 99: 0.96 };
 function voiceNorm(t) { return t.replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF\uFE0F]/gu, '').replace(/[!؟?.,،:؛—"«»]/g, ' ').replace(/\s+/g, ' ').trim(); }
 let VNAMES = null;
 function voiceSegs(text) {
-  if (!VNAMES) VNAMES = CHARS.slice(0, NCH).map(c => c.name).sort((a, b) => b.length - a.length);
+  if (!VNAMES) VNAMES = CHARS.filter((c, i) => i < NCH || c.hidden).map(c => c.name).sort((a, b) => b.length - a.length);
   const out = [];
   text.split('…').forEach((part, pi) => {
     let segs = [voiceNorm(part)];
@@ -2304,6 +2359,10 @@ function updProj(F) {
     if (p.kind === 'hball' && p.fire && p.t % 2 === 0) FX.push({ t: 'p', x: p.x - Math.sign(p.vx) * 20, y: p.y + rnd(-10, 10), vx: -Math.sign(p.vx) * 2, vy: rnd(-1, 1), life: 12, max: 12, c: '#ff8a2a', sz: rnd(4, 8) });
     if (p.kind === 'egg' && p.y >= -p.r * 0.6 && p.vy > 0) { p.y = -4; eggSplat(p); p.dead = true; continue; }
     if (p.kind === 'bike' && p.y >= -p.r * 0.55 && p.vy > 0) { bikeCrash(p); p.dead = true; continue; }
+    if (p.kind === 'flame' && p.t % 2 === 0) FX.push({ t: 'p', x: p.x + rnd(-30, 30), y: p.y + rnd(-30, 30), vx: -Math.sign(p.vx) * rnd(1, 3), vy: -rnd(1, 4), life: 16, max: 16, c: p.t % 4 ? '#ff8a2a' : '#ffd34d', sz: rnd(4, 9) });
+    if (p.kind === 'tomato' && p.y >= -p.r * 0.6 && p.vy > 0) { SFX.splat(); finBurst(p.x, -8, 14, ['#e8231c', '#ff6a50', '#2f8f2a'], 6, 5); p.dead = true; continue; }
+    if (p.kind === 'plate' && p.y >= -10 && p.vy > 0) { SFX.rattle(); finBurst(p.x, -8, 12, ['#ffffff', '#3a6fd1'], 7, 4); p.dead = true; continue; }
+    if (p.kind === 'pot' && !p.noHit && p.y >= -p.r * 0.6 && p.vy > 0) { SFX.thud(); SFX.rattle(); dust(p.x, 20); if (G.fight) G.fight.shake(14); p.dead = true; continue; }
     if (p.kind === 'goldbar' && p.y >= -p.r * 0.5 && p.vy > 0) { finBurst(p.x, -10, 10, ['#ffd34d', '#ffffff'], 6, 5); SFX.rattle(); p.dead = true; continue; }
     if (p.kind === 'door' && p.g && !p.noHit && p.y >= -p.r * 0.4 && p.vy > 0) { dust(p.x, 10); SFX.rattle(); SFX.thud(); if (G.fight) G.fight.shake(8); p.dead = true; continue; }
     if (p.kind === 'bikewreck' && p.y >= -30 && p.vy > 0) { p.y = -30; p.vy *= -0.35; p.vx *= 0.6; p.vr *= 0.5; if (Math.abs(p.vy) > 2) { dust(p.x, 5); SFX.rattle(); } }
@@ -2541,6 +2600,11 @@ function drawProj(p) {
   if (p.kind === 'card') drawCard(p.x, p.y, p.rot * 0.3, Math.cos(p.t * 0.7), p.suit, p.sc || 1);
   else if (p.kind === 'rock') drawRock(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'cartire') drawCarTire(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'tomato') drawTomato(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'plate') drawPlate(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'pot') drawPot(p.x, p.y + p.r * 0.5, p.r * 0.8, 1);
+  else if (p.kind === 'flame') drawFlame(p);
+  else if (p.kind === 'spice') { ctx.save(); ctx.globalAlpha *= Math.min(1, p.life / 12); for (let i = 0; i < 9; i++) { ctx.fillStyle = i % 3 ? 'rgba(200,60,20,0.55)' : 'rgba(240,170,40,0.6)'; ctx.beginPath(); ctx.arc(p.x + Math.cos(i * 2.1 + p.t * 0.3) * p.r * 0.6, p.y + Math.sin(i * 1.7 + p.t * 0.25) * p.r * 0.5, p.r * (0.3 + 0.03 * (i % 4)), 0, 7); ctx.fill(); } ctx.restore(); }
   else if (p.kind === 'door') drawDoor(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'hball') { if (p.fire) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, p.r * 2); g.addColorStop(0, 'rgba(255,170,60,0.8)'); g.addColorStop(1, 'rgba(255,60,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2, 0, 7); ctx.fill(); ctx.restore(); } drawHandball(p.x, p.y, p.rot, p.r); }
   else if (p.kind === 'joker') drawCard(p.x, p.y, p.rot * 0.2, Math.cos(p.t * 0.3), 'J', 2.6);
@@ -2575,6 +2639,7 @@ function drawHeld(f) {
   if (m.eat) drawEatProps(f);
   if (m.id === 'sk_cards' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); for (let i = 0; i < 3; i++) drawCard(w[0] + f.facing * (i - 1) * 6, w[1] - 8, f.facing * (i - 1) * 0.35, 1, '♠♥♦'[i], 0.8); }
   if (m.id === 'sk2_tire' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawCarTire(w[0], w[1] - 10, 0, 34); }
+  if (m.pan && f.mt < (m.spawnAt || m.st + m.ac + 6)) { const w = f.toWorld(f.J.fH); drawPan(w[0], w[1] - 10, -f.facing * (1.2 - Math.min(1, f.mt / (m.st || 10)) * 1.6), 32); }
   if (m.id === 'sk2_pan' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawPan(w[0], w[1] - 10, -f.facing * 1.2, 30); }
   if (m.id === 'sk2_mouse' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawMouse(w[0], w[1] - 6, 0, 20, -f.facing, f.mt); }
   if (m.id === 'sk_hball' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawHandball(w[0] + f.facing * 6, w[1] - 6, 0); }
@@ -2637,7 +2702,7 @@ function finQueue(F, a, d) {
   const q = F.fin && F.fin.q; if (!q) return;
   for (let i = 0; i < q.length; i++) { const e = q[i]; if (F.fin.t < e.at) continue; q.splice(i--, 1); e.p.dead = true; const xy = [e.p.x, e.p.y]; if (e.dmg) finHit(F, a, d, e.dmg, xy, e.fr); if (e.fx) e.fx(xy); if (!F.fin) return; }
 }
-function finEnd(a, d) { a.finCar = null; a.finHeld = null; a.finBall = false; a.finTrail = false; a.finProp = null; if (d) d.finP = null; }
+function finEnd(a, d) { a.finCar = null; a.finHeld = null; a.finProp = null; a.finBall = false; a.finTrail = false; a.finProp = null; if (d) d.finP = null; }
 // glowing ball (handball / energy)
 function finOrb(x, y, r, c1, c2, rot = 0) {
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -3058,6 +3123,30 @@ const FIN = [
         for (const [lw, col] of [[w * 3.2, 'rgba(255,20,30,0.25)'], [w * 1.6, 'rgba(255,40,40,0.7)'], [w * 0.55, 'rgba(255,240,240,0.95)']]) { ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(e[0], e[1]); ctx.lineTo(c[0], c[1]); ctx.stroke(); } ctx.restore(); }
       if (t >= 82 && t < 101) finComet(a.x, a.y - 200, d.x - a.x, 320, 520, 90, 'rgba(255,30,40,0.8)', 'rgba(255,200,180,0.8)');
     } },
+  // 18 الطباخ — pan smacks, tomatoes and eggs, the giant pot drops on you, then the flambé blast
+  { name: 'المطبخ الناري', line: 'الأكل جاهز!', col: '#ff8a2a',
+    run(F, a, d, t) {
+      const f = a.facing; if (t < 150) finHold(d, a.x + f * 170);
+      if (t < 12) { a.finHeld = 'pan'; a.rageP = FPZ.point; finCam(F, (a.x + d.x) / 2, -240, 1.1); return; }
+      if (t < 48) { const k = (t - 12) % 12, u = k < 5 ? k / 5 : 1 - (k - 5) / 7; a.rageP = G2({ ua: lerp(210, 70, u), fa: lerp(60, 10, u), lean: lerp(-14, 26, u), dx: lerp(-6, 18, u), th: 30, bth: -24 }); d.finP = FPZ.hurt({ lean: -18 - (k < 5 ? 0 : 10) });
+        if (k === 5) { const c = finHead(d); finHit(F, a, d, 5, c, 6); SFX.block(); SFX.hit(1.6); popText('طاخ! 🍳', c[0], c[1] - 50, '#ffd34d', 40); finBurst(c[0], c[1], 14, ['#ffd34d', '#ffffff'], 8, 5); }
+        finCam(F, (a.x + d.x) / 2, -250, 1.2); return; }
+      if (t < 76) { a.finHeld = null; const k = t - 48; a.rageP = k % 9 < 4 ? G2({ ua: 200, fa: 40, lean: -14 }) : G2({ ua: 85, fa: 5, lean: 22, dx: 12 });
+        if (k % 9 === 4) { const w = a.toWorld(a.J.fH), c = finChest(d), egg = k === 22; finThrow(F, a, d, { kind: egg ? 'egg' : 'tomato', from: w, to: [c[0], c[1] + rnd(-40, 20)], T: 7, g: 0.3, r: egg ? 14 : 18, vr: f * 0.4, dmg: 3, fx: xy => { if (egg) eggSplat({ x: xy[0], y: xy[1], r: 14 }); else { SFX.splat(); finBurst(xy[0], xy[1], 18, ['#e8231c', '#ff6a50', '#2f8f2a'], 8, 6); } } }); SFX.throw(); }
+        d.finP = FPZ.hurt({ lean: -20 }); finCam(F, (a.x + d.x) / 2, -240, 1.1); return; }
+      if (t < 100) { const u = finSeg(t, 76, 100); a.rageP = FPZ.armsUp; if (t === 76) { SFX.skill(); SFX.whoosh(1); } a.finProp = { k: 'pot', x: d.x, y: lerp(-900, -46, u * u), lid: 1 }; d.finP = FPZ.hurt({ lean: -10 }); finCam(F, (a.x + d.x) / 2, -300, 0.95); return; }
+      if (t === 100) { finHit(F, a, d, 8, [d.x, -150], 12); F.shake(30); SFX.thud(); SFX.rock(); dust(d.x, 30); finRing(d.x, -20, '#ffffff', 300, 18); a.finProp.y = -46; return; }
+      if (t < 134) { a.rageP = FPZ.point; const P = a.finProp; P.sh = Math.sin(t * 1.3) * (t > 112 ? 6 : 2); if (t % 2 === 0) { FX.push({ t: 'p', x: d.x + rnd(-120, 120), y: -rnd(20, 60), vx: rnd(-1, 1), vy: -rnd(3, 7), life: 24, max: 24, c: t % 4 ? '#ff8a2a' : '#ffd34d', sz: rnd(4, 9) }); FX.push({ t: 'p', x: d.x + rnd(-80, 80), y: -250 - rnd(0, 40), vx: rnd(-1, 1), vy: -rnd(2, 4), life: 30, max: 30, c: 'rgba(240,240,240,0.7)', sz: rnd(8, 16) }); } if (t % 8 === 0) SFX.rattle(); finCam(F, d.x, -230, 1.05); return; }
+      if (t === 134) { const c = [d.x, -160]; a.finProp = null; finHit(F, a, d, 24, c, 20, true); finLaunch(d, f * 13, -22); F.shake(46); SFX.thud(); SFX.rock(); SFX.zap();
+        for (let i = 0; i < 3; i++) finRing(c[0], c[1], i % 2 ? '#ff8a2a' : '#ffd34d', 220 + i * 140, 18 + i * 6); finBurst(c[0], c[1], 80, ['#ff8a2a', '#ffd34d', '#ff3b30', '#ffffff'], 16, 9);
+        spawnProj({ kind: 'pot', noHit: true, owner: a, x: d.x, y: -200, vx: f * 6, vy: -18, g: 0.7, r: 62, vr: f * 0.2, life: 70 }); return; }
+      if (t < 172) { a.rageP = Object.assign({}, FPZ.armsUp, { lean: -6 }); finCam(F, lerp(a.x, d.x, 0.5), -230, 1.0); return; }
+      return true;
+    },
+    back(F, a, d, t) { const P = a.finProp; if (P && P.k === 'pot' && t >= 100 && t < 134) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 5; i++) { const x = P.x - 120 + i * 60, h = 50 + 30 * Math.sin(t * 0.8 + i); const g = ctx.createLinearGradient(0, 0, 0, -h); g.addColorStop(0, 'rgba(255,120,20,0.9)'); g.addColorStop(1, 'rgba(255,220,80,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 26, 0); ctx.quadraticCurveTo(x, -h * 1.4, x + 26, 0); ctx.fill(); } ctx.restore(); } },
+    front(F, a, d, t) { const P = a.finProp;
+      if (P && P.k === 'pot' && t >= 100) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 7; i++) { const x = P.x - 150 + i * 50, h = 46 + 22 * Math.sin(t * 0.9 + i * 1.3); const g = ctx.createLinearGradient(0, 0, 0, -h); g.addColorStop(0, 'rgba(255,110,20,0.95)'); g.addColorStop(1, 'rgba(255,230,90,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 24, 0); ctx.quadraticCurveTo(x, -h * 1.5, x + 24, 0); ctx.fill(); } ctx.restore(); ctx.fillStyle = '#2b2f36'; ctx.fillRect(P.x - 170, -14, 340, 12); }
+      if (P && P.k === 'pot') drawPot(P.x, P.y, 175, 1, P.sh || 0); if (a.finHeld === 'pan') { const w = a.toWorld(a.J.fH); drawPan(w[0], w[1] - 10, -a.facing * 1.1 + Math.sin(t * 0.5) * 0.3, 36); } } },
 ];
 
 // ================= FIGHT =================
@@ -4192,7 +4281,7 @@ const G = {
     if (AC) Music.intensity = 0;
   },
   toVS() { this.scene = 'vs'; this.t = 0; if (!this.story && this.mode !== 'online') this.stageId = STAGE_POOL[(RR() * STAGE_POOL.length) | 0]; },
-  toFight() { this.scene = 'fight'; this.t = 0; this.fight = new Fight(this.sel.cur[0], this.sel.cur[1], this.mode); if (this.mode === 'online') netFightInit(this.fight); if (this.story) storySetupFight(this.fight); },
+  toFight() { this.scene = 'fight'; this.t = 0; this.fight = new Fight(selCI(this.sel, 0), selCI(this.sel, 1), this.mode); if (this.mode === 'online') netFightInit(this.fight); if (this.story) storySetupFight(this.fight); },
   toResult(w, fight) { if (this.story) { storyResult(w); return; } this.scene = 'result'; this.t = 0; this.res = { w, ci: fight.cis[w], wins: fight.wins.slice() }; if (AC) Music.intensity = 0; say(`${w === 0 ? 'Player one' : (this.mode === 'cpu' ? 'Computer' : 'Player two')} wins`); },
 };
 window.__storyAPI = { storyAdvance, storyStart, storyFight, storyMapOpen, storyScript };
@@ -4348,7 +4437,7 @@ function updSelect() {
     }
   }
   if (online) { if (!NET.on) { G.scene = 'online'; G.t = 0; return; } netSelSync(); }
-  if (G.storyPick && S.done[0]) { G.storyPick = false; const po = (S.outfit || [0])[0] | 0; storyStart(S.cur[0]); if (G.story) G.story.pcOutfit = po; return; }
+  if (G.storyPick && S.done[0]) { G.storyPick = false; storyStart(selCI(S, 0)); return; }
   if (S.done[0] && S.done[1]) { S.readyT++; if (S.readyT > 40 && (!online || NET.slot === 0)) { if (online) netStartMatch(); G.toVS(); } } else S.readyT = 0;
   if (S.flash) { S.flash[1]--; if (S.flash[1] <= 0) S.flash = null; }
 }
@@ -4363,7 +4452,7 @@ function drawSelect() {
   else if (cpu) txt(S.done[0] ? 'اختر خصمك (الكمبيوتر)' : 'اختر شخصيتك', VW / 2, 106, { size: 24, weight: 700, color: '#ffd34d' });
   // big previews
   for (let s = 0; s < 2; s++) {
-    const ci = S.cur[s], OF = outfitOf(ci, S.outfit && S.outfit[s]), base = IMG['front' + (ci + 1)], im = imgOf('front', ci, OF && OF.id), C = CHARS[ci];
+    const OF = outfitOf(S.cur[s], S.outfit && S.outfit[s]), ci = selCI(S, s), base = IMG['front' + (S.cur[s] + 1)], im = IMG['front' + (ci + 1)], C = CHARS[ci];
     const sc = 470 / base.height, hgt = im.height * sc, w = im.width * sc, cx = s === 0 ? 200 : VW - 200;
     const slide = S.done[s] ? 0 : Math.sin(G.frame * 0.05) * 3;
     ctx.save();
@@ -4415,13 +4504,13 @@ function drawSelect() {
   // stats for both
   const statN = ['قوة', 'سرعة', 'تحمّل'];
   for (let s = 0; s < 2; s++) {
-    const C = CHARS[S.cur[s]], bx = s === 0 ? 430 : VW - 430 - 180, by = 486;
+    const C = CHARS[selCI(S, s)], bx = s === 0 ? 430 : VW - 430 - 180, by = 486;
     for (let j = 0; j < 3; j++) {
       const y = by + j * 34;
       txt(statN[j], bx + 220, y, { size: 18, weight: 700, color: 'rgba(255,255,255,0.7)', align: 'right' });
       for (let q = 0; q < 5; q++) { ctx.fillStyle = q < C.stats[j] ? (s === 0 ? '#3ea0ff' : '#ff3b4a') : 'rgba(255,255,255,0.12)'; ctx.fillRect(bx + q * 30, y - 8, 26, 16); }
     }
-    txt('المهارة: ' + SKILL_NAMES[S.cur[s]], bx + 110, by + 110, { size: 19, weight: 800, color: '#ffd34d' });
+    txt('المهارة: ' + SKILL_NAMES[selCI(S, s)], bx + 110, by + 110, { size: 19, weight: 800, color: '#ffd34d' });
   }
   // key hints under each side
   const hintRow = (cx, mv, okk, bk) => {
@@ -4462,7 +4551,7 @@ function drawVS() {
   ctx.restore();
   for (let s = 0; s < 2; s++) {
     const bossVS = s === 1 && G.story && G.story.ch === 4;
-    const OFv = outfitOf(S.cur[s], S.outfit && S.outfit[s]), vb = IMG['vs' + (S.cur[s] + 1)], vi = imgOf('vs', S.cur[s], OFv && OFv.id);
+    const vci = selCI(S, s), OFv = outfitOf(vci, S.outfit && S.outfit[s]), vb = IMG['vs' + (vci + 1)], vi = imgOf('vs', vci, OFv && OFv.id);
     const im = bossVS ? shadowOf(vb) : vi; const u = easeOut(clamp(t / 30, 0, 1));
     const hgt = im.height * 600 / vb.height, w = im.width * hgt / im.height;
     ctx.save();
@@ -4474,7 +4563,7 @@ function drawVS() {
     if (s === 0) { const cx = lerp(-w / 2, VW * 0.28, u); ctx.drawImage(im, cx - w / 2, VH - hgt, w, hgt); }
     else { const cx = lerp(VW + w / 2, VW * 0.72, u); ctx.translate(cx, 0); ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, VH - hgt, w, hgt); }
     ctx.restore();
-    const C = CHARS[S.cur[s]];
+    const C = CHARS[selCI(S, s)];
     const nx = s === 0 ? lerp(-400, 260, u) : lerp(VW + 400, VW - 260, u);
     txt(bossVS ? 'ظل ' + C.name : C.name, nx, 640, { size: bossVS ? 64 : 76, weight: 900, color: bossVS ? '#e0b0ff' : '#fff', stroke: '#000', sw: 8, glow: s === 0 ? '#3ea0ff' : bossVS ? '#b030ff' : '#ff3b4a', glowBlur: 30 });
     txt(bossVS ? 'SHADOW ' + C.en : C.en, nx, 690, { size: 34, font: FE, weight: 600, color: s === 0 ? '#7fc0ff' : '#ff8090', italic: true, rtl: false });
