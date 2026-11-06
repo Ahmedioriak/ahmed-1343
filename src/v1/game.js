@@ -144,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.30';
+const GAME_VER = '1.31';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1449,6 +1449,80 @@ COMBOS[CODER] = {
   '14': ['كتابة سريعة', flurryMove({ st: 6, ac: 30, rc: 16, multi: 5, dmg: 2.6, hs: 14, bs: 7, push: 3, stop: 2, r: 36, mvx: [[6, 36, 2]] })],
   '34': ['ركلة الريستارت', M({ st: 12, ac: 4, rc: 20, limb: 'fT', r: 42, dmg: 13, push: 60, kick: 1, p: 1.5, kf: [[0, {}], [8, PZ.stompUp], [12, { th: 90, sh: 0, ft: -40, ffl: 0, lean: -14, dx: 10 }], [16, {}], [36, null]] })],
 };
+// ================= المروض — الزعيم's tamer outfit: dogs, cats, a parrot and a falcon fight for him =================
+const TAMER = CHARS.length;
+CHARS.push({ name: 'المروض', en: 'THE TAMER', h: 0.9, tag: 'جيشه من الحيوانات', hp: 1.04, dmg: 1.04, spd: 1.0, color: '#d9a441', stats: [4, 4, 4], quote: 'حتى القطو أقوى منك!', hidden: 1 });
+OUTFITS[0] = [{ id: '', name: 'الأساسي' }, { id: 'tamer', name: 'المروض', as: TAMER }];
+SFX.bark = () => { if (!SET.fx) return; tn('square', 560, 320, 0.08, 0.05); tn('sawtooth', 420, 240, 0.09, 0.04, 0.01); tn('square', 600, 330, 0.07, 0.045, 0.16); };
+SFX.meow = () => { if (!SET.fx) return; tn('sine', 620, 980, 0.12, 0.05); tn('sine', 980, 520, 0.18, 0.05, 0.12); };
+SFX.squawk = () => { if (!SET.fx) return; tn('sawtooth', 1300, 900, 0.1, 0.04); tn('square', 1500, 1000, 0.08, 0.03, 0.08); };
+const DOGC = { golden: ['#e6b056', '#b97a2c', '#f6dca8'], husky: ['#8b909a', '#4e535d', '#f2f2f2'] };
+function drawDog(x, y, dir, t, s = 1, kind = 'golden', bite = false) {
+  const [c1, c2, c3] = DOGC[kind] || DOGC.golden;
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir * s, s);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 2, 64, 9, 0, 0, 7); ctx.fill();
+  ctx.lineCap = 'round'; ctx.strokeStyle = c2; ctx.lineWidth = 11;
+  [[-36, 0], [-20, 2.4], [24, 1.2], [40, 3.6]].forEach(([lx, ph]) => { const a = Math.sin(t * 0.55 + ph) * 0.65; ctx.beginPath(); ctx.moveTo(lx, -46); ctx.lineTo(lx + Math.sin(a) * 30, -4); ctx.stroke(); });
+  const tw = Math.sin(t * 0.8) * 10; ctx.strokeStyle = c1; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(-50, -62); ctx.quadraticCurveTo(-74, -70, -82, -96 + tw); ctx.stroke();
+  const g = ctx.createLinearGradient(0, -86, 0, -36); g.addColorStop(0, c1); g.addColorStop(1, c2);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(-2, -60, 56, 25, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = c3; ctx.beginPath(); ctx.ellipse(30, -50, 22, 15, 0.3, 0, 7); ctx.fill();
+  ctx.fillStyle = c1; ctx.beginPath(); ctx.arc(56, -86, 23, 0, 7); ctx.fill();
+  ctx.fillStyle = kind === 'husky' ? c3 : c1; ctx.beginPath(); ctx.ellipse(78, -78, 18, 11, 0.1, 0, 7); ctx.fill();
+  if (kind === 'husky') { ctx.fillStyle = c3; ctx.beginPath(); ctx.arc(60, -80, 13, 0, 7); ctx.fill(); ctx.fillStyle = c2; ctx.beginPath(); ctx.moveTo(42, -100); ctx.lineTo(48, -122); ctx.lineTo(58, -104); ctx.fill(); }
+  else { ctx.fillStyle = c2; ctx.beginPath(); ctx.ellipse(44, -84, 9, 19, 0.35, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.arc(94, -81, 5.5, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(62, -92, 3.6, 0, 7); ctx.fill();
+  if (bite || Math.sin(t * 0.3) > 0) { ctx.fillStyle = '#ff7a96'; ctx.beginPath(); ctx.ellipse(82, -64, 7, 11, 0.2, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+function drawCat(x, y, dir, t, s = 1, leap = false) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir * s, s);
+  const g = ctx.createLinearGradient(0, -50, 0, -14); g.addColorStop(0, '#9a9488'); g.addColorStop(1, '#5d574d');
+  ctx.lineCap = 'round'; ctx.strokeStyle = '#6a6458'; ctx.lineWidth = 7;
+  if (leap) { [[22, 1], [14, 1], [-22, -1], [-14, -1]].forEach(([lx, d]) => { ctx.beginPath(); ctx.moveTo(lx, -30); ctx.lineTo(lx + d * 26, -24 + (d > 0 ? -8 : 6)); ctx.stroke(); }); }
+  else { [-20, -10, 14, 24].forEach((lx, i) => { const a = Math.sin(t * 0.6 + i) * 0.4; ctx.beginPath(); ctx.moveTo(lx, -24); ctx.lineTo(lx + Math.sin(a) * 12, 0); ctx.stroke(); }); }
+  ctx.strokeStyle = '#7d776b'; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(-32, -34); ctx.quadraticCurveTo(-56, -40 + Math.sin(t * 0.5) * 6, -50, -66); ctx.stroke();
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, -32, 36, 15, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(40,36,30,0.6)'; ctx.lineWidth = 3; for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.arc(i * 11, -42, 9, 0.3, 2.6); ctx.stroke(); }
+  ctx.fillStyle = '#948e82'; ctx.beginPath(); ctx.arc(36, -46, 16, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(26, -56); ctx.lineTo(28, -74); ctx.lineTo(38, -60); ctx.fill(); ctx.beginPath(); ctx.moveTo(40, -60); ctx.lineTo(48, -74); ctx.lineTo(50, -55); ctx.fill();
+  ctx.fillStyle = '#c8e05a'; ctx.beginPath(); ctx.ellipse(40, -48, 3.5, 4.5, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.ellipse(48, -47, 3, 4, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#ff9aa8'; ctx.beginPath(); ctx.arc(51, -41, 2.6, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.2; for (const dy of [-41, -38]) { ctx.beginPath(); ctx.moveTo(50, dy); ctx.lineTo(66, dy - 3 + (dy + 39)); ctx.stroke(); }
+  ctx.restore();
+}
+function drawBirdA(x, y, dir, t, s = 1, kind = 'parrot', dive = 0) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir * s, s); ctx.rotate(dive);
+  const P = kind === 'parrot', wing = Math.sin(t * 0.9) * 0.9;
+  ctx.fillStyle = P ? '#2a6fd6' : '#6b4a2c'; ctx.beginPath(); ctx.moveTo(-26, 2); ctx.lineTo(-74, 14); ctx.lineTo(-70, 2); ctx.lineTo(-26, -6); ctx.fill();
+  ctx.save(); ctx.rotate(-wing); ctx.fillStyle = P ? '#1f5cc0' : '#5a3c22'; ctx.beginPath(); ctx.moveTo(-6, -8); ctx.quadraticCurveTo(-30, -60, -64, -66); ctx.quadraticCurveTo(-40, -30, -20, 2); ctx.fill(); ctx.restore();
+  const g = ctx.createLinearGradient(0, -20, 0, 18); g.addColorStop(0, P ? '#2a7be0' : '#7a5634'); g.addColorStop(1, P ? '#f5c518' : '#d9c2a0');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, 30, 15, -0.15, 0, 7); ctx.fill();
+  if (!P) { ctx.fillStyle = 'rgba(60,40,20,0.6)'; for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.arc(-14 + i * 6, 4 + (i % 2) * 4, 2, 0, 7); ctx.fill(); } }
+  ctx.fillStyle = P ? '#2f9a4a' : '#7a5634'; ctx.beginPath(); ctx.arc(28, -12, 13, 0, 7); ctx.fill();
+  if (P) { ctx.fillStyle = '#f4f4f4'; ctx.beginPath(); ctx.arc(32, -10, 8, 0, 7); ctx.fill(); }
+  ctx.fillStyle = P ? '#222' : '#f2c230'; ctx.beginPath(); ctx.moveTo(38, -14); ctx.quadraticCurveTo(52, -10, 42, 0); ctx.lineTo(38, -6); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(30, -15, 2.6, 0, 7); ctx.fill();
+  ctx.save(); ctx.rotate(wing * 0.8); ctx.fillStyle = P ? '#3a86ea' : '#7c5532'; ctx.beginPath(); ctx.moveTo(4, -6); ctx.quadraticCurveTo(-18, -54, -50, -62); ctx.quadraticCurveTo(-26, -24, -8, 6); ctx.fill(); ctx.restore();
+  ctx.restore();
+}
+function drawCage(x, y, rot, r) { ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.strokeStyle = '#c9ccd4'; ctx.lineWidth = 3; ctx.fillStyle = 'rgba(30,30,36,0.35)'; rrect(-r, -r * 1.1, r * 2, r * 2.1, 10); ctx.fill(); ctx.stroke(); for (let i = 1; i < 6; i++) { ctx.beginPath(); ctx.moveTo(-r + i * r / 3, -r * 1.1); ctx.lineTo(-r + i * r / 3, r); ctx.stroke(); } ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, -r * 1.15, r * 0.25, Math.PI, 0); ctx.stroke(); ctx.restore(); }
+function spawnDog(f, kind = 'golden', o = {}) { SFX.bark();
+  spawnProj(Object.assign({ kind: 'dog', sub: kind, owner: f, x: f.x - f.facing * 30, y: -46, vx: f.facing * 15, vy: 0, g: 0, r: 46, life: 75, big: 1, ground: true, m: { dmg: 17, lvl: 'mid', hs: 0, bs: 16, push: 50, stop: 10, p: 1.6, kd: 1 } }, o)); }
+MV.sk_dog = { name: 'dog', skill: 1, limb: null, lvl: 'mid', st: 12, ac: 1, rc: 22, p: 1.4, spawnAt: 12, spawn: f => spawnDog(f),
+  kf: [[0, {}], [6, { ua: 160, fa: 30, lean: -6 }], [12, { ua: 92, fa: 0, lean: 18, dx: 12, th: 30, bth: -26 }], [24, {}], [36, null]] };
+MV.sk2_parrot = { name: 'parrot', skill: 1, sk2: 1, limb: null, lvl: 'high', st: 12, ac: 1, rc: 18, p: 1.1, spawnAt: 12, spawn: f => { SFX.squawk(); const w = f.toWorld(f.J.fH); spawnProj({ kind: 'parrot', owner: f, x: w[0], y: w[1] - 40, vx: f.facing * 15, vy: 0, g: 0, r: 28, life: 80, sin: [16, 0.3], base: w[1] - 40, m: { dmg: 12, lvl: 'high', hs: 18, bs: 10, push: 22, stop: 7, p: 1.1 } }); },
+  kf: [[0, {}], [8, { ua: 200, fa: 20, lean: -10 }], [12, { ua: 120, fa: 10, lean: 8 }], [18, {}], [30, null]] };
+SKILL_IDS[TAMER] = 'sk_dog'; SKILL_NAMES[TAMER] = 'هجمة الكلب';
+SKILL2[TAMER] = 'sk2_parrot'; SKILL2_LINE[TAMER] = 'طير يا ببغاء!'; SKILL2_NAMES[TAMER] = 'هجمة الببغاء';
+COMBOS[TAMER] = {
+  '12': ['خربشة القط', projMove(12, 20, PZ.windup, PZ.release, f => { SFX.meow(); shoot(f, { kind: 'cat', sp: 17, ang: -0.28, g: 0.5, r: 26, dmg: 12, vr: 0, life: 80 }); })],
+  '23': ['دفشة الهاسكي', projMove(10, 20, { ...PZ.windup, ua: 150 }, PZ.release, f => spawnDog(f, 'husky', { vx: f.facing * 11, m: { dmg: 13, lvl: 'low', hs: 0, bs: 14, push: 40, stop: 8, p: 1.4, kd: 1 } }))],
+  '24': ['نباح', projMove(10, 18, { ...PZ.windup, ua: 120 }, { ...PZ.release, ua: 90 }, f => { SFX.bark(); shoot(f, { kind: 'bark', sp: 11, r: 50, dmg: 10, launch: 1, life: 26, vr: 0 }); })],
+  '13': ['انقضاض الصقر', projMove(14, 22, PZ.summon, { ...PZ.summon, lean: -22 }, f => { SFX.squawk(); shoot(f, { kind: 'falcon', from: 'sky', vy: 11, g: 0.2, r: 34, dmg: 16, kd: 1, p: 1.6, vr: 0, life: 140 }); })],
+  '14': ['لكمات المروض', flurryMove({ st: 6, ac: 30, rc: 16, multi: 5, dmg: 2.6, hs: 14, bs: 7, push: 3, stop: 2, r: 36, mvx: [[6, 36, 2]] })],
+  '34': ['ركلة المروض', M({ st: 12, ac: 4, rc: 20, limb: 'fT', r: 42, dmg: 13, push: 60, kick: 1, p: 1.5, kf: [[0, {}], [8, PZ.stompUp], [12, { th: 90, sh: 0, ft: -40, ffl: 0, lean: -14, dx: 10 }], [16, {}], [36, null]] })],
+};
 const COMBO_NAME = {};
 COMBOS.forEach((set, ci) => { for (const k of COMBO_KEYS) { const [name, mv] = set[k]; const id = `cb${ci}_${k}`; MV[id] = mv; mv.cname = name; COMBO_NAME[id] = name; set[k] = id; } });
 COMBOS[NOKH] = COMBOS[9]; COMBOS[RAIS] = COMBOS[1]; COMBOS[RAIS2] = COMBOS[1];
@@ -2044,14 +2118,15 @@ PERSONA.push(
   { vo: 'roar', intro: ['كلكم شغالين عندي!'], skill: ['حس بالخاتم!'], win: ['الكأس لي… للأبد!'], st: { lean: 10, ua: 4, bua: 4, th: 8, bth: -10 }, br: 0.05, ba: 2 },
   { vo: 'roar', intro: ['الحين… تشوف قوتي!'], skill: ['شوف عيوني!'], win: ['ما في أحد يوقف الرئيس!'], st: { lean: 14, ua: 8, bua: 8, th: 10, bth: -12 }, br: 0.05, ba: 2.6 },
 );
+PERSONA[TAMER] = { vo: 'shout', intro: ['الحيوانات معي!'], skill: ['هجوم!'], win: ['حتى القطو أقوى منك!'], st: { lean: 8, th: 6, bth: -6 }, br: 0.12, bob: 4 };
 PERSONA[CODER] = { vo: 'laugh', intro: ['خلني أكتب الكود…'], skill: ['كهربا!'], win: ['صلّحت البق… وأنت كنت البق!'], st: { lean: -2, fa: 12, bfa: 10 }, br: 0.1 };
 PERSONA[CHEF] = { vo: 'roar', intro: ['جاهز للطبخة؟'], skill: ['نار!'], win: ['الأكل جاهز… وأنت الطبق!'], st: { lean: 12, ua: 6, bua: 6, th: 10, bth: -12 }, br: 0.06, ba: 2.2 };
-if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 15: [0.82, 0.95], 16: [0.6, 0.86], 17: [0.42, 0.8], 18: [0.45, 0.88], 19: [0.9, 1.0] });
+if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 15: [0.82, 0.95], 16: [0.6, 0.86], 17: [0.42, 0.8], 18: [0.45, 0.88], 19: [0.9, 1.0], 20: [1.0, 1.05] });
 const pickLine = a => a[(Math.random() * a.length) | 0];
 // ---- Arabic voices: the browser's Arabic voice when it has one, otherwise the built-in recorded lines ----
 const VOX = { clips: window.VOICE_CLIPS || {}, txt: window.VOICE_TXT || {}, bufs: {}, tbufs: {}, last: {}, voices: null, cur: [] };
 // ---- recorded neural Arabic voice (Piper «Kareem»): every sentence recorded once, names recorded separately ----
-const VOICE_RATE = { 19: 1.0, 18: 0.9, 0: 1.1, 1: 0.88, 5: 0.87, 6: 1.12, 8: 1.13, 11: 1.13, 15: 0.93, 16: 0.9, 17: 0.82, 99: 0.96 };
+const VOICE_RATE = { 20: 1.02, 19: 1.0, 18: 0.9, 0: 1.1, 1: 0.88, 5: 0.87, 6: 1.12, 8: 1.13, 11: 1.13, 15: 0.93, 16: 0.9, 17: 0.82, 99: 0.96 };
 function voiceNorm(t) { return t.replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF\uFE0F]/gu, '').replace(/[!؟?.,،:؛—"«»]/g, ' ').replace(/\s+/g, ' ').trim(); }
 let VNAMES = null;
 function voiceSegs(text) {
@@ -2413,6 +2488,9 @@ function updProj(F) {
     if (p.kind === 'egg' && p.y >= -p.r * 0.6 && p.vy > 0) { p.y = -4; eggSplat(p); p.dead = true; continue; }
     if (p.kind === 'bike' && p.y >= -p.r * 0.55 && p.vy > 0) { bikeCrash(p); p.dead = true; continue; }
     if (p.kind === 'flame' && p.t % 2 === 0) FX.push({ t: 'p', x: p.x + rnd(-30, 30), y: p.y + rnd(-30, 30), vx: -Math.sign(p.vx) * rnd(1, 3), vy: -rnd(1, 4), life: 16, max: 16, c: p.t % 4 ? '#ff8a2a' : '#ffd34d', sz: rnd(4, 9) });
+    if (p.kind === 'dog' && p.t % 3 === 0) dust(p.x - Math.sign(p.vx) * 50, 2, -Math.sign(p.vx));
+    if (p.kind === 'cat' && p.y >= -10 && p.vy > 0) { p.y = -10; p.vy = 0; p.g = 0; p.vx *= 0.3; p.life = Math.min(p.life, 14); }
+    if (p.kind === 'falcon' && p.y >= -40 && p.vy > 0) { p.vy = -2; p.g = -0.4; p.vx = (Math.sign(p.vx) || p.dir || 1) * 12; }
     if (p.kind === 'laptop' && !p.noHit && p.y >= -p.r * 0.5 && p.vy > 0) { SFX.thud(); SFX.rattle(); dust(p.x, 16); finBurst(p.x, -20, 16, ['#ff2a3a', '#ffffff', '#555b66'], 8, 5); if (G.fight) G.fight.shake(12); p.dead = true; continue; }
     if (p.kind === 'code' && p.t % 3 === 0) FX.push({ t: 'p', x: p.x, y: p.y + rnd(-20, 20), vx: -Math.sign(p.vx) * 2, vy: rnd(-1, 1), life: 12, max: 12, c: '#ff3040', sz: rnd(3, 6) });
     if (p.kind === 'tomato' && p.y >= -p.r * 0.6 && p.vy > 0) { SFX.splat(); finBurst(p.x, -8, 14, ['#e8231c', '#ff6a50', '#2f8f2a'], 6, 5); p.dead = true; continue; }
@@ -2656,6 +2734,11 @@ function drawProj(p) {
   else if (p.kind === 'rock') drawRock(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'cartire') drawCarTire(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'tomato') drawTomato(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'dog') drawDog(p.x, p.y + p.r, p.dir || Math.sign(p.vx) || 1, p.t, 1, p.sub || 'golden', p.t > 10);
+  else if (p.kind === 'cat') drawCat(p.x, p.y + 26, p.dir || Math.sign(p.vx) || 1, p.t, 1, true);
+  else if (p.kind === 'parrot' || p.kind === 'falcon') drawBirdA(p.x, p.y, p.dir || Math.sign(p.vx) || 1, p.t, 1.15, p.kind, p.kind === 'falcon' && p.vy > 2 ? 0.7 : 0);
+  else if (p.kind === 'cage') drawCage(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'bark') { ctx.save(); ctx.strokeStyle = 'rgba(255,230,160,' + Math.min(1, p.life / 12) + ')'; ctx.lineWidth = 5; const d = Math.sign(p.vx) || 1; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(p.x - d * i * 20, p.y, p.r * (0.5 + i * 0.25), d > 0 ? -0.9 : Math.PI - 0.9, d > 0 ? 0.9 : Math.PI + 0.9); ctx.stroke(); } ctx.restore(); }
   else if (p.kind === 'keyboard') drawKeyboard(p.x, p.y, p.rot, p.r);
   else if (p.kind === 'laptop') drawLaptop(p.x, p.y + p.r * 0.5, p.rot, p.r);
   else if (p.kind === 'bug') drawBug(p);
@@ -3233,6 +3316,30 @@ const FIN = [
       if (fn.bolt !== undefined && t - fn.bolt < 6) { drawBolt(d.x + Math.sin(fn.bolt) * 60, -900, d.x, -140, 9, fn.bolt); drawBolt(d.x - 40, -900, d.x + 20, -200, 5, fn.bolt + 3); }
       if (fn.glyph) drawCodeGlyph({ x: fn.glyph.x, y: fn.glyph.y, r: 90 * fn.glyph.s, rot: 0 });
       if (fn.beam) { const w = a.toWorld(a.J.fH); for (let i = 0; i < 3; i++) drawBolt(w[0], w[1], d.x + a.facing * 40, finChest(d)[1] + (i - 1) * 30, 10 - i * 2, t + i * 5); }
+    } },
+  // 20 المروض — the cats scratch, the parrot pecks, the falcon dives, then the whole dog pack runs you over
+  { name: 'زحمة الحيوانات', line: 'هجوووم!', col: '#d9a441',
+    run(F, a, d, t) {
+      const f = a.facing; if (t < 118) finHold(d, a.x + f * 300);
+      if (!a.finS || a.finS.fin !== F.fin) a.finS = { fin: F.fin, ax: a.x };
+      if (t < 12) { a.rageP = FPZ.point; if (t === 2) SFX.zap(); finCam(F, (a.x + d.x) / 2, -240, 1.05); return; }
+      if (t < 40) { a.rageP = G2({ ua: 175, fa: 10, bua: 30, bfa: 120, lean: -8 }); d.finP = FPZ.hurt({ lean: -14 });
+        if (t === 14 || t === 26) { const w = a.toWorld(a.J.fH), c = finChest(d); SFX.meow(); finThrow(F, a, d, { kind: 'cat', from: w, to: [c[0], c[1] - 20], T: 8, g: 0.4, r: 26, dmg: 4, extra: { dir: f }, fx: xy => { SFX.hit(1); for (let i = 0; i < 3; i++) FX.push({ t: 'p', x: xy[0] + rnd(-20, 20), y: xy[1] + rnd(-30, 30), vx: rnd(-2, 2), vy: rnd(-2, 2), life: 18, max: 18, c: '#ffffff', sz: 3 }); popText('خرررش!', xy[0], xy[1] - 50, '#ffd34d', 34); } }); }
+        finCam(F, (a.x + d.x) / 2, -240, 1.1); return; }
+      if (t < 60) { a.rageP = FPZ.point; if (t === 42) { SFX.squawk(); finThrow(F, a, d, { kind: 'parrot', from: [a.x - f * 120, -420], to: finHead(d), T: 12, g: 0, r: 28, dmg: 4, extra: { dir: f }, fx: xy => { SFX.hit(1.2); finBurst(xy[0], xy[1], 14, ['#2a6fd6', '#f5c518', '#2f9a4a'], 7, 6); } }); }
+        d.finP = FPZ.hurt({ lean: -20 }); finCam(F, (a.x + d.x) / 2, -260, 1.05); return; }
+      if (t < 84) { a.rageP = G2({ ua: 175, fa: 10, bua: 170, bfa: 10, lean: -10 }); if (t === 62) { SFX.squawk(); finThrow(F, a, d, { kind: 'falcon', from: [d.x - f * 360, -900], to: finHead(d), T: 18, g: 0, r: 34, dmg: 6, extra: { dir: f }, fx: xy => { SFX.thud(); F.shake(16); finBurst(xy[0], xy[1], 22, ['#6b4a2c', '#d9c2a0', '#ffffff'], 9, 6); } }); }
+        d.finP = FPZ.hurt({ lean: -22 }); finCam(F, d.x, -280, 1.0); return; }
+      if (t < 124) { a.rageP = FPZ.point; const S = a.finS; if (t === 84) { SFX.bark(); S.dogs = [{ k: 'golden', t0: 84 }, { k: 'husky', t0: 92 }, { k: 'golden', t0: 100 }]; }
+        for (const g of S.dogs) { const u = (t - g.t0) / 18; g.x = S.ax - f * 300 + f * u * 1100; if (Math.abs(g.x - d.x) < 30 && !g.hit) { g.hit = 1; finHit(F, a, d, 5, finChest(d), 8); SFX.bark(); SFX.hit(1.4); F.shake(12); dust(d.x, 14); d.finP = FPZ.hurt({ lean: -34 }); } }
+        if (t % 5 === 0) SFX.bark(); finCam(F, d.x, -230, 0.95); return; }
+      if (t === 124) { const c = finChest(d); a.finS.dogs = []; a.finS.leap = 124; finHit(F, a, d, 21, c, 18, true); finLaunch(d, f * 15, -21); F.shake(40); SFX.bark(); SFX.thud(); for (let i = 0; i < 3; i++) finRing(c[0], c[1], i % 2 ? '#d9a441' : '#ffffff', 220 + i * 140, 18 + i * 6); finBurst(c[0], c[1], 60, ['#e6b056', '#ffffff', '#ffd34d'], 14, 8); return; }
+      if (t < 160) { a.rageP = Object.assign({}, FPZ.armsUp); finCam(F, lerp(a.x, d.x, 0.5), -220, 1.0); return; }
+      return true;
+    },
+    front(F, a, d, t) { const S = a.finS; if (!S) return;
+      if (S.dogs) for (const g of S.dogs) if (g.x !== undefined && t >= g.t0) { drawDog(g.x, 0, a.facing, t, 1.25, g.k, Math.abs(g.x - d.x) < 120); if (t % 3 === 0) dust(g.x - a.facing * 60, 2, -a.facing); }
+      if (S.leap && t >= S.leap && t < S.leap + 24) { const u = (t - S.leap) / 24; drawDog(lerp(d.x - a.facing * 80, d.x + a.facing * 260, u), -Math.sin(u * Math.PI) * 220, a.facing, t, 1.5, 'golden', true); }
     } },
 ];
 
