@@ -187,8 +187,8 @@ const pick = a => a[(Math.random() * a.length) | 0];
 
 // ================= CHARACTERS =================
 const CHARS = [
-  { name: 'الزعيم', en: 'AL-ZAEEM', h: 0.82, tag: 'قبضة الشوارع', hp: 1.08, dmg: 1.0, spd: 0.96, color: '#ff4d3d', stats: [4, 3, 5], quote: 'قلت لك لا تلعب معي!' },
-  { name: 'الوحش', en: 'AL-WAHSH', tag: 'عضلات من حديد', hp: 1.0, dmg: 1.12, spd: 0.93, color: '#ff2a55', stats: [5, 3, 4], quote: 'روح تمرّن وتعال!' },
+  { name: 'الزعيم', en: 'AL-ZAEEM', h: 0.82, tag: 'قبضة الشوارع', hp: 1.08, dmg: 1.14, spd: 0.96, color: '#ff4d3d', stats: [4, 3, 5], quote: 'قلت لك لا تلعب معي!' },
+  { name: 'الوحش', en: 'AL-WAHSH', tag: 'عضلات من حديد', hp: 1.0, dmg: 1.24, spd: 0.93, color: '#ff2a55', stats: [5, 3, 4], quote: 'روح تمرّن وتعال!' },
   { name: 'الكابتن', en: 'CAPTAIN', tag: 'سرعة البرق', hp: 0.94, dmg: 0.95, spd: 1.15, color: '#f2f2f2', stats: [3, 5, 3], quote: 'أسرع منك بمليون مرة' },
   { name: 'الدكتور', en: 'THE DOCTOR', tag: 'العقل المدبّر', hp: 1.0, dmg: 1.03, spd: 1.0, color: '#e6c37a', stats: [4, 4, 4], quote: 'حسبتها قبل لا تبدأ' },
   { name: 'الحارس', en: 'THE KEEPER', tag: 'ما يعدّي منه شي', hp: 1.03, dmg: 1.0, spd: 1.03, color: '#ffd21f', stats: [3, 4, 4], quote: 'ولا كورة تعدّي… ولا ضربة!' },
@@ -301,7 +301,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.25';
+const GAME_VER = '1.26';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
