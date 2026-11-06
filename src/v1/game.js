@@ -144,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.34';
+const GAME_VER = '1.35';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1573,6 +1573,59 @@ COMBOS[FISHER] = {
   '14': ['ضربات الصياد', flurryMove({ st: 6, ac: 30, rc: 16, multi: 5, dmg: 2.8, hs: 14, bs: 7, push: 3, stop: 2, r: 38, mvx: [[6, 36, 2]] })],
   '34': ['ركلة البحّار', M({ st: 12, ac: 4, rc: 20, limb: 'fT', r: 42, dmg: 14, push: 60, kick: 1, p: 1.5, kf: [[0, {}], [8, PZ.stompUp], [12, { th: 90, sh: 0, ft: -40, ffl: 0, lean: -14, dx: 10 }], [16, {}], [36, null]] })],
 };
+// ================= القنّاص — المعلّم's gangster outfit: a pistol, rapid shooting, a sniper's lock-on =================
+const GUNMAN = CHARS.length;
+CHARS.push({ name: 'القنّاص', en: 'THE SHOOTER', tag: 'ما يخطي الهدف', hp: 1.05, dmg: 1.05, spd: 1.0, color: '#c8102e', stats: [4, 3, 4], quote: 'آخر طلقة… كانت لك!', hidden: 1 });
+OUTFITS[6] = [{ id: '', name: 'الأساسي' }, { id: 'gunman', name: 'القنّاص', as: GUNMAN }];
+SFX.gun = () => { if (!SET.fx) return; nz(0.16, 'lowpass', 2600, 0.8, 0.34); nz(0.05, 'highpass', 3200, 0.6, 0.2); tn('square', 170, 40, 0.12, 0.07); };
+SFX.bigGun = () => { if (!SET.fx) return; nz(0.4, 'lowpass', 1600, 0.7, 0.42); nz(0.08, 'highpass', 2800, 0.6, 0.25); tn('square', 120, 30, 0.3, 0.09); };
+SFX.click = () => { if (!SET.fx) return; tn('square', 2400, 1900, 0.02, 0.035); tn('square', 1700, 1400, 0.02, 0.03, 0.06); };
+// the pistol is in the sprite's hand and lies along the forearm: the muzzle is past the hand on the elbow→hand line
+function gunMuzzle(f) { const e = f.toWorld(f.J.fE), h = f.toWorld(f.J.fH); return [h[0] + (h[0] - e[0]) * 0.62, h[1] + (h[1] - e[1]) * 0.62]; }
+function gunShot(f, o = {}) {
+  const [x, y] = gunMuzzle(f), dir = f.facing, sp = o.sp || 40, a = o.ang || 0; o.big ? SFX.bigGun() : SFX.gun();
+  spawnProj({ kind: 'bullet', owner: f, x, y, vx: dir * sp * Math.cos(a), vy: sp * Math.sin(a), r: o.r || 11, life: 34, vr: 0, big: o.big ? 1 : 0, heavy: o.big ? 1 : 0, tr: [],
+    m: { dmg: o.dmg || 4, lvl: o.lvl || 'mid', hs: o.hs || 14, bs: 6, push: o.push || 8, stop: o.stop || 4, p: o.p || 0.8, kd: o.kd } });
+  spawnProj({ kind: 'mflash', owner: f, noHit: true, x, y, vx: 0, vy: 0, life: 4, r: o.big ? 46 : 30, dir });
+  for (let i = 0; i < (o.big ? 12 : 5); i++) FX.push({ t: 'p', x, y, vx: dir * rnd(2, 8), vy: rnd(-3, 3), life: 10, max: 10, c: i % 2 ? '#fff3b0' : '#ffb020', sz: rnd(2, 5) });
+  FX.push({ t: 'p', x: x - dir * 30, y: y - 10, vx: -dir * rnd(2, 4), vy: -rnd(4, 7), life: 20, max: 20, c: '#e2b04a', sz: 3 }); // the spent shell
+  if (o.big && G.fight) G.fight.shake(10);
+}
+function drawBullet(p) {
+  const dir = Math.sign(p.vx) || 1, L = p.big ? 150 : 80, w = p.big ? 7 : 3.5, ang = Math.atan2(p.vy, p.vx);
+  ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(ang); ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createLinearGradient(0, 0, -L, 0); g.addColorStop(0, 'rgba(255,240,170,0.95)'); g.addColorStop(0.4, 'rgba(255,150,40,0.5)'); g.addColorStop(1, 'rgba(255,60,0,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(4, -w); ctx.lineTo(-L, 0); ctx.lineTo(4, w); ctx.closePath(); ctx.fill();
+  if (p.big) { const a = ctx.createRadialGradient(0, 0, 2, 0, 0, 34); a.addColorStop(0, 'rgba(255,90,60,0.7)'); a.addColorStop(1, 'rgba(255,0,0,0)'); ctx.fillStyle = a; ctx.beginPath(); ctx.arc(0, 0, 34, 0, 7); ctx.fill(); }
+  ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#d9a640'; ctx.beginPath(); ctx.ellipse(0, 0, p.big ? 10 : 7, p.big ? 4.5 : 3, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#fff6d0'; ctx.fillRect(-2, -1, p.big ? 7 : 5, 2);
+  ctx.restore(); void dir;
+}
+function drawMuzzleFlash(x, y, r, dir, k) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= k;
+  const R = [1.7, 0.3, 0.75, 0.26, 0.34, 0.26, 0.75, 0.3]; ctx.fillStyle = 'rgba(255,170,50,0.85)'; ctx.beginPath();
+  R.forEach((m, i) => { const a = i * Math.PI / 4; ctx.lineTo(Math.cos(a) * r * m, Math.sin(a) * r * m); }); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,240,180,0.95)'; ctx.beginPath(); R.forEach((m, i) => { const a = i * Math.PI / 4; ctx.lineTo(Math.cos(a) * r * m * 0.55, Math.sin(a) * r * m * 0.55); }); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(r * 0.1, 0, r * 0.2, 0, 7); ctx.fill();
+  ctx.restore();
+}
+const GAIM = { ua: 90, fa: 2, bua: 84, bfa: 36, lean: 6, th: 28, sh: 18, bth: -22, bsh: 10 };
+MV.sk_gunfan = { name: 'gunfan', skill: 1, limb: null, lvl: 'mid', st: 12, ac: 36, rc: 18, p: 1, projLimit: 0,
+  onStep: f => { if (f.mt === 2) SFX.click(); const t = f.mt - 12; if (t >= 0 && t < 36 && t % 6 === 0) gunShot(f, t === 30 ? { dmg: 8, big: 1, kd: 1, push: 40, sp: 44 } : { dmg: 3.4 }); },
+  kf: [[0, {}], [10, GAIM], [17, { ...GAIM, ua: 98, lean: 2 }], [23, GAIM], [29, { ...GAIM, ua: 98, lean: 2 }], [35, GAIM], [41, { ...GAIM, ua: 104, lean: -2 }], [48, GAIM], [56, {}], [66, null]] };
+MV.sk2_snipe = { name: 'snipe', skill: 1, sk2: 1, limb: null, lvl: 'mid', st: 26, ac: 1, rc: 22, p: 1.2, spawnAt: 26,
+  onStep: f => { if (f.mt === 2 || f.mt === 14) SFX.click(); },
+  spawn: f => gunShot(f, { dmg: 16, big: 1, kd: 1, sp: 52, r: 16, push: 60, stop: 12, p: 1.6, hs: 24 }),
+  kf: [[0, {}], [8, { ...GAIM, lean: 12, th: 36, bth: -28, dx: -6 }], [26, { ...GAIM, lean: 12, th: 36, bth: -28, dx: -6 }], [30, { ...GAIM, ua: 104, lean: -4, th: 36, bth: -28, dx: -14 }], [40, {}], [49, null]] };
+SKILL_IDS[GUNMAN] = 'sk_gunfan'; SKILL_NAMES[GUNMAN] = 'تطليق';
+SKILL2[GUNMAN] = 'sk2_snipe'; SKILL2_LINE[GUNMAN] = 'لا تتحرك…'; SKILL2_NAMES[GUNMAN] = 'طلقة القنّاص';
+COMBOS[GUNMAN] = {
+  '12': ['طلقة سريعة', projMove(8, 16, GAIM, GAIM, f => gunShot(f, { dmg: 7 }))],
+  '23': ['دبل تاب', M({ st: 8, ac: 12, rc: 16, projLimit: 0, onStep: f => { const t = f.mt - 8; if (t === 0 || t === 8) gunShot(f, { dmg: 5 }); }, kf: [[0, {}], [6, GAIM], [10, { ...GAIM, ua: 98 }], [14, GAIM], [18, { ...GAIM, ua: 98 }], [22, GAIM], [28, {}], [37, null]] })],
+  '24': ['طلقة الرجول', projMove(10, 18, { ...GAIM, ua: 66, lean: 14, th: 34, bth: -26 }, { ...GAIM, ua: 66, lean: 14, th: 34, bth: -26 }, f => gunShot(f, { dmg: 8, lvl: 'low', kd: 1, ang: 0.26 }))],
+  '13': ['طلقة من فوق', jumpMove({ st: 6, ac: 44, vy: -17, vx: 3, projLimit: 0, airPose: { ...JUMPAIR, ua: 58, fa: 2, bua: 60, bfa: 40, th: 60, sh: 100 }, step: f => { if (f.mt === 16 || f.mt === 24) gunShot(f, { dmg: 6, ang: 0.5 }); } })],
+  '14': ['ضرب بالمسدس', flurryMove({ st: 6, ac: 26, rc: 16, multi: 4, dmg: 3.2, hs: 14, bs: 7, push: 3, stop: 2, r: 40, mvx: [[6, 32, 2]] })],
+  '34': ['ركلة العصابة', M({ st: 12, ac: 4, rc: 20, limb: 'fT', r: 42, dmg: 13, push: 60, kick: 1, p: 1.5, kf: [[0, {}], [8, PZ.stompUp], [12, { th: 90, sh: 0, ft: -40, ffl: 0, lean: -14, dx: 10 }], [16, {}], [36, null]] })],
+};
 const COMBO_NAME = {};
 COMBOS.forEach((set, ci) => { for (const k of COMBO_KEYS) { const [name, mv] = set[k]; const id = `cb${ci}_${k}`; MV[id] = mv; mv.cname = name; COMBO_NAME[id] = name; set[k] = id; } });
 COMBOS[NOKH] = COMBOS[9]; COMBOS[RAIS] = COMBOS[1]; COMBOS[RAIS2] = COMBOS[1];
@@ -2168,11 +2221,12 @@ PERSONA.push(
   { vo: 'roar', intro: ['كلكم شغالين عندي!'], skill: ['حس بالخاتم!'], win: ['الكأس لي… للأبد!'], st: { lean: 10, ua: 4, bua: 4, th: 8, bth: -10 }, br: 0.05, ba: 2 },
   { vo: 'roar', intro: ['الحين… تشوف قوتي!'], skill: ['شوف عيوني!'], win: ['ما في أحد يوقف الرئيس!'], st: { lean: 14, ua: 8, bua: 8, th: 10, bth: -12 }, br: 0.05, ba: 2.6 },
 );
+PERSONA[GUNMAN] = { vo: 'deep', intro: ['جاهز… تطلع من اللعبة؟'], skill: ['تطليق!'], win: ['آخر طلقة… كانت لك!'], st: { lean: 4, th: 6, bth: -6 }, br: 0.06 };
 PERSONA[FISHER] = { vo: 'deep', intro: ['اليوم صيدي أنت!'], skill: ['هامور!'], win: ['صيد ثقيل… بس سهل!'], st: { lean: 10, th: 8 }, br: 0.05, ba: 2.6 };
 PERSONA[TAMER] = { vo: 'shout', intro: ['الحيوانات معي!'], skill: ['هجوم!'], win: ['حتى القطو أقوى منك!'], st: { lean: 8, th: 6, bth: -6 }, br: 0.12, bob: 4 };
 PERSONA[CODER] = { vo: 'laugh', intro: ['خلني أكتب الكود…'], skill: ['كهربا!'], win: ['صلّحت البق… وأنت كنت البق!'], st: { lean: -2, fa: 12, bfa: 10 }, br: 0.1 };
 PERSONA[CHEF] = { vo: 'roar', intro: ['جاهز للطبخة؟'], skill: ['نار!'], win: ['الأكل جاهز… وأنت الطبق!'], st: { lean: 12, ua: 6, bua: 6, th: 10, bth: -12 }, br: 0.06, ba: 2.2 };
-if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 15: [0.82, 0.95], 16: [0.6, 0.86], 17: [0.42, 0.8], 18: [0.45, 0.88], 19: [0.9, 1.0], 20: [1.0, 1.05], 21: [0.5, 0.85] });
+if (window.VOICE_TTS) Object.assign(window.VOICE_TTS, { 15: [0.82, 0.95], 16: [0.6, 0.86], 17: [0.42, 0.8], 18: [0.45, 0.88], 19: [0.9, 1.0], 20: [1.0, 1.05], 21: [0.5, 0.85], 22: [0.62, 0.92] });
 const pickLine = a => a[(Math.random() * a.length) | 0];
 // ---- Arabic voices: the browser's Arabic voice when it has one, otherwise the built-in recorded lines ----
 const VOX = { clips: window.VOICE_CLIPS || {}, txt: window.VOICE_TXT || {}, bufs: {}, tbufs: {}, last: {}, voices: null, cur: [] };
@@ -2569,7 +2623,7 @@ function updProj(F) {
     if (Math.hypot(p.x - cx, p.y - cy) <= p.r && p.bob && d.ci === 4) { p.dead = true; spark(p.x, p.y, 'block', d.facing); SFX.block(); popText('صدّها! 🧤', p.x, p.y - 50, '#7fd6ff', 34); d.flash = 6; continue; }
     if (Math.hypot(p.x - cx, p.y - cy) <= p.r) {
       F.hitResolve(p.owner, d, p.m, { x: p.x, y: p.y, proj: true }, Math.sign(p.vx) || p.owner.facing);
-      p.dead = true; if (p.power) { SFX.hit(1.8); SFX.thud(); popText('قووول! 🥅', p.x, p.y - 70, '#ffd34d', 54); finRing(p.x, p.y, '#ffd34d', 190, 18); finRing(p.x, p.y, '#ffffff', 110, 12); finBurst(p.x, p.y, 30, ['#ffffff', '#ffd34d', '#ff8a2a', '#c8142a'], 13, 7); G.fight && G.fight.shake(16); } if (p.kind === 'pan') { SFX.block(); SFX.hit(1.6); popText('طاخ! 🍳', p.x, p.y - 60, '#ffd34d', 46); finBurst(p.x, p.y, 16, ['#ffffff', '#ffd34d', '#9aa3b5'], 10, 5); G.fight && G.fight.shake(12); } if (p.kind === 'mouse') { SFX.zap(); popText('كليك! 🖱️', p.x, p.y - 50, '#3cf2ff', 40); finBurst(p.x, p.y, 10, ['#ffffff', '#3cf2ff'], 8, 4); } if (p.kind === 'rock') crumble(p); if (p.kind === 'egg') eggSplat(p); if (p.kind === 'chicken') featherPuff(p.x, p.y, 14); if (p.kind === 'bike') bikeCrash(p);
+      p.dead = true; if (p.kind === 'bullet') { finBurst(p.x, p.y, p.big ? 26 : 8, ['#ffffff', '#ffd34d', '#ff3a2a'], p.big ? 12 : 6, p.big ? 7 : 4); if (p.big) { finRing(p.x, p.y, '#ff3a2a', 150, 14); popText('بانق! 💥', p.x, p.y - 60, '#ff3a2a', 48); } } if (p.power) { SFX.hit(1.8); SFX.thud(); popText('قووول! 🥅', p.x, p.y - 70, '#ffd34d', 54); finRing(p.x, p.y, '#ffd34d', 190, 18); finRing(p.x, p.y, '#ffffff', 110, 12); finBurst(p.x, p.y, 30, ['#ffffff', '#ffd34d', '#ff8a2a', '#c8142a'], 13, 7); G.fight && G.fight.shake(16); } if (p.kind === 'pan') { SFX.block(); SFX.hit(1.6); popText('طاخ! 🍳', p.x, p.y - 60, '#ffd34d', 46); finBurst(p.x, p.y, 16, ['#ffffff', '#ffd34d', '#9aa3b5'], 10, 5); G.fight && G.fight.shake(12); } if (p.kind === 'mouse') { SFX.zap(); popText('كليك! 🖱️', p.x, p.y - 50, '#3cf2ff', 40); finBurst(p.x, p.y, 10, ['#ffffff', '#3cf2ff'], 8, 4); } if (p.kind === 'rock') crumble(p); if (p.kind === 'egg') eggSplat(p); if (p.kind === 'chicken') featherPuff(p.x, p.y, 14); if (p.kind === 'bike') bikeCrash(p);
     }
   }
   for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
@@ -2824,6 +2878,8 @@ function drawProj(p) {
   else if (p.kind === 'flame') drawFlame(p);
   else if (p.kind === 'spice') { ctx.save(); ctx.globalAlpha *= Math.min(1, p.life / 12); for (let i = 0; i < 9; i++) { ctx.fillStyle = i % 3 ? 'rgba(200,60,20,0.55)' : 'rgba(240,170,40,0.6)'; ctx.beginPath(); ctx.arc(p.x + Math.cos(i * 2.1 + p.t * 0.3) * p.r * 0.6, p.y + Math.sin(i * 1.7 + p.t * 0.25) * p.r * 0.5, p.r * (0.3 + 0.03 * (i % 4)), 0, 7); ctx.fill(); } ctx.restore(); }
   else if (p.kind === 'door') drawDoor(p.x, p.y, p.rot, p.r);
+  else if (p.kind === 'bullet') drawBullet(p);
+  else if (p.kind === 'mflash') drawMuzzleFlash(p.x, p.y, p.r, p.dir, p.life / 4);
   else if (p.kind === 'hball' && p.power) drawPowerBall(p);
   else if (p.kind === 'hball') { if (p.fire) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, p.r * 2); g.addColorStop(0, 'rgba(255,170,60,0.8)'); g.addColorStop(1, 'rgba(255,60,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2, 0, 7); ctx.fill(); ctx.restore(); } drawHandball(p.x, p.y, p.rot, p.r); }
   else if (p.kind === 'joker') drawCard(p.x, p.y, p.rot * 0.2, Math.cos(p.t * 0.3), 'J', 2.6);
@@ -2863,6 +2919,7 @@ function drawHeld(f) {
   if (m.pan && f.mt < (m.spawnAt || m.st + m.ac + 6)) { const w = f.toWorld(f.J.fH); drawPan(w[0], w[1] - 10, -f.facing * (1.2 - Math.min(1, f.mt / (m.st || 10)) * 1.6), 32); }
   if (m.id === 'sk2_pan' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawPan(w[0], w[1] - 10, -f.facing * 1.2, 30); }
   if (m.id === 'sk2_mouse' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH); drawMouse(w[0], w[1] - 6, 0, 20, -f.facing, f.mt); }
+  if (m.id === 'sk2_snipe' && f.mt < m.spawnAt && G.fight) { const o = G.fight.f[1 - f.slot], u = f.mt / m.spawnAt, mz = gunMuzzle(f), ty = (o.hurt.y0 + o.hipY) / 2; ctx.save(); ctx.strokeStyle = `rgba(255,30,40,${0.3 + 0.5 * u})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(mz[0], mz[1]); ctx.lineTo(o.x, ty); ctx.stroke(); ctx.restore(); finReticle(o.x, ty, lerp(120, 40, u), 0.5 + 0.5 * u); }
   if (m.id === 'sk_hball' && f.mt < m.spawnAt) { const w = f.toWorld(f.J.fH), x = w[0] + f.facing * 6, y = w[1] - 6, k = f.mt / m.spawnAt, rr = 19 + 8 * k; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 4, x, y, rr * (1.6 + k)); g.addColorStop(0, `rgba(255,236,150,${0.3 + 0.6 * k})`); g.addColorStop(1, 'rgba(255,140,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rr * (1.6 + k), 0, 7); ctx.fill(); ctx.restore(); drawHandball(x, y, f.mt * 0.4 * f.facing, rr); }
   if (m.id === 'sk_rock' && f.mt >= 12 && f.mt < m.spawnAt) { const [x, y] = handsMid(f); const lift = f.mt < 18 ? 0 : 1; drawRock(x, y - (lift ? ROCK_R * 0.85 : ROCK_R * 0.5), f.mt * 0.02, ROCK_R); }
   if (m.cart && f.mt >= 2 && !f.cartGone && f.mt < m.st + m.ac) { const [hx] = cartHandle(f); const a = Math.min(1, (f.mt - 1) / 4); drawCart(hx, 0, f.facing, 0, a); }
@@ -3447,6 +3504,24 @@ const FIN = [
       if (S.fish) drawGrouper(w[0] + a.facing * 60, w[1] - 10, a.facing > 0 ? -0.3 : Math.PI + 0.3, 170);
       if (S.net) drawNet(d.x, S.net.y, S.net.r);
       if (S.shark) drawShark(d.x, S.shark.y, a.facing > 0 ? S.shark.r : Math.PI - S.shark.r, 1.4);
+    } },
+  { name: 'تصفية الحساب', line: 'آخر طلقة… لك!', col: '#c8102e',
+    run(F, a, d, t) {
+      const f = a.facing; if (!a.finS || a.finS.fin !== F.fin) a.finS = { fin: F.fin, d0: clamp(a.x + f * 430, -STAGE + 60, STAGE - 60), tr: null, ret: 0 };
+      const S = a.finS; finHold(d, S.d0); const shot = (dmg, big) => { const m = gunMuzzle(a), c = big ? finHead(d) : t % 12 < 6 ? finChest(d) : finHead(d); S.tr = { t, m, c: [c[0] + rnd(-12, 12), c[1] + rnd(-16, 16)], big }; big ? SFX.bigGun() : SFX.gun(); finHit(F, a, d, dmg, S.tr.c, big ? 18 : 3, big); d.finP = FPZ.hurt({ lean: big ? -30 : (t % 2 ? 18 : -14) }); finBurst(S.tr.c[0], S.tr.c[1], big ? 50 : 8, ['#ffffff', '#ffd34d', '#ff3a2a'], big ? 15 : 6, big ? 8 : 4); };
+      if (t < 16) { a.rageP = FPZ.aim; S.ret = { x: d.x, y: finChest(d)[1], s: lerp(140, 60, finSeg(t, 0, 16)), a: 1 }; if (t === 2) SFX.click(); finCam(F, (a.x + d.x) / 2, -250, 1.0); return; }
+      if (t < 64) { a.rageP = G2({ ...GAIM, ua: (t - 16) % 6 < 2 ? 100 : 90, lean: (t - 16) % 6 < 2 ? 0 : 6 }); S.ret.y = finChest(d)[1]; if ((t - 16) % 6 === 0) shot(3); finCam(F, (a.x + d.x) / 2, -250, 1.08); return; }
+      S.ret = 0;
+      if (t < 84) { a.rageP = G2({ ua: 30, fa: 120, bua: 60, bfa: 120, lean: -4 }); if (t === 64) { popText('ريلود…', a.x, -470, '#ffd34d', 38); SFX.click(); } if (t === 76) SFX.click(); d.finP = FPZ.hurt({ lean: 10 }); finCam(F, a.x + f * 80, -260, 1.25); return; }
+      if (t < 112) { a.rageP = FPZ.aim; const h = finHead(d); S.ret = { x: h[0], y: h[1], s: lerp(110, 34, finSeg(t, 84, 108)), a: 1 }; if (t === 86) popText('لا تتحرك…', d.x, -480, '#ff3a2a', 40); finCam(F, lerp(a.x, d.x, finSeg(t, 84, 110) * 0.8), -300, lerp(1.0, 1.5, finSeg(t, 84, 110))); return; }
+      if (t === 112) { S.ret = 0; shot(30, 1); F.shake(40); const c = S.tr.c; for (let i = 0; i < 3; i++) finRing(c[0], c[1], i % 2 ? '#ff3a2a' : '#ffffff', 200 + i * 130, 18 + i * 6); finLaunch(d, f * 12, -24); popText('بانق! 💥', c[0], c[1] - 70, '#ff3a2a', 64); return; }
+      if (t < 122) { a.rageP = G2({ ...GAIM, ua: t < 116 ? 112 : 96, lean: t < 116 ? -8 : 0, dx: t < 116 ? -12 : -6 }); finCam(F, lerp(a.x, d.x, 0.5), -260, 1.05); return; }
+      if (t < 160) { a.rageP = G2({ ua: 140, fa: 70, bua: 30, bfa: 10, lean: -6 }); S.smoke = 1; if (t % 3 === 0) { const m = gunMuzzle(a); FX.push({ t: 'p', x: m[0], y: m[1], vx: rnd(-0.6, 0.6), vy: -rnd(1.5, 3), life: 30, max: 30, c: 'rgba(200,200,200,0.5)', sz: rnd(5, 9) }); } finCam(F, lerp(a.x, d.x, 0.35), -240, 1.1); return; }
+      S.smoke = 0; return true;
+    },
+    front(F, a, d, t) { const S = a.finS; if (!S) return;
+      if (S.ret) finReticle(S.ret.x, S.ret.y, S.ret.s, S.ret.a);
+      if (S.tr && t - S.tr.t < 4) { const k = 1 - (t - S.tr.t) / 4, [mx, my] = gunMuzzle(a), [cx, cy] = S.tr.c; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k; ctx.strokeStyle = '#ffe7a0'; ctx.lineWidth = S.tr.big ? 10 : 4; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(cx, cy); ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = S.tr.big ? 3 : 1.5; ctx.stroke(); ctx.restore(); drawMuzzleFlash(mx, my, S.tr.big ? 60 : 34, Math.sign(cx - mx) || 1, k); }
     } },
 ];
 
