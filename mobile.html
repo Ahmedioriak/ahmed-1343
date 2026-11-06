@@ -301,7 +301,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.41';
+const GAME_VER = '1.42';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2279,6 +2279,8 @@ class Fighter {
         o.th += 14 * w; o.bth -= 14 * w; o.sh += 14 * Math.max(0, c); o.bsh += 14 * Math.max(0, -c); o.lean += 2;
         break;
       }
+      case 'widle': { const b = Math.sin(this.clock * 0.06); o = Object.assign({}, BASE, { lean: 2 + b, ua: 6 + b * 2, fa: 18, bua: -4 - b * 2, bfa: 20, th: 4, sh: 4, bth: -4, bsh: 4 }); break; }   // open world: standing relaxed
+      case 'wwalk': { const w = Math.sin(this.wph || 0), c = Math.cos(this.wph || 0); o = Object.assign({}, BASE, { lean: 5, th: 24 * w, bth: -24 * w, sh: 6 + 26 * Math.max(0, c), bsh: 6 + 26 * Math.max(0, -c), ua: -22 * w, fa: 24, bua: 22 * w, bfa: 24, dy: -Math.abs(c) * 4 }); break; }   // open world: casual walk
       case 'crouch': o = Object.assign({}, CROUCH); o.lean += Math.sin(this.clock * 0.08) * 1.5; break;
       case 'dash': o = (this.vx * this.facing > 0) ? DASHP : BDASHP; break;
       case 'dodge': { const u = Math.sin(Math.min(1, this.t / 16) * Math.PI); o = Object.assign({}, GUARD, { lean: -26 * u, r: -6 * u, th: 18 + 30 * u, sh: 22 + 50 * u, bth: -14 + 20 * u, bsh: 8 + 60 * u, ua: 34 - 10 * u, bua: 26 - 10 * u, dy: 30 * u }); break; }
@@ -5446,6 +5448,12 @@ function drawChibi(c, x, y, ci, dir, ph, moving, sc = 1.35) {
     c.strokeStyle = '#fff'; c.lineWidth = 2.6; c.beginPath(); c.arc(side ? 3 : 0, hy, hr, 0, 7); c.stroke(); c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 1.2; c.beginPath(); c.arc(side ? 3 : 0, hy, hr + 1.6, 0, 7); c.stroke(); }
   c.restore();
 }
+// the real fighters (same model as in the fights) walking around the world
+const WFIG_S = 0.47;
+function wMakeFig(ci, eq) { const f = new Fighter(0, ci, { h: {}, p: {}, read() { } }); f.state = 'widle'; f.x = 0; f.facing = 1; f.clock = (Math.random() * 200) | 0; if (eq) { f.eq = eq; f.R = clothRig(f.R, 'c' + ci, eq); } f.animate(); return f; }
+function wAnimFig(e) { const f = e.fig; if (!f) return; f.facing = e.face || 1; f.state = e.moving ? 'wwalk' : 'widle'; f.wph = e.ph; f.clock++; f.animate(); }
+function drawFig(c, e, s = WFIG_S) { const f = e.fig; if (!f) return; c.save(); c.translate(e.x, e.y); c.fillStyle = 'rgba(0,0,0,0.28)'; c.beginPath(); c.ellipse(0, 0, 36, 10, 0, 0, 7); c.fill();
+  c.scale(s, s); if (f.eq) drawEqBack(f); drawFighter(f); if (f.eq) drawEqFront(f); c.restore(); }
 // ---- building blocks of the maps
 const W_SHADE = (hex, k) => { const n = parseInt(hex.slice(1), 16); const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255, f = v => Math.max(0, Math.min(255, Math.round(v * k))); return `rgb(${f(r)},${f(g)},${f(b)})`; };
 function wBox(x, y, w, d, h, col, extra = {}) {
@@ -5578,8 +5586,8 @@ function worldOpen() { wMaps(); const sv = worldLoad(); G.world = { phase: 'pick
 function worldStart(ci, o) {
   const W = G.world, sv = W.sv, eff = (() => { const O = outfitOf(ci, o); return O && O.as !== undefined ? O.as : ci; })();
   const map = sv && sv.ci === ci && WMAPS[sv.map] ? sv.map : 'fareej', M = WMAPS[map];
-  W.P = { base: ci, o, ci: eff, x: map === (sv && sv.map) && sv.ci === ci ? sv.x : M.spawn[0], y: map === (sv && sv.map) && sv.ci === ci ? sv.y : M.spawn[1], dir: 'down', ph: 0, moving: false };
-  W.npcs = W_HOME.filter(h => h[0] !== ci).map(([nci, mp, x, y, dir, line]) => ({ ci: nci, map: mp, x, y, hx: x, hy: y, dir, d0: dir, line, ph: Math.random() * 6, wait: 60 + Math.random() * 200, tx: null, ty: null }));
+  W.P = { fig: wMakeFig(eff, eqOfProf(profCur(), eff)), face: 1, base: ci, o, ci: eff, x: map === (sv && sv.map) && sv.ci === ci ? sv.x : M.spawn[0], y: map === (sv && sv.map) && sv.ci === ci ? sv.y : M.spawn[1], dir: 'down', ph: 0, moving: false };
+  W.npcs = W_HOME.filter(h => h[0] !== ci).map(([nci, mp, x, y, dir, line]) => ({ ci: nci, map: mp, x, y, hx: x, hy: y, dir, d0: dir, line, ph: Math.random() * 6, wait: 60 + Math.random() * 200, tx: null, ty: null, fig: wMakeFig(nci, null), face: dir === 'left' ? -1 : 1 }));
   W.phase = 'walk'; W.map = map; W.cam = null; W.fade = 30; W.dlg = null; W.mapOpen = false; W.msg = { t: 'أهلاً في ' + M.name + ' 👋', k: 0 }; worldSave();
 }
 function worldGo(to, at) { const W = G.world; W.go = { to, at, k: 0 }; SFX.whoosh(0); }
@@ -5597,7 +5605,7 @@ function wNearRack(W) { const M = WMAPS[W.map]; for (const o of M.objs) if (o.wa
 function wTalk(n) {
   const W = G.world, C = CHARS[n.ci], Pz = PERSONA[n.ci] || {}, intro = (Pz.intro && Pz.intro[0]) || C.quote || '…';
   const boss = n.ci >= NCH; W.dlg = { n, lines: [n.line, intro], i: 0, k: 0, opt: 0, opts: [['🥊 تحدّاه', 'fight'], ['👋 مع السلامة', 'bye']], boss };
-  n.dir = wDirOf(W.P.x - n.x, W.P.y - n.y, n.dir); SFX.move();
+  n.dir = wDirOf(W.P.x - n.x, W.P.y - n.y, n.dir); n.face = W.P.x >= n.x ? 1 : -1; W.P.face = n.x >= W.P.x ? 1 : -1; SFX.move();
 }
 function wChallenge(n) {
   const W = G.world; worldSave(); W.fightWith = n; W.dlg = null;
@@ -5638,24 +5646,25 @@ function updWorld() {
   if (anyP('Tab') || p.b2) { W.mapOpen = true; W.mapSel = Object.keys(WMAPS).indexOf(W.map); SFX.ok(); return; }
   // talk / wardrobe
   const near = wNearNpc(W), rack = wNearRack(W);
-  if (ok || (tap && near && W.cam && Math.hypot(tap[0] - (near.x - W.cam.x), tap[1] - (near.y - 90 - W.cam.y)) < 90) || (tap && W.prompt && Math.abs(tap[0] - W.prompt[0]) < 120 && Math.abs(tap[1] - W.prompt[1]) < 40)) {
+  if (ok || (tap && near && W.cam && Math.hypot(tap[0] - (near.x - W.cam.x), tap[1] - (near.y - 95 - W.cam.y)) < 100) || (tap && W.prompt && Math.abs(tap[0] - W.prompt[0]) < 120 && Math.abs(tap[1] - W.prompt[1]) < 40)) {
     if (near) { wTalk(near); return; } if (rack) { worldSave(); shopOpen('world'); return; } }
   // walk
   let vx = (h.right ? 1 : 0) - (h.left ? 1 : 0), vy = (h.down ? 1 : 0) - (h.up ? 1 : 0);
   if (TOUCH_ON && STK.id !== null) { const m = Math.hypot(STK.dx, STK.dy) / STK.R; if (m > 0.18) { vx = STK.dx / STK.R; vy = STK.dy / STK.R; } }
   const m = Math.hypot(vx, vy); const P = W.P;
   if (m > 0.1) { const s = WD.SPD * Math.min(1, m) / Math.max(1, m); const nx = P.x + vx * s, ny = P.y + vy * s;
-    if (wFree(W, nx, P.y, WD.R, P)) P.x = nx; if (wFree(W, P.x, ny, WD.R, P)) P.y = ny; P.dir = wDirOf(vx, vy, P.dir); P.moving = true; P.ph += 0.32; }
+    if (wFree(W, nx, P.y, WD.R, P)) P.x = nx; if (wFree(W, P.x, ny, WD.R, P)) P.y = ny; P.dir = wDirOf(vx, vy, P.dir); if (Math.abs(vx) > 0.15) P.face = vx > 0 ? 1 : -1; P.moving = true; P.ph += 0.2 * Math.min(1, m); }
   else { P.moving = false; P.ph += 0.05; }
   for (const e of WMAPS[W.map].exits) if (P.x > e.x && P.x < e.x + e.w && P.y > e.y && P.y < e.y + e.h) { worldGo(e.to, e.at); break; }
   // the gang: idle, look at you, stroll a little
   for (const n of W.npcs) { if (n.map !== W.map) continue; const d = Math.hypot(n.x - P.x, n.y - P.y);
-    if (d < WD.NEAR + 40) { n.dir = wDirOf(P.x - n.x, P.y - n.y, n.dir); n.moving = false; n.ph += 0.05; continue; }
+    if (d < WD.NEAR + 40) { n.dir = wDirOf(P.x - n.x, P.y - n.y, n.dir); if (Math.abs(P.x - n.x) > 8) n.face = P.x > n.x ? 1 : -1; n.moving = false; n.ph += 0.05; continue; }
     if (n.tx === null) { n.ph += 0.05; n.moving = false; if (--n.wait <= 0) { const a = Math.random() * 6.28, r = 40 + Math.random() * 90; n.tx = n.hx + Math.cos(a) * r; n.ty = n.hy + Math.sin(a) * r * 0.6; } }
     else { const dx = n.tx - n.x, dy = n.ty - n.y, dd = Math.hypot(dx, dy); if (dd < 4) { n.tx = null; n.wait = 120 + Math.random() * 260; n.dir = n.d0; continue; }
-      const s = 1.6, nx = n.x + dx / dd * s, ny = n.y + dy / dd * s; if (wFree(W, nx, ny, WD.R, n)) { n.x = nx; n.y = ny; n.dir = wDirOf(dx, dy, n.dir); n.moving = true; n.ph += 0.22; } else { n.tx = null; n.wait = 90; } } }
+      const s = 1.6, nx = n.x + dx / dd * s, ny = n.y + dy / dd * s; if (wFree(W, nx, ny, WD.R, n)) { n.x = nx; n.y = ny; n.dir = wDirOf(dx, dy, n.dir); if (Math.abs(dx) > 1) n.face = dx > 0 ? 1 : -1; n.moving = true; n.ph += 0.14; } else { n.tx = null; n.wait = 90; } } }
+  wAnimFig(P); for (const n of W.npcs) if (n.map === W.map) wAnimFig(n);
   // camera
-  const M = WMAPS[W.map], tx = clamp(P.x - VW / 2, 0, Math.max(0, M.W - VW)) - Math.max(0, (VW - M.W) / 2), ty = clamp(P.y - 40 - VH / 2, -160, Math.max(0, M.H - VH)) - Math.max(0, (VH - M.H) / 2);
+  const M = WMAPS[W.map], tx = clamp(P.x - VW / 2, 0, Math.max(0, M.W - VW)) - Math.max(0, (VW - M.W) / 2), ty = clamp(P.y - 70 - VH / 2, -200, Math.max(0, M.H - VH)) - Math.max(0, (VH - M.H) / 2);
   if (!W.cam) W.cam = { x: tx, y: ty }; W.cam.x = lerp(W.cam.x, tx, 0.14); W.cam.y = lerp(W.cam.y, ty, 0.14);
 }
 const W_MAPPOS = { fareej: [640, 400], diwan: [330, 210], shop: [950, 210], pitch: [250, 520], beach: [1030, 540] };
@@ -5677,7 +5686,7 @@ function updWorldPick(W, p, q, ok, back, tap) {
 function drawWorldPick(W) {
   drawCupBg('🗺️ العالم المفتوح', 'اختر شخصيتك الأساسية');
   const L = outfitList(W.cur), O = L[W.o % L.length], ci = O && O.as !== undefined ? O.as : W.cur;
-  drawChibi(ctx, VW / 2 - 250, 360, ci, 'down', G.frame * 0.05, false, 2.2);
+  if (!W.pf || W.pf.ci !== ci) W.pf = { ci, fig: wMakeFig(ci, eqOfProf(profCur(), ci)), face: 1, x: VW / 2 - 250, y: 380, moving: false, ph: 0 }; wAnimFig(W.pf); drawFig(ctx, W.pf, 0.68);
   const im = IMG['front' + (ci + 1)]; if (im) { const hgt = 250, w = im.width * hgt / im.height; ctx.drawImage(im, VW / 2 + 60, 115, w, hgt); }
   txt(CHARS[ci].name, VW / 2 - 40, 200, { size: 44, weight: 900, color: '#fff', stroke: '#000', sw: 6 });
   if (W.sv && W.sv.ci === W.cur) txt('📍 بتكمل من ' + ((WMAPS[W.sv.map] || {}).name || ''), VW / 2 - 40, 250, { size: 20, weight: 800, color: '#7dffb0' });
@@ -5705,16 +5714,16 @@ function drawWorld() {
   // sort everything by where its feet are
   const L = [];
   for (const o of M.objs) L.push([o.sy, () => o.draw(ctx)]);
-  for (const n of W.npcs) if (n.map === W.map) L.push([n.y, () => drawChibi(ctx, n.x, n.y, n.ci, n.dir, n.ph, n.moving)]);
-  L.push([P.y, () => drawChibi(ctx, P.x, P.y, P.ci, P.dir, P.ph, P.moving)]);
+  for (const n of W.npcs) if (n.map === W.map) L.push([n.y, () => drawFig(ctx, n)]);
+  L.push([P.y, () => drawFig(ctx, P)]);
   L.sort((a, b) => a[0] - b[0]); for (const [, f] of L) f();
   // speech bubbles + your marker
   const near = !W.dlg && wNearNpc(W), rack = !W.dlg && !near && wNearRack(W); W.prompt = null;
-  for (const n of W.npcs) if (n.map === W.map && Math.hypot(n.x - P.x, n.y - P.y) < WD.NEAR + 120) { const on = n === near, bx = n.x, by = n.y - 150;
+  for (const n of W.npcs) if (n.map === W.map && Math.hypot(n.x - P.x, n.y - P.y) < WD.NEAR + 120) { const on = n === near, bx = n.x, by = n.y - 205;
     ctx.fillStyle = '#fff'; ctx.strokeStyle = '#222'; ctx.lineWidth = 2.5; rrect(bx - 30, by - 22, 60, 36, 16); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(bx - 6, by + 13); ctx.lineTo(bx, by + 24); ctx.lineTo(bx + 6, by + 13); ctx.fill();
     txt(on ? '💬' : '…', bx, by - 4, { size: on ? 20 : 26, weight: 900, color: '#222', rtl: false });
     if (on) txt(CHARS[n.ci].name, bx, n.y + 22, { size: 20, weight: 900, color: '#ffd34d', stroke: '#000', sw: 4 }); }
-  ctx.fillStyle = '#ffd34d'; ctx.beginPath(); const my = P.y - 135 + Math.sin(G.frame * 0.12) * 4; ctx.moveTo(P.x - 9, my - 12); ctx.lineTo(P.x + 9, my - 12); ctx.lineTo(P.x, my); ctx.fill();
+  ctx.fillStyle = '#ffd34d'; ctx.beginPath(); const my = P.y - 192 + Math.sin(G.frame * 0.12) * 4; ctx.moveTo(P.x - 9, my - 12); ctx.lineTo(P.x + 9, my - 12); ctx.lineTo(P.x, my); ctx.fill();
   if (near || rack) { const px = P.x - cam.x, py = P.y - cam.y + 48; W.prompt = [px, py]; }
   // night: dim the world, light the lamps
   const hr = (W.min % (24 * 60)) / 60, night = hr >= 19 || hr < 5 ? 1 : hr >= 17 ? (hr - 17) / 2 : hr < 7 ? (7 - hr) / 2 : 0;
