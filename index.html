@@ -300,7 +300,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.32';
+const GAME_VER = '1.33';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -4223,6 +4223,28 @@ function fbDB() {
     return F.database();
   } catch (e) { return null; }
 }
+// ---- player stats for the admin page (only when firebase-config.js is filled in) ----
+const STATS = { id: null, started: false };
+function statsId() { try { let id = localStorage.getItem('shilla_id'); if (!id || !/^[a-z0-9]{12}$/.test(id)) { id = ''; for (let i = 0; i < 12; i++) id += 'abcdefghijklmnopqrstuvwxyz0123456789'[(Math.random() * 36) | 0]; localStorage.setItem('shilla_id', id); } return id; } catch (e) { return null; } }
+function statsName() { try { return (localStorage.getItem('shilla_name') || '').trim().slice(0, 24); } catch (e) { return ''; } }
+function statsDev() { return (TOUCH_ON || window.FORCE_TOUCH) ? 'جوال' : 'كمبيوتر'; }
+function statsPing(extra) {
+  try {
+    const db = fbDB(), F = window.firebase; if (!db || !F || !F.database || !F.database.ServerValue) return;
+    const id = STATS.id || (STATS.id = statsId()); if (!id) return;
+    const SV = F.database.ServerValue, ref = db.ref('players/' + id), up = { name: statsName(), last: SV.TIMESTAMP, ver: GAME_VER, dev: statsDev(), app: !!PWA.standalone };
+    if (!STATS.started) { STATS.started = true; up.visits = SV.increment(1); let first = 0; try { first = +localStorage.getItem('shilla_first') || 0; if (!first) { first = Date.now(); localStorage.setItem('shilla_first', first); } } catch (e) { } up.first = first || Date.now();
+      const on = db.ref('online/' + id); on.onDisconnect().remove(); on.set({ name: statsName(), since: SV.TIMESTAMP, dev: statsDev() }); }
+    if (extra) { if (extra.fight) { up.fights = SV.increment(1); up.char = extra.char; up.mode = extra.mode; db.ref('online/' + id).update({ char: extra.char, mode: extra.mode }); } }
+    ref.update(up);
+  } catch (e) { }
+}
+function statsAskName(force) {
+  try { if (!fbDB() && !force) return; if (!force && (statsName() || localStorage.getItem('shilla_name_asked'))) return; localStorage.setItem('shilla_name_asked', '1');
+    setTimeout(() => { const n = window.prompt('وش اسمك؟ (عشان المدير يعرف منو يلعب)', statsName()); if (n !== null) { localStorage.setItem('shilla_name', n.trim().slice(0, 24)); statsPing(); } }, 60);
+  } catch (e) { }
+}
+addEventListener('load', () => setTimeout(() => statsPing(), 2500));
 class FbConn {
   constructor(ref, role) { this.ref = ref; this.role = role; this.h = {}; this.open = false; this.closed = false; this.pendIn = null; this.subs = []; this.me = role === 'host' ? 'H' : 'G'; this.op = role === 'host' ? 'G' : 'H'; }
   on(e, f) { (this.h[e] = this.h[e] || []).push(f); }
@@ -4717,7 +4739,7 @@ const G = {
     if (AC) Music.intensity = 0;
   },
   toVS() { this.scene = 'vs'; this.t = 0; if (!this.story && this.mode !== 'online') this.stageId = STAGE_POOL[(RR() * STAGE_POOL.length) | 0]; },
-  toFight() { this.scene = 'fight'; this.t = 0; this.fight = new Fight(selCI(this.sel, 0), selCI(this.sel, 1), this.mode); if (this.mode === 'online') netFightInit(this.fight); if (this.story) storySetupFight(this.fight); },
+  toFight() { this.scene = 'fight'; this.t = 0; this.fight = new Fight(selCI(this.sel, 0), selCI(this.sel, 1), this.mode); { const mi = this.mode === 'online' ? NET.slot : 0, mc = this.fight.f[mi].ci; statsPing({ fight: 1, char: CHARS[mc].name, mode: this.story ? 'القصة' : ({ '2p': 'لاعبين', cpu: 'ضد الكمبيوتر', online: 'أونلاين' })[this.mode] || this.mode }); } if (this.mode === 'online') netFightInit(this.fight); if (this.story) storySetupFight(this.fight); },
   toResult(w, fight) { if (this.story) { storyResult(w); return; } this.scene = 'result'; this.t = 0; this.res = { w, ci: fight.cis[w], wins: fight.wins.slice() }; if (AC) Music.intensity = 0; say(`${w === 0 ? 'Player one' : (this.mode === 'cpu' ? 'Computer' : 'Player two')} wins`); },
 };
 window.__storyAPI = { storyAdvance, storyStart, storyFight, storyMapOpen, storyScript };
@@ -4726,7 +4748,8 @@ window.__voiceSegs = t => voiceSegs(t).map(x => x.t); window.__VOXS = VOX; windo
 window.__G = G; window.__MV = MV; window.__SK = SKILL_IDS; window.__COMBOS = COMBOS; window.__CPU = CPUPad; window.__txt = txt; window.__IMG = IMG; window.__FX = FX; window.__spark = spark;
 
 const SET_ROWS = [
-  ['vol', 'مستوى الصوت العام'], ['music', 'الموسيقى'], ['fx', 'أصوات المعركة والضربات'], ['gong', 'جرس بداية الجولة و K.O.'], ['voice', 'أصوات وكلام الشخصيات'], ['ui', 'أصوات القوائم'], ['rumble', 'اهتزاز يد التحكم'], ['install', 'ثبّت اللعبة كتطبيق 📲'], ['back', 'رجوع']];
+  ['vol', 'مستوى الصوت العام'], ['music', 'الموسيقى'], ['fx', 'أصوات المعركة والضربات'], ['gong', 'جرس بداية الجولة و K.O.'], ['voice', 'أصوات وكلام الشخصيات'], ['ui', 'أصوات القوائم'], ['rumble', 'اهتزاز يد التحكم'], ['install', 'ثبّت اللعبة كتطبيق 📲'], ['name', 'اسمك في اللعبة'], ['back', 'رجوع']];
+const SR0 = 150, SRH = 52;
 let setIdx = 0;
 function applySet() { if (master && !muted) master.gain.value = MASTER_VOL * SET.vol; if (musG) musG.gain.value = SET.music ? MUSIC_VOL : 0; musicOn = SET.music; saveSet(); }
 function updSettings() { // returns true when closed
@@ -4737,7 +4760,7 @@ function updSettings() { // returns true when closed
   if (any('back') || anyP('Escape', 'GPStart')) { setIdx = 0; SFX.move(); return true; }
   let tapOk = false;
   if (G.tap && Math.abs(G.tap[0] - VW / 2) < 440) {
-    const i = Math.round((G.tap[1] - 165) / 58);
+    const i = Math.round((G.tap[1] - SR0) / SRH);
     if (i >= 0 && i < SET_ROWS.length) {
       setIdx = i; tapOk = true;
       if (SET_ROWS[i][0] === 'vol' && G.tap[0] < VW / 2 - 130) { SET.vol = clamp(Math.floor((G.tap[0] - (VW / 2 - 360)) / 44) + 1, 0, 5) / 5; applySet(); SFX.ok(); return false; }
@@ -4746,6 +4769,7 @@ function updSettings() { // returns true when closed
   const key = SET_ROWS[setIdx][0], l = any('left'), r = any('right'), ok = any('ok') || tapOk;
   if (key === 'back') { if (ok) { setIdx = 0; SFX.ok(); return true; } return false; }
   if (key === 'install') { if (ok) { SFX.ok(); pwaInstall(); } return false; }
+  if (key === 'name') { if (ok) { SFX.ok(); statsAskName(true); } return false; }
   if (key === 'vol') { if (l || r) { SET.vol = clamp(Math.round((SET.vol + (r ? 0.2 : -0.2)) * 10) / 10, 0, 1); applySet(); SFX.ok(); } }
   else if (l || r || ok) { SET[key] = !SET[key]; applySet(); SFX.ok(); }
   return false;
@@ -4754,11 +4778,12 @@ function drawSettings() {
   ctx.fillStyle = 'rgba(3,4,10,0.94)'; ctx.fillRect(0, 0, VW, VH);
   txt('الإعدادات', VW / 2, 80, { size: 60, weight: 900, color: '#fff', glow: '#ff2040' });
   SET_ROWS.forEach(([key, label], i) => {
-    const y = 165 + i * 58, sel = i === setIdx;
+    const y = SR0 + i * SRH, sel = i === setIdx;
     ctx.fillStyle = sel ? 'rgba(230,20,40,0.85)' : 'rgba(255,255,255,0.05)';
     ctx.beginPath(); ctx.moveTo(VW / 2 - 400, y - 24); ctx.lineTo(VW / 2 + 420, y - 24); ctx.lineTo(VW / 2 + 400, y + 24); ctx.lineTo(VW / 2 - 420, y + 24); ctx.closePath(); ctx.fill();
     if (key === 'back') { txt(label, VW / 2, y + 2, { size: 30, weight: 800, color: '#fff' }); return; }
     txt(label, VW / 2 + 370, y + 2, { size: 28, weight: 800, color: '#fff', align: 'right' });
+    if (key === 'name') { const n = statsName(); txt(n || 'اضغط واكتب اسمك', VW / 2 - 300, y + 2, { size: 24, weight: 800, color: n ? '#7dffb0' : '#ffd34d' }); return; }
     if (key === 'install') {
       const ok = PWA.standalone; txt(ok ? 'مثبتة ✓' : 'اضغط هنا', VW / 2 - 300, y + 2, { size: 24, weight: 800, color: ok ? '#7dffb0' : '#ffd34d' });
     } else if (key === 'vol') {
@@ -4782,6 +4807,7 @@ function drawSettings() {
 function updTitle() {
   G.t++;
   if (G.settingsOpen) { if (updSettings()) G.settingsOpen = false; return; }
+  if (G.t === 40) statsAskName(false);
   const up = pads[0].p.up || pads[1].p.up, dn = pads[0].p.down || pads[1].p.down;
   if (up) { G.menuIdx = (G.menuIdx + 4) % 5; SFX.move(); }
   if (dn) { G.menuIdx = (G.menuIdx + 1) % 5; SFX.move(); }

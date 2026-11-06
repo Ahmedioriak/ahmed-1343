@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>معركة الشلة — لوحة المدير</title>
+<style>
+  :root { --bg: #07080f; --card: #11131e; --line: #23263a; --red: #ff2a3a; --gold: #ffd34d; --green: #2fd67a; --mute: #8b90a6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(1200px 600px at 80% -10%, #2a0710 0%, var(--bg) 60%); color: #fff; font-family: 'Cairo', system-ui, sans-serif; min-height: 100vh; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+  h1 { margin: 0 0 4px; font-size: 30px; font-weight: 900; } h1 span { color: var(--red); }
+  .sub { color: var(--mute); margin-bottom: 22px; }
+  .box { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+  .login { max-width: 400px; margin: 60px auto; }
+  label { display: block; font-weight: 700; margin: 12px 0 6px; color: #d9dbe6; }
+  input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: #0b0c14; color: #fff; font: inherit; font-size: 16px; }
+  input[type=email], input[type=password] { direction: ltr; text-align: left; }
+  button { font: inherit; font-weight: 800; border: 0; border-radius: 10px; padding: 12px 16px; cursor: pointer; }
+  .btn { background: var(--red); color: #fff; width: 100%; margin-top: 16px; font-size: 17px; }
+  .btn2 { background: transparent; color: var(--gold); width: 100%; margin-top: 8px; }
+  .ghost { background: #1b1e2d; color: #fff; padding: 8px 14px; }
+  .err { color: #ff8a8a; min-height: 22px; margin-top: 10px; font-weight: 700; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .stat b { display: block; font-size: 34px; font-weight: 900; line-height: 1.2; font-family: system-ui, sans-serif; }
+  .stat span { color: var(--mute); font-weight: 700; }
+  .stat.live b { color: var(--green); }
+  .bar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .bar input { flex: 1; min-width: 200px; }
+  .bar select { padding: 11px; border-radius: 10px; background: #0b0c14; color: #fff; border: 1px solid var(--line); font: inherit; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 11px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--mute); font-size: 13px; font-weight: 800; position: sticky; top: 0; background: var(--card); }
+  td.name { font-weight: 800; } td .id { color: var(--mute); font-size: 12px; font-family: monospace; direction: ltr; display: inline-block; margin-right: 6px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #3a3e52; margin-left: 6px; }
+  .dot.on { background: var(--green); box-shadow: 0 0 10px var(--green); }
+  .tbl { overflow-x: auto; max-height: 70vh; overflow-y: auto; padding: 0; }
+  .when { color: #d9dbe6; } .when small { display: block; color: var(--mute); font-size: 12px; }
+  .pill { background: #1b1e2d; border-radius: 99px; padding: 3px 10px; font-size: 13px; font-weight: 700; }
+  .guide ol { line-height: 2; padding-right: 20px; } .guide code { background: #0b0c14; padding: 2px 6px; border-radius: 6px; direction: ltr; display: inline-block; }
+  .empty { text-align: center; color: var(--mute); padding: 40px; }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><h1>لوحة <span>المدير</span> 👑</h1><div class="sub">معركة الشلة — منو يلعب ومتى آخر مرة دخل</div></div>
+    <button class="ghost" id="logout" style="display:none">تسجيل خروج</button>
+  </div>
+
+  <div id="guide" class="box guide" style="display:none">
+    <h2>لازم تربط السيرفر أول (مرة وحدة بس)</h2>
+    <p>اللوحة تحتاج سيرفر Firebase المجاني عشان تعرف منو يلعب. خطوات الربط في ملف <code>README.md</code> قسم «لوحة المدير»، وباختصار:</p>
+    <ol>
+      <li>سوّ مشروع في <code>console.firebase.google.com</code> وفعّل <b>Realtime Database</b>.</li>
+      <li>من <b>Authentication ← Sign-in method</b> فعّل <b>Email/Password</b>.</li>
+      <li>الصق محتوى <code>database.rules.json</code> في تبويب <b>Rules</b> واضغط Publish.</li>
+      <li>الصق إعدادات المشروع في <code>firebase-config.js</code> وارفعه.</li>
+    </ol>
+  </div>
+
+  <div id="login" class="box login" style="display:none">
+    <h2 style="margin-top:0">دخول المدير</h2>
+    <label>الإيميل</label><input id="em" type="email" autocomplete="username">
+    <label>كلمة السر</label><input id="pw" type="password" autocomplete="current-password">
+    <button class="btn" id="go">دخول</button>
+    <button class="btn2" id="reg">أول مرة؟ سجّل نفسك كمدير</button>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div id="dash" style="display:none">
+    <div class="stats">
+      <div class="stat live"><b id="sOn">0</b><span>🟢 يلعبون الحين</span></div>
+      <div class="stat"><b id="sAll">0</b><span>👥 كل اللاعبين</span></div>
+      <div class="stat"><b id="sDay">0</b><span>📅 دخلوا اليوم</span></div>
+      <div class="stat"><b id="sWeek">0</b><span>🗓️ آخر ٧ أيام</span></div>
+      <div class="stat"><b id="sFights">0</b><span>⚔️ كل المباريات</span></div>
+    </div>
+    <div class="bar">
+      <input id="q" placeholder="🔎 دوّر باسم اللاعب">
+      <select id="sort"><option value="last">الأحدث دخول</option><option value="visits">الأكثر دخول</option><option value="fights">الأكثر مباريات</option><option value="first">الأقدم</option></select>
+    </div>
+    <div class="box tbl">
+      <table>
+        <thead><tr><th>اللاعب</th><th>آخر دخول</th><th>أول مرة</th><th>مرات الدخول</th><th>المباريات</th><th>آخر شخصية</th><th>الطور</th><th>الجهاز</th><th>الإصدار</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty" style="display:none">للحين ما أحد لعب بعد ما ربطت السيرفر.</div>
+    </div>
+  </div>
+</div>
+<script src="firebase-config.js"></script>
+<script>/*FB*/</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id), show = (id, on) => { $(id).style.display = on ? '' : 'none'; };
+  const cfg = window.SHILLA_FIREBASE;
+  if (!cfg || !cfg.databaseURL || !window.firebase) { show('guide', true); return; }
+  firebase.initializeApp(cfg);
+  const auth = firebase.auth(), db = firebase.database();
+  let players = {}, online = {}, subs = [];
+  const err = m => { $('err').textContent = m || ''; };
+  const msg = e => ({ 'auth/invalid-credential': 'الإيميل أو كلمة السر غلط', 'auth/wrong-password': 'كلمة السر غلط', 'auth/user-not-found': 'ما في حساب بهالإيميل', 'auth/email-already-in-use': 'الإيميل مسجّل من قبل، اضغط دخول', 'auth/weak-password': 'كلمة السر قصيرة (٦ حروف أو أكثر)', 'auth/invalid-email': 'الإيميل مو صحيح', 'auth/operation-not-allowed': 'فعّل Email/Password من Firebase ← Authentication', 'auth/too-many-requests': 'محاولات كثيرة، جرب بعد شوي' })[e.code] || e.message;
+  $('go').onclick = () => { err(); auth.signInWithEmailAndPassword($('em').value.trim(), $('pw').value).catch(e => err(msg(e))); };
+  $('pw').onkeydown = e => { if (e.key === 'Enter') $('go').click(); };
+  $('reg').onclick = () => { err(); auth.createUserWithEmailAndPassword($('em').value.trim(), $('pw').value).catch(e => err(msg(e))); };
+  $('logout').onclick = () => auth.signOut();
+  auth.onAuthStateChanged(async u => {
+    subs.forEach(f => f()); subs = []; show('dash', false); show('logout', !!u);
+    if (!u) { show('login', true); return; }
+    show('login', false);
+    try {
+      const adm = await db.ref('admins').once('value');
+      if (!adm.exists()) await db.ref('admins/' + u.uid).set(true);          // the first account becomes the admin
+      else if (!adm.child(u.uid).exists()) { show('login', true); err('هذا الحساب مو المدير'); await auth.signOut(); return; }
+    } catch (e) { show('login', true); err('السيرفر رفض: تأكد إنك لصقت database.rules.json في Firebase'); return; }
+    show('dash', true);
+    const pr = db.ref('players'), or = db.ref('online');
+    const onP = s => { players = s.val() || {}; render(); }, onO = s => { online = s.val() || {}; render(); };
+    pr.on('value', onP, e => err(e.message)); or.on('value', onO);
+    subs.push(() => pr.off('value', onP), () => or.off('value', onO));
+  });
+  const ago = t => { if (!t) return '—'; const s = (Date.now() - t) / 1000; if (s < 60) return 'الحين'; if (s < 3600) return 'قبل ' + Math.floor(s / 60) + ' دقيقة'; if (s < 86400) return 'قبل ' + Math.floor(s / 3600) + ' ساعة'; const d = Math.floor(s / 86400); return d === 1 ? 'أمس' : 'قبل ' + d + ' يوم'; };
+  const fmt = t => t ? new Date(t).toLocaleString('ar', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  $('q').oninput = () => render(); $('sort').onchange = () => render();
+  function render() {
+    const now = Date.now(), list = Object.entries(players).map(([id, p]) => Object.assign({ id }, p || {}));
+    const day0 = new Date(); day0.setHours(0, 0, 0, 0);
+    $('sOn').textContent = Object.keys(online).length; $('sAll').textContent = list.length;
+    $('sDay').textContent = list.filter(p => p.last >= day0.getTime()).length; $('sWeek').textContent = list.filter(p => now - p.last < 7 * 864e5).length;
+    $('sFights').textContent = list.reduce((a, p) => a + (+p.fights || 0), 0);
+    const q = $('q').value.trim(), k = $('sort').value;
+    const rows = list.filter(p => !q || (p.name || '').includes(q) || p.id.includes(q))
+      .sort((a, b) => k === 'first' ? (a.first || 0) - (b.first || 0) : (+b[k] || 0) - (+a[k] || 0));
+    show('empty', !rows.length);
+    $('rows').innerHTML = rows.map(p => `<tr>
+      <td class="name"><span class="dot ${online[p.id] ? 'on' : ''}"></span>${esc(p.name) || 'بدون اسم'}<span class="id">${esc(p.id.slice(0, 6))}</span></td>
+      <td class="when">${online[p.id] ? '<b style="color:var(--green)">يلعب الحين</b>' : ago(p.last)}<small>${fmt(p.last)}</small></td>
+      <td class="when">${fmt(p.first) || '—'}</td><td>${+p.visits || 0}</td><td>${+p.fights || 0}</td>
+      <td>${esc(online[p.id] && online[p.id].char || p.char || '—')}</td><td><span class="pill">${esc(online[p.id] && online[p.id].mode || p.mode || '—')}</span></td>
+      <td>${esc(p.dev || '—')}${p.app ? ' 📲' : ''}</td><td style="direction:ltr">${esc(p.ver ? 'v' + p.ver : '—')}</td></tr>`).join('');
+  }
+  setInterval(render, 30000);
+})();
+</script>
+</body>
+</html>

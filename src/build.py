@@ -21,3 +21,8 @@ def build(sub, out, title, cfg):
     print('built', out or '.', len(s) // 1024, 'KB')
 build(('v1',), '', 'معركة الشلة', 'firebase-config.js')
 build((), 'v2', 'معركة الشلة 2', '/firebase-config.js')
+
+# admin dashboard (separate link: /admin)
+fba = '\n'.join(rd(f).replace('//# sourceMappingURL=' + f + '.map', '') for f in ['firebase-app-compat.js', 'firebase-database-compat.js', 'firebase-auth-compat.js'])
+a = rd('admin.html').replace('/*FB*/', fba.replace('</script', '<\\/script')).replace('</head>', '<style>' + rd('fonts.css') + '</style></head>', 1)
+open(os.path.join(R, 'admin.html'), 'w', encoding='utf-8').write(a); print('built admin', len(a) // 1024, 'KB')

@@ -8,6 +8,25 @@
         ".write": true,
         ".validate": "$code.matches(/^[0-9]{4}$/)"
       }
+    },
+    "admins": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid && !root.child('admins').exists()"
+      }
+    },
+    "players": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$id": {
+        ".write": "$id.matches(/^[a-z0-9]{12}$/)",
+        ".validate": "newData.hasChildren(['last'])"
+      }
+    },
+    "online": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$id": {
+        ".write": "$id.matches(/^[a-z0-9]{12}$/)"
+      }
     }
   }
 }
