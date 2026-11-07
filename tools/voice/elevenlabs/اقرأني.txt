@@ -1,0 +1,26 @@
+﻿تسجيل أصوات معركة الشلة بأصوات ElevenLabs
+==========================================
+
+الجمل: 1449 — الحروف: 24,180 تقريباً (تكفيها باقة Starter: 30,000 رصيد في الشهر).
+
+الخطوات:
+1) سوّ حساب في elevenlabs.io واشترك في باقة Starter.
+2) من Voices ← Voice Library ابحث عن كل صوت تحت واضغط "Add to my voices":
+   - الراوي: Hasan   (ID: 6wsXez7Nsh9HQSbtqwIK)
+   - الجد والكبار: RAED   (ID: IK7YYZcSpmlkjKrQxbSn)
+   - ملالي والظلام: Abdullah - Dramatic Bass   (ID: XdoLPWNt7ytn6BtU4FBf)
+   - الرئيس: Jeddawi   (ID: yXEnnEln9armDCyhkXcA)
+   - النوخذة: Abu Salem   (ID: G1QUjBCuRBbLbAmYlTgl)
+   - شباب ١: Sultan   (ID: rUaPbzcZIu8df8iNL9WZ)
+   - شباب ٢: Ghawi   (ID: DANw8bnAVbjDEHwZIoYa)
+   - شباب ٣: Adeeb   (ID: s83SAGdFTflAwJcAV81K)
+   - شباب ٤: Faisal Ali   (ID: H48IdiQwyf50CXpP0dy0)
+3) من الإعدادات ← API Keys سوّ مفتاح جديد (يكفي صلاحية Text to Speech).
+4) فك هذا المجلد على سطح المكتب (مو داخل مجلد اسمه عربي)، واضغط مرتين على record-voices.bat
+   والصق المفتاح لما يطلبه واضغط Enter. التسجيل ياخذ تقريباً 30–45 دقيقة.
+   - تقدر تسكّره وتشغّله مرة ثانية، يكمّل من وين وقف.
+   - إذا تبي ما يسألك عن المفتاح كل مرة: حطه في ملف اسمه api-key.txt جنب الملفات.
+5) لما يخلص يطلع ملف pro-voices-recorded.zip — ارسله لـ Claude في المحادثة وهو يركّبه في اللعبة.
+6) بعد ما تخلص تقدر تحذف المفتاح من حساب ElevenLabs.
+
+مفتاحك ما ينرسل لأي أحد، يستخدمه الملف بس عشان يكلم ElevenLabs من جهازك.
