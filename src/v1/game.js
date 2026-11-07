@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.59';
+const GAME_VER = '1.61';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -6926,7 +6926,7 @@ function sqBrain(W, giver) {
     ask = type === 'cat' ? sqFill(sqPick(SQ_TXT.cat), { hi, c: L[1].replace('القطو ', ''), p: WMAPS[m].name }) : sqFill(sqPick(SQ_TXT.lost), { hi, i: L[0] + ' ' + L[1], p: WMAPS[m].name }); }
   else if (type === 'courier' || type === 'rush') { const far = cits.filter(n => n.map !== giver.map || Math.hypot(n.x - giver.x, n.y - giver.y) > 900), T = sqPick(far.length ? far : cits); if (!T) return null;
     q.hand = T.cid; q.tn = T.dname; q.ready = true; base = type === 'rush' ? 70 : 38 + (T.map !== giver.map ? 15 : 0);
-    if (type === 'rush') { q.dl = W.min + 100 + ((Math.random() * 60) | 0); q.dl0 = W.min; } const hh = q.dl ? Math.floor((q.dl % 1440) / 60) + ':' + String(q.dl % 60).padStart(2, '0') : '';
+    if (type === 'rush') { q.dl = Math.round((W.min + 100 + ((Math.random() * 60) | 0)) / 15) * 15; q.dl0 = W.min; } const hh = q.dl ? Math.floor((q.dl % 1440) / 60) + ':' + String(q.dl % 60).padStart(2, '0') : '';
     ask = sqFill(sqPick(SQ_TXT[type]), { hi, t: T.dname, p: WMAPS[T.map].name, h: hh }); }
   else if (type === 'fight' || type === 'chat') { const T = sqPick(gang); if (!T) return null; q.tci = T.ci; q.tn = CHARS[T.ci].name; base = type === 'fight' ? (T.ci >= NCH ? 140 : 85) : 28; if (type === 'chat') q.ready = true;
     ask = sqFill(sqPick(SQ_TXT[type]), { hi, t: CHARS[T.ci].name, p: WMAPS[T.map].name }); }
@@ -6967,7 +6967,7 @@ function sqTalk(W, n) { const S = W.sq; if (!S || n.cid == null) return false;
   const o = S.off.find(o => o.q.g === n.cid);
   if (o) { W.dlg = { n, lines: o.q.lines.slice(), i: 0, k: 0, opt: 0, opts: [['✅ أبشر', () => sqAccept(W, o)], ['❌ مو الحين', () => { W.dlg = null; S.off = S.off.filter(z => z !== o); SFX.move(); }]] }; face(); return true; }
   const mine = S.act.find(q => q.g === n.cid);
-  if (mine) { W.dlg = { n, lines: ['هاه؟ ' + sqGoal(W, mine) + '… لا تنساني 😅'], i: 0, k: 0, opt: 0, opts: [['👍 جاي', 'bye'], ['🏳️ ألغِ المهمة', () => { W.dlg = null; S.act = S.act.filter(z => z !== mine); W.msg = { t: '🏳️ لغيت المهمة', k: 0, c: '#ffb070' }; SFX.move(); worldSave(); }]] }; face(); return true; }
+  if (mine) { W.dlg = { n, lines: ['هاه؟ ' + sqGoal(W, mine) + '… لا تنساني 😅'], vt: ['هاه؟… لا تنساني'], i: 0, k: 0, opt: 0, opts: [['👍 جاي', 'bye'], ['🏳️ ألغِ المهمة', () => { W.dlg = null; S.act = S.act.filter(z => z !== mine); W.msg = { t: '🏳️ لغيت المهمة', k: 0, c: '#ffb070' }; SFX.move(); worldSave(); }]] }; face(); return true; }
   return false; }
 function sqAccept(W, o) { const S = W.sq; W.dlg = null; S.off = S.off.filter(z => z !== o); if (S.act.length >= 3) { W.msg = { t: 'عندك ٣ مهام… خلّص وحدة أول 📌', k: 0, c: '#ffb070' }; return; }
   const q = o.q; if (q.dl) { const span = q.dl - q.dl0; q.dl0 = W.min; q.dl = W.min + span; }
@@ -7382,7 +7382,7 @@ function sgLineStart(W) { const S = W.saga, D = S.say, L = D.L[D.i]; D.k = 0; D.
 function sgSpeak(L) { if (!SET.voice || muted) return; try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } voiceStop(); VOX.waitL = null;
   if (speakRec(L.text, L.vo, true)) return;
   if (!VOX.pro && !proVoices.fail) { proVoices(); VOX.waitL = L; return; }
-  if (!window.VOICE_STORY && !storyVoices.fail) { storyVoices(); VOX.waitL = L; return; } const T = L.vo === 99 ? [0.95, 0.95] : ((window.VOICE_TTS && window.VOICE_TTS[L.vo]) || [1, 1]); try { speakAr(L.text, T[0], T[1]); } catch (e) { } }
+  if (!VOX.pro && !window.VOICE_STORY && !storyVoices.fail) { storyVoices(); VOX.waitL = L; return; } if (!/[؀-ۿ]/.test(L.text)) return; const T = L.vo === 99 ? [0.95, 0.95] : ((window.VOICE_TTS && window.VOICE_TTS[L.vo]) || [1, 1]); try { speakAr(L.text, T[0], T[1]); } catch (e) { } }
 function sgSayEnd(W) { const S = W.saga, D = S.say; voiceStop(); try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } S.say = null; if (D && D.done) D.done(); }
 // ---- story fights
 function sgFight(W, st) { const S = W.saga; worldSave(); W.dlg = null; S.fightLater = false; voiceStop();
@@ -7520,7 +7520,7 @@ function sgDrawPortrait(W, key, cx, flip, on, t) { const im = sgPortraitImg(W, k
   if (key === 'jadd') { if (!on) ctx.globalAlpha = 0.5; drawJadd(ctx, cx, VH + 40, 3.2, G.frame); ctx.restore(); return; }
   if (!im) { ctx.restore(); return; } const pic = on ? im : (im._dk || (im._dk = tinted(im, '#05060c', 0.62))), h = on ? 530 : 500, w = im.width * h / im.height;
   if (flip) { ctx.translate(cx * 2, 0); ctx.scale(-1, 1); } ctx.drawImage(pic, cx - w / 2, VH - h + 10 - rise, w, h); ctx.restore(); }
-function sgDrawSay(W) { sgDrawSay0(W); if (VOX.waitL) { const a = 0.6 + 0.4 * Math.sin(G.frame * 0.15); ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = 'rgba(8,10,20,0.75)'; rrect(VW / 2 - 150, 62, 300, 38, 19); ctx.fill(); txt('🔊 يحمّل صوت القصة…', VW / 2, 82, { size: 18, weight: 800, color: '#9fe8ff' }); ctx.restore(); } }
+function sgDrawSay(W) { sgDrawSay0(W); if (VOX.waitL !== VOX.wl0) { VOX.wl0 = VOX.waitL; VOX.wlT = G.frame; } if (VOX.waitL && G.frame - (VOX.wlT | 0) < 300) { const a = 0.6 + 0.4 * Math.sin(G.frame * 0.15); ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = 'rgba(8,10,20,0.75)'; rrect(VW / 2 - 150, 62, 300, 38, 19); ctx.fill(); txt('🔊 يحمّل صوت القصة…', VW / 2, 82, { size: 18, weight: 800, color: '#9fe8ff' }); ctx.restore(); } }
 function sgDrawSay0(W) { const S = W.saga, D = S.say, L = D.L[D.i]; if (!L) return; const t = D.t, fxA = Array.isArray(L.fx) ? L.fx : [L.fx], fx = fxA[0];
   ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, VW, VH); { const v = ctx.createRadialGradient(VW / 2, VH / 2, 200, VW / 2, VH / 2, 760); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.6)'); ctx.fillStyle = v; ctx.fillRect(0, 0, VW, VH); }
   if (fx) sgFxBack(W, fx, t);
@@ -7653,10 +7653,11 @@ function wDress(W) { if (!W || !W.P) return; W.P.fig = wMakeFig(W.P.ci, wEqFor(W
 const VOX_TOWN = ['town1', 'town2', 'old'];
 function voxTag(who) {   // one voice per hero; the narrator, the mystery voice, the grandpa and the townspeople have their own
   if (typeof who === 'string') return who; if (who === 99) return 'nar'; if (who === 98 || who === 96) return 'myst'; if (who === 97) return 'old';
-  if (who === CHEF) return 'c1'; return 'c' + (who | 0);
+  return 'c' + (who | 0);   // الطباخ (c18) has his own voice now
 }
 // the studio pieces of a line for one voice, or null when any piece is missing
-function voxProKeys(text, tag) {
+function voxProKeys(text, tag) { const r = voxProKeys0(text, tag); return r || (tag === 'c18' ? voxProKeys0(text, 'c1') : null); }
+function voxProKeys0(text, tag) {
   if (!VOX.pro) return null; const out = [];
   const parts = text.replace(/[\u{1F300}-\u{1FAFF}☀-➿️]/gu, '').split('…');
   for (let pi = 0; pi < parts.length; pi++) { const whole = voiceNorm(parts[pi]); if (!whole) continue;
@@ -7679,7 +7680,9 @@ function voxPlay(segs, rate, stopPrev) {
 function dlgSpeak(W, D) {
   if (!SET.voice || muted || !AC) return; const text = D.lines && D.lines[D.i]; if (!text) return; const n = D.n;
   const tags = D.jadd ? ['old'] : n && n.cit ? (n.role === 'karakman' ? ['old'] : n.role === 'ice' ? ['town2'] : VOX_TOWN) : n && n.ci != null ? [voxTag(n.ci)] : ['nar'];
-  for (const tg of tags) { const k = voxProKeys(text, tg); if (k) { VOX.dlgOn = true; voxPlay(k, 1, true); return; } }
+  const vt = (D.vt && D.vt[D.i]) || text;
+  for (const tg of tags) { const k = voxProKeys(vt, tg); if (k) { VOX.dlgOn = true; voxPlay(k, 1, true); return; } }
+  if (n && n.cit) { const k = sqVoxKeys(vt, sqVoxTag(n)); if (k) { VOX.dlgOn = true; voxPlay(k, 1, true); return; } }
   if (n && !n.cit && n.ci != null && speakRec(text, n.ci, true)) VOX.dlgOn = true;
 }
 // the studio pack loads first; if there is none, the older recorded story voice loads instead
@@ -7689,8 +7692,9 @@ function proMerge() { const P = window.VOICE_PRO_PARTS || []; for (let i = proMe
 function proVoices() { if (proMerge()) return; if (proVoices.s || proVoices.fail) return;
   const fail = () => { if (proVoices.fail || VOX.pro) return; proVoices.fail = true; storyVoices(); if (window.VOICE_STORY) { const L = VOX.waitL; VOX.waitL = null; sgSayAgain(L); } };
   if (!window.PRO_VOICES) { fail(); return; }   // the build marks the page with how many parts the studio pack has
-  try { proVoices.s = []; for (let i = 1; i <= window.PRO_VOICES; i++) { const s = document.createElement('script'); s.src = 'pro-voices-' + i + '.js'; s.async = true; s.onerror = fail; document.head.appendChild(s); proVoices.s.push(s); } } catch (e) { fail(); } }
-window.__proVoices = () => { if (!proMerge()) return; const L = VOX.waitL; VOX.waitL = null; sgSayAgain(L); };
+  try { proVoices.s = []; for (let i = 1; i <= window.PRO_VOICES; i++) { const s = document.createElement('script'); s.src = 'pro-voices-' + i + '.js' + (window.PRO_H ? '?h=' + window.PRO_H[i - 1] : ''); s.async = true; s.onerror = fail; document.head.appendChild(s); proVoices.s.push(s); } } catch (e) { fail(); } }
+// every part is usable the moment it arrives: a waiting line plays as soon as its own clips are in (no need to wait for the whole pack)
+window.__proVoices = () => { proMerge(); const L = VOX.waitL; if (!L) return; let ok = VOX.pro; try { ok = ok || !!voxProKeys(L.text, voxTag(L.vo)); } catch (e) { } if (ok) { VOX.waitL = null; sgSayAgain(L); } };
 setTimeout(proVoices, 1500);
 // ---- the recording list: every line the game can say, for the voice that says it ----
 function voxEach(fn) {   // fn(tag, text, inPieces, source)
@@ -7712,6 +7716,8 @@ function voxEach(fn) {   // fn(tag, text, inPieces, source)
   W_HOME.forEach(h => fn(voxTag(h[0]), h[5], false, 'world'));
   ['يا هلا ومرحبا بولدي! نوّرت البيت.', 'اقعد تغدّى معي… الأكل حار وجاهز', 'تغدّينا اليوم الحمد لله… تعال بكرة نتغدّى سوا.'].forEach(x => fn('old', x, false, 'world'));
   CIT_LINES.forEach((x, i) => fn(VOX_TOWN[i % 3], x, false, 'world'));
+  for (const x of sqVoxAll()) for (const tg of ['town1', 'town2']) fn(tg, x, false, 'sq');
+  W_HOME.forEach(h => { for (const x of ['أوكي أوكي… قل له وصلت 👍', 'هههه ماشي… بلّغه إني جاي!', 'تمام… مشكور إنك بلغتني', 'ضربة معلم… المرة الجاية لي!']) fn(voxTag(h[0]), x, false, 'world'); });
   fn('old', 'كرك حار على الصبح… يعدّل المزاج!', false, 'world'); fn('town2', 'آيس كريم بارد! تبي فانيلا ولا شوكولاتة؟', false, 'world');
 }
 const voxClean = t => String(t).replace(/[\u{1F300}-\u{1FAFF}☀-➿️]/gu, ''), voxSay = r => r.trim().replace(/^[!؟?.,،:؛—"«»\s]+/, '');
@@ -7722,6 +7728,41 @@ window.__voxManifest = () => { const M = new Map(), put = (tag, k, t, src) => { 
   // a piece keeps its own punctuation where it can, so questions still sound like questions
   return [...M.entries()].map(([k, o]) => ({ k, tag: o.tag, t: o.t, src: o.src })); };
 window.__voxCov = () => { let n = 0, miss = []; voxEach((tag, text) => { n++; if (!voxProKeys(text, tag)) miss.push(tag + ' | ' + text); }); return { n, miss: [...new Set(miss)] }; };
+window.__voxHas = (text, tags) => (tags || ['town1', 'town2', 'old']).some(t => !!voxProKeys(text, t));
+
+// ---- side quests talk too: their lines are built from pieces (a greeting, a name, a place, an item, a number…),
+// so every piece is recorded once per town voice and the pieces play in a row
+const AR_N = ['صفر', 'واحد', 'اثنين', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة', 'عشرة', 'إحدعش', 'اثنعش', 'ثلطعش', 'أربعطعش', 'خمسطعش', 'سطعش', 'سبعطعش', 'ثمنطعش', 'تسعطعش'], AR_T = ['', '', 'عشرين', 'ثلاثين', 'أربعين', 'خمسين', 'ستين', 'سبعين', 'ثمانين', 'تسعين'];
+const AR_H = ['اثنعش', 'وحدة', 'ثنتين', 'ثلاث', 'أربع', 'خمس', 'ست', 'سبع', 'ثمان', 'تسع', 'عشر', 'إحدعش'];
+function arNum(n) { n = Math.round(n); if (n < 20) return AR_N[n]; if (n < 100) { const u = n % 10, t = AR_T[(n / 10) | 0]; return u ? AR_N[u] + ' و' + t : t; }
+  if (n < 1000) { const h = (n / 100) | 0, r = n % 100, H = h === 1 ? 'مية' : h === 2 ? 'ميتين' : AR_N[h].replace(/ة$/, '') + ' مية'; return r ? H + ' و' + arNum(r) : H; } return String(n); }
+function arTime(h, m) { return m >= 45 ? AR_H[(h + 1) % 12] + ' إلا ربع' : AR_H[h % 12] + (m >= 30 ? ' ونص' : m >= 15 ? ' وربع' : ''); }
+const sqVoxTag = n => (n.cid | 0) % 2 ? 'town2' : 'town1';
+const sqClean = t => String(t).replace(/[\u{1F000}-\u{1FFFF}\u2300-\u23FF\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u200D]/gu, '');
+function sqVoxText(t) { return sqClean(t).replace(/بـ(\d)/g, 'بـ $1').replace(/(\d{1,2}):(\d{2})/g, (m, h, mm) => arTime(+h, +mm)).replace(/\d+/g, d => arNum(+d)); }
+let SQ_VOCAB = null;
+function sqVocab() { if (SQ_VOCAB) return SQ_VOCAB; wMaps(); const V = new Set(), add = x => { const v = voiceNorm(sqClean(String(x || '')).replace(/…/g, ' ')); if (v) V.add(v); }, li = x => { add(x); add(sqLi(voiceNorm(sqClean(x)))); };
+  SQ_HI.forEach(add); SQ_THX.forEach(add); SQ_CATS.forEach(add); SQ_LOST.forEach(L => { add(L[1]); add(L[2]); });
+  for (const k in W_FOOD) for (const it of W_FOOD[k][1]) add(it[1]); ['عربة الآيسكريم بالكورنيش', 'كشك الكرك بالفريج', 'البقالة', 'المطعم'].forEach(add);
+  for (const id in WMAPS) li(WMAPS[id].name); SQ_SPOTS.forEach(s => { li(s[3]); add(s[4]); }); for (const m in SQ_COLLECT) add(SQ_COLLECT[m][1]);
+  CIT_NAMES.forEach(li); CHARS.forEach(c => li(c.name));
+  for (let n = 1; n <= 20; n++) add(arNum(n)); for (let n = 25; n <= 600; n += 5) add(arNum(n)); for (let h = 0; h < 24; h++) for (const m of [0, 15, 30, 45]) add(arTime(h, m));
+  return (SQ_VOCAB = [...V].sort((a, b) => b.length - a.length)); }
+function sqSplit(t) { const V = sqVocab(), out = [], bnd = (s, i, L) => (i === 0 || s[i - 1] === ' ') && (i + L === s.length || s[i + L] === ' ');
+  const go = s => { s = s.trim(); if (!s) return; let best = -1, bw = null; for (const w of V) { let i = s.indexOf(w); while (i >= 0 && !bnd(s, i, w.length)) i = s.indexOf(w, i + 1); if (i >= 0 && (best < 0 || i < best || (i === best && w.length > bw.length))) { best = i; bw = w; } }
+    if (best < 0) { out.push(s); return; } go(s.slice(0, best)); out.push(bw); go(s.slice(best + bw.length)); };
+  go(t); return out; }
+function sqVoxPieces(text) { const out = []; sqVoxText(text).split('…').forEach(part => { const n = voiceNorm(part); if (n) sqSplit(n).forEach(x => out.push(x)); }); return out; }
+function sqVoxKeys(text, tag) { if (!VOX.pro) return null; const out = []; let pi = 0;
+  for (const part of sqVoxText(text).split('…')) { const n = voiceNorm(part); if (!n) continue; const segs = sqSplit(n); segs.forEach((sg, si) => out.push({ t: tag + '|' + sg, gap: si === 0 && pi ? 0.2 : 0.05 })); pi++; }
+  return out.length && out.every(o => VOX.txt[o.t]) ? out : null; }
+// every piece the side quests can say (for the recording list)
+function sqVoxAll() { const P = new Set(sqVocab()), S = 'زين إني شفتك… ', T = { hi: S, i: 'شاي كرك', p: 'الفريج', t: 'سالم', c: 'مشمش', h: '11:30', w: 'وقت الغروب', lt: sqLi('سالم'), lp: sqLi('الفريج') };
+  const lines = []; for (const k in SQ_TXT) for (const tp of SQ_TXT[k]) { if (k === 'collect') { for (const m in SQ_COLLECT) lines.push(S + SQ_COLLECT[m][2].replace('{n}', 5)); continue; } lines.push(tp.replace(/\{(\w+)\}/g, (m, x) => T[x] !== undefined ? T[x] : m)); }
+  SQ_PAY.forEach(x => lines.push(x.replace('{r}', 45))); SQ_THX.forEach(x => { lines.push('هذا من سالم؟ مشكور! 📦 ' + x); lines.push(x + ' هذا اللي كنت أبيه!'); });
+  lines.push('ترى عندي طلب ثاني إذا فاضي… أبي شاي كرك من الفريج', 'هاه؟… لا تنساني');
+  for (const L of lines) sqVoxPieces(L).forEach(x => P.add(x)); return [...P]; }
+window.__sqVox = { all: sqVoxAll, pieces: sqVoxPieces };
 
 // ================= الدوري — 8-fighter knockout cup: quarter-finals → semi-finals → final, random draw =================
 // up to 8 people pick a fighter each (hot-seat), the empty places are filled by the computer; human vs computer is a normal
