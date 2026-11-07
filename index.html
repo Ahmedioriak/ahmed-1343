@@ -248,6 +248,9 @@ function gpAssign(g) {
   GP.slots[g.index] = free; GP.kind[g.index] = gpKind(g.id); GP.seen = true;
   toast(`تم توصيل يد ${GP.kind[g.index] === 'PAD' ? 'التحكم' : GP.kind[g.index]} ← اللاعب ${free + 1}`);
 }
+function gpTP() { return !!(GPS[0].p.tp || GPS[1].p.tp); }   // the PS4/PS5 touchpad click
+function gpOn() { return Object.keys(GP.slots).length > 0; }
+function padLbl() { const k = gpSlotKind(0) || gpSlotKind(1); return k === 'XBOX' ? { x: 'A', o: 'B', s: 'X', t: 'Y', l1: 'LB', r1: 'RB', l2: 'LT', r2: 'RT', tp: 'View' } : { x: '✕', o: '○', s: '□', t: '△', l1: 'L1', r1: 'R1', l2: 'L2', r2: 'R2', tp: 'التاتش باد' }; }
 function gpSlotKind(slot) { for (const i in GP.slots) if (GP.slots[i] === slot) return GP.kind[i]; return null; }
 addEventListener('gamepadconnected', e => { try { gpAssign(e.gamepad); } catch (er) { } });
 addEventListener('gamepaddisconnected', e => {
@@ -263,7 +266,7 @@ function gpPoll() {
     const ax = g.axes[0] || 0, ay = g.axes[1] || 0;
     const cur = {
       up: B(12) || ay < -0.5, down: B(13) || ay > 0.5, left: B(14) || ax < -0.5, right: B(15) || ax > 0.5,
-      b1: B(2), b2: B(3), b3: B(0), b4: B(1), sp: B(10) || B(11), c12: B(5), c34: B(7), c13: B(4), dg: B(6), ra: B(6) && B(7), ok: B(0) || B(9), back: B(1), start: B(9), sel: B(8),
+      b1: B(2), b2: B(3), b3: B(0), b4: B(1), sp: B(10) || B(11), c12: B(5), c34: B(7), c13: B(4), dg: B(6), ra: B(6) && B(7), ok: B(0) || B(9), back: B(1), start: B(9), sel: B(8), tp: B(17),
     };
     const pv = GP.prev[g.index] || {};
     const st = GPS[sl];
@@ -301,7 +304,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.51';
+const GAME_VER = '1.52';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -5499,13 +5502,24 @@ function updShop() {
   const setChar = ci => { if (ci !== S.ci) { S.ci = ci; S.try = null; shopPrev(); } SFX.move(); shopPress('ch' + ci); };
   const pick = i => { const it = shopItems()[i]; if (!it) return; S.idx = i; S.pg = Math.floor(i / 8); S.try = (profCur().eq[S.ci] || {})[it.cat] === it.id ? null : it.id; SFX.move(); shopPrev(); shopPress('it' + i); };
   if (back && S.t > 8) { shopLeave(); return; }
-  // keyboard / pad: ▲▼ sections · ◀▶ items · Q/E (L1/R1) character · Enter buy/wear · Tab account
-  if (p.up || q.up) setCat((S.cat + SHOP_CATS.length - 1) % SHOP_CATS.length);
-  if (p.down || q.down) setCat((S.cat + 1) % SHOP_CATS.length);
-  if (p.left || q.left || p.right || q.right) { const n = items.length; pick(S.idx < 0 ? 0 : (S.idx + (p.right || q.right ? 1 : n - 1)) % n); }
+  // keyboard / controller: ✚ moves through the 2-column grid (▲ on the top row / ▼ on the last row change section)
+  // L1/R1 (Z/X) sections · L2/R2 (Q/E) hero · ✕ buy/wear · □ (Del) take off · △ (Tab) account · ○ back
+  const nC = SHOP_CATS.length, n = items.length, cur = S.idx;
+  const L = p.left || q.left, R = p.right || q.right, Up = p.up || q.up, Dn = p.down || q.down;
+  if (p.c13 || q.c13 || anyP('KeyZ', 'PageUp')) setCat((S.cat + nC - 1) % nC);
+  else if (p.c12 || q.c12 || anyP('KeyX', 'PageDown')) setCat((S.cat + 1) % nC);
+  else if (cur < 0 || cur >= n) { if (n && (L || R || Dn)) pick(0); else if (Up) setCat((S.cat + nC - 1) % nC); }
+  else if (R) pick((cur + 1) % n);
+  else if (L) pick((cur + n - 1) % n);
+  else if (Up) { if (cur >= 2) pick(cur - 2); else setCat((S.cat + nC - 1) % nC); }
+  else if (Dn) { if (cur + 2 < n) pick(cur + 2); else if (((cur / 2) | 0) < (((n - 1) / 2) | 0)) pick(n - 1); else setCat((S.cat + 1) % nC); }
   if (p.dg || q.dg) { const i = CH.indexOf(S.ci); setChar(CH[(i + CH.length - 1) % CH.length]); }
-  if (p.sp || q.sp) { const i = CH.indexOf(S.ci); setChar(CH[(i + 1) % CH.length]); }
-  if (anyP('Tab')) profSwitch();
+  else if (p.c34 || q.c34 || p.sp || q.sp) { const i = CH.indexOf(S.ci); setChar(CH[(i + 1) % CH.length]); }
+  if ((p.b1 && !p.ok) || (q.b1 && !q.ok) || anyP('Delete')) { shopPress('act');
+    if (S.try) { S.try = null; shopPrev(); SFX.move(); shopMsg('رجعت للبسك'); }
+    else { const PR = profCur(), e = PR.eq[S.ci] || {}, c = SHOP_CATS[S.cat][0], id = e[c], it = items.find(x => x.id === id);
+      if (id) { delete e[c]; profSave(); SFX.ok(); shopMsg('شلت ' + (it ? it.name : 'القطعة')); shopPrev(); } else { SFX.move(); shopMsg('ما لابس شي من هذا القسم', '#ffb070'); } } }
+  if (anyP('Tab') || ((p.b2 || q.b2) && S.t > 8)) profSwitch();
   if (ok && S.t > 8) { const it = items[S.idx]; if (it) { shopAction(it); shopPress('act'); } }
   if (!tap) return;
   // touch / mouse — the closest target wins, one tap is enough
@@ -5561,7 +5575,7 @@ function drawShop() {
     txt(wear ? 'شيله' : own ? 'البسه ✓' : 'اشتري · 🪙 ' + it.price, VW - 180, 679, { size: 26, weight: 900, color: '#fff' }); }
   else { ctx.fillStyle = 'rgba(255,255,255,0.06)'; rrect(VW - 330, 646, 300, 64, 16); ctx.fill(); txt('👆 اختر قطعة تجربها', VW - 180, 679, { size: 21, weight: 800, color: 'rgba(255,255,255,0.6)' }); }
   ctx.fillStyle = 'rgba(255,255,255,0.1)'; rrect(16, 646, 170, 64, 16); ctx.fill(); txt('رجوع', 101, 679, { size: 25, weight: 900, color: '#fff' });
-  txt(TOUCH_ON ? 'المس القطعة تجربها · المسها مرة ثانية أو الزر الأحمر تشتريها/تلبسها' : '◀ ▶ القطع · ▲ ▼ الأقسام · Q/E الشخصية · Enter شراء/لبس · Tab تبديل الحساب · Esc رجوع', VW / 2 + 20, 712, { size: 15, weight: 700, color: 'rgba(255,255,255,0.5)' });
+  txt(TOUCH_ON ? 'المس القطعة تجربها · المسها مرة ثانية أو الزر الأحمر تشتريها/تلبسها' : gpOn() ? (B => '✚ القطع · ' + B.l1 + '/' + B.r1 + ' الأقسام · ' + B.l2 + '/' + B.r2 + ' الشخصية · ' + B.x + ' شراء/لبس · ' + B.s + ' شيل · ' + B.t + ' الحساب · ' + B.o + ' رجوع')(padLbl()) : 'الأسهم: القطع · Z/X الأقسام · Q/E الشخصية · Enter شراء/لبس · Del شيل · Tab الحساب · Esc رجوع', VW / 2 + 20, 712, { size: 15, weight: 700, color: 'rgba(255,255,255,0.5)' });
   if (S.msg && S.msg.k < 110) { ctx.save(); ctx.globalAlpha = Math.min(1, (110 - S.msg.k) / 20); ctx.fillStyle = 'rgba(0,0,0,0.75)'; rrect(VW / 2 - 260 + 40, 84, 520, 40, 20); ctx.fill(); txt(S.msg.t, VW / 2 + 40, 105, { size: 20, weight: 900, color: S.msg.c }); ctx.restore(); }
 }
 // ================= العالم المفتوح — a small top-down world: walk around the neighbourhood, meet the gang, challenge them =================
@@ -6268,7 +6282,7 @@ function worldStart(ci, o) {
   const W = G.world, sv = W.sv, eff = (() => { const O = outfitOf(ci, o); return O && O.as !== undefined ? O.as : ci; })();
   const map = sv && sv.ci === ci && WMAPS[sv.map] ? sv.map : 'fareej', M = WMAPS[map];
   W.P = { fig: wMakeFig(eff, wEqFor(ci, eff)), face: 1, base: ci, o, ci: eff, x: map === (sv && sv.map) && sv.ci === ci ? sv.x : M.spawn[0], y: map === (sv && sv.map) && sv.ci === ci ? sv.y : M.spawn[1], dir: 'down', ph: 0, moving: false };
-  W.en = sv && sv.en !== undefined ? sv.en : 100; W.th = sv && sv.th !== undefined ? sv.th : 100; W.fridge = sv ? sv.fr | 0 : 0; W.jaddDay = sv ? sv.jd : -1; W.ev = sv && sv.ev || null; W.evNote = sv && sv.evn !== undefined ? sv.evn : -1;
+  W.en = sv && Number.isFinite(sv.en) ? sv.en : 100; W.th = sv && Number.isFinite(sv.th) ? sv.th : 100; W.fridge = sv ? sv.fr | 0 : 0; W.jaddDay = sv ? sv.jd : -1; W.ev = sv && sv.ev || null; W.evNote = sv && sv.evn !== undefined ? sv.evn : -1;
   W.npcs = W_HOME.filter(h => h[0] !== ci && h[0] !== eff).map(([nci, mp, x, y, dir, line, role]) => ({ ci: nci, map: mp, x, y, hx: x, hy: y, dir, d0: dir, line, role, ph: Math.random() * 6, wait: 60 + Math.random() * 200, tx: null, ty: null, fig: wMakeFig(nci, null), face: dir === 'left' ? -1 : 1 }));
   W.phase = 'walk'; W.map = map; W.cam = null; W.fade = 30; W.dlg = null; W.mapOpen = false; W.msg = { t: 'أهلاً في ' + M.name + ' 👋', k: 0 }; citSpawn(W); sqInit(W, sv && sv.sq); worldSave(); sagaBegin(W);
 }
@@ -6277,7 +6291,7 @@ function wSolids(W) { const M = WMAPS[W.map], L = []; for (const o of M.objs) if
 function wFree(W, x, y, r, skip) {
   const M = WMAPS[W.map]; if (x < r || y < r || x > M.W - r || y > M.H - r) return false;
   for (const [bx, by, bw, bd] of W.solid) if (x > bx - r && x < bx + bw + r && y > by - r * 0.6 && y < by + bd + r * 0.6) return false;
-  for (const n of W.npcs) if (n !== skip && n.map === W.map && Math.hypot(n.x - x, n.y - y) < r * 2) return false;
+  for (const n of W.npcs) if (n !== skip && n.map === W.map) { const d = Math.hypot(n.x - x, n.y - y); if (d < r * 2 && !(skip && d > Math.hypot(n.x - skip.x, n.y - skip.y) + 0.01)) return false; }
   if (skip !== W.P && Math.hypot(W.P.x - x, W.P.y - y) < r * 2) return false;
   return true;
 }
@@ -6379,7 +6393,7 @@ function updWorld() {
   if (tap && hud.hit(tap)) return;
   if (esc) { worldSave(); G.world = null; G.toTitle(); return; }
   if (anyP('Tab') || p.b2) { wOpenMap(W); return; }
-  if (anyP('KeyC')) { calOpen(W); return; }
+  if (anyP('KeyC') || p.c13 || q.c13 || gpTP()) { calOpen(W); return; }
   // talk / use things
   let near = wNearNpc(W), rack = wNearAct(W); if (near && rack && rack.d0 < 24 && Math.hypot(near.x - W.P.x, near.y - W.P.y) > 60) near = null; if (near) rack = null;
   if (ok || (tap && near && W.cam && Math.hypot(tap[0] - (near.x - W.cam.x), tap[1] - (near.y - 95 - W.cam.y)) < 100) || (tap && W.prompt && Math.abs(tap[0] - W.prompt[0]) < 120 && Math.abs(tap[1] - W.prompt[1]) < 40)) {
@@ -6501,7 +6515,7 @@ function drawWorld0() {
       ctx.save(); ctx.globalAlpha = Math.min(1, (150 - W.msg.k) / 25); ctx.fillStyle = 'rgba(0,0,0,0.7)'; rrect(mx - mw / 2, my - 26, mw, 50, 25); ctx.fill(); txt(W.msg.t, mx, my, { size: 24, weight: 900, color: W.msg.c || '#fff' }); ctx.restore(); }
     if (W.toast && W.toast.k < 330) { ctx.font = `900 24px ${FA}`; const tw = Math.min(VW - 120, ctx.measureText(W.toast.t).width + 70); let ty = Math.max(224, mw ? my + 78 : 0), tx = slot(tw, ty - 28, VW - 16); if (tx == null) { tx = VW / 2; ty = Math.max(ty, gB + 42); }
       ctx.save(); ctx.globalAlpha = Math.min(1, (330 - W.toast.k) / 30, W.toast.k / 10); ctx.fillStyle = 'rgba(40,24,0,0.88)'; rrect(tx - tw / 2, ty - 28, tw, 54, 27); ctx.fill(); ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 3; ctx.stroke(); txt(W.toast.t, tx, ty, { size: 24, weight: 900, color: '#ffd34d' }); ctx.restore(); } }
-  if (!TOUCH_ON && W.t < 400) txt('WASD / الأسهم: تمشي · Enter: تكلّم · Tab: الخريطة · C: التقويم · Esc: خروج', VW / 2, VH - 22, { size: 17, weight: 800, color: 'rgba(255,255,255,0.8)', stroke: '#000', sw: 4 });
+  if (!TOUCH_ON && W.t < 400) txt(gpOn() ? (B => 'العصا: تمشي · ' + B.x + ' تكلّم · ' + B.t + ' الخريطة · ' + B.l1 + ' أو ' + B.tp + ': التقويم 📅')(padLbl()) : 'WASD / الأسهم: تمشي · Enter: تكلّم · Tab: الخريطة · C: التقويم · Esc: خروج', VW / 2, VH - 22, { size: 17, weight: 800, color: 'rgba(255,255,255,0.8)', stroke: '#000', sw: 4 });
   }
   if (W.dlg) drawWorldDlg(W);
   if (W.menu) { const Mn = W.menu, n = Mn.items.length, y0 = VH / 2 - n * 35 - 10, P1 = profCur(); ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, VW, VH);
@@ -6644,7 +6658,7 @@ function calUpd(W, p, q, ok, back, tap) { const C = W.cal; C.k++; const mv = n =
   if (p.left || q.left) mv(1); if (p.right || q.right) mv(-1); if (p.up || q.up) mv(-7); if (p.down || q.down) mv(7);
   if (tap) { if (Math.abs(tap[1] - 120) < 34 && Math.abs(tap[0] - (VW / 2 - 330)) < 50) { C.m++; SFX.move(); return; } if (Math.abs(tap[1] - 120) < 34 && Math.abs(tap[0] - (VW / 2 + 330)) < 50) { C.m--; SFX.move(); return; }
     for (let i = 0; i < 42; i++) { const c = calCell(W, i); if (Math.abs(tap[0] - c.x) < 72 && Math.abs(tap[1] - c.y) < 33) { C.sel = wDayOf(c.date); SFX.move(); return; } } W.cal = null; SFX.move(); return; }
-  if ((ok && C.k > 6) || back || anyP('KeyC')) { W.cal = null; SFX.move(); } }
+  if ((ok && C.k > 6) || back || anyP('KeyC') || ((p.c13 || q.c13 || gpTP()) && C.k > 6)) { W.cal = null; SFX.move(); } }
 function calStory(W) { const S = W.saga; if (!S || S.done) return null; if (S.wait != null) return { day: S.wait, ch: S.ch }; return { day: wDay(W), ch: S.ch, now: 1 }; }
 function drawCal(W) { const C = W.cal, M = calMonth(W), today = wDay(W), st = calStory(W);
   ctx.fillStyle = 'rgba(4,6,16,0.94)'; ctx.fillRect(0, 0, VW, VH);
@@ -6964,7 +6978,7 @@ const SAGA = [
     { go: ['qasr', 1000, 760], goal: 'روح القصر 🏰 — احتفال السلام' },
     { say: [['N', 'اجتمعت العائلة في القصر… للاحتفال بالسلام.'], ['chef', 'الليلة عشا ملكي! محد يطلع جوعان!'], ['N', 'وفجأة… انطفت الأنوار!', 'dark'], ['N', 'وظهر على الشاشة… رجّال بقناع أسود.', 'mask'], ['?', 'أنا اللي صنع الحروب… اللي مزّقتكم.', 'mask'], ['N', 'وشال القناع…', 'unmask'], ['moalem', 'إيه… أنا. درّبتكم عشان أعرف أسراركم.', 'unmask'], ['N', 'وجنبه… كان واقف ملالي.', 'eyes'], ['malali', 'بس أنا… ما عاد أحتاجك.'], ['moalem', 'ملالي؟! أنا اللي صنعتك!'], ['N', 'وهكذا… صارت الخيانة تاكل أصحابها، للمرة الأخيرة.']] },
   ] },
-  { part: 4, n: 'آخر تحالف', coins: 40, place: { adel: ['diwan', 600, 360, 'down'], salah: ['diwan', 800, 360, 'down'], captain: ['diwan', 300, 420, 'right'], bull: ['diwan', 1100, 420, 'left'], chef: ['diwan', 300, 640, 'right'], dragon: ['diwan', 1100, 640, 'left'], abd: ['diwan', 1180, 330, 'left'], dajaj: ['diwan', 220, 330, 'right'], teer: ['diwan', 980, 760, 'up'], gamer: ['diwan', 420, 760, 'up'], inv: ['diwan', 700, 760, 'up'] }, steps: [
+  { part: 4, n: 'آخر تحالف', coins: 40, place: { adel: ['diwan', 600, 360, 'down'], salah: ['diwan', 800, 360, 'down'], captain: ['diwan', 300, 420, 'right'], bull: ['diwan', 1100, 420, 'left'], chef: ['diwan', 300, 640, 'right'], dragon: ['diwan', 1100, 640, 'left'], abd: ['diwan', 1180, 330, 'left'], dajaj: ['diwan', 220, 330, 'right'], teer: ['diwan', 980, 760, 'up'], gamer: ['diwan', 420, 760, 'up'], inv: ['diwan', 840, 760, 'up'] }, steps: [
     { go: ['diwan', 700, 640], goal: 'روح الديوانية 🏠 — آخر تحالف' },
     { say: [['adel', 'اسمعوا كلكم…'], ['adel', 'اليوم لا خال أول ولا خال ثاني… إحنا عائلة وحدة.'], ['salah', 'وإحنا وراك يا عادل.'], ['adel', 'يا {P}… كلّم الكل، وتأكد إن كل واحد جاهز.']] },
     { talks: { captain: [['captain', 'القيادة علي. كل واحد يعرف مكانه.']], bull: [['bull', 'البوابة؟ اعتبرها طاحت!']], chef: [['chef', 'الإمدادات جاهزة… ووجبتك المفضلة بعد! كُل.']], dragon: [['dragon', 'أنا في الصف الأول. هذي المعركة… تستاهل.']], abd: [['abd', 'اخترت طريقي بنفسي… وطريقي معكم.']] }, en: { chef: 60 }, goal: 'تأكد إن الكل جاهز' },
@@ -7042,7 +7056,7 @@ function sgCard(W) { const S = W.saga; S.card = { k: 0, ch: S.ch, part: S.ch ===
 function sgStep(W, resume) {
   const S = W.saga, st = sgCur(S); if (!st) { sgChapterEnd(W); return; }
   if (!resume) { if (st.place) { Object.assign(S.place, st.place); sgApplyPlace(W); } if (st.unlock) { S.un.add(st.unlock); W.msg = { t: '🗺️ مكان جديد في الخريطة: ' + WMAPS[st.unlock].name, k: 0, c: '#7dffb0' }; }
-    if (st.time !== undefined) W.min = Math.floor(W.min / 1440) * 1440 + Math.round(st.time * 60); if (st.en) W.en = Math.min(100, W.en + st.en); }
+    if (st.time !== undefined) W.min = Math.floor(W.min / 1440) * 1440 + Math.round(st.time * 60); if (typeof st.en === 'number') W.en = Math.min(100, W.en + st.en); }
   S.items = null; S.esc = null; S.fightLater = false; S.tdone = {};
   if (st.say && !st.talk) { sgSay(W, st.say, () => sgNext(W)); return; }
   if (st.find) { S.items = st.find.map(([map, x, y, ic, L]) => ({ map, x, y, ic, L, got: false })); return; }
