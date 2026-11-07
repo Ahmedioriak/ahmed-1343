@@ -229,7 +229,7 @@ const MAPS = [
 const PADKEYS = ['up', 'down', 'left', 'right', 'b1', 'b2', 'b3', 'b4', 'sp', 'c12', 'c34', 'c13', 'c24', 'dg', 'ra', 'ok', 'back'];
 // ---- Game controllers (PS4 / PS5 / Xbox via the Gamepad API, standard mapping) ----
 // Square/X = 1, Triangle/Y = 2, Cross/A = 3, Circle/B = 4, R1/RB = 1+2, L2+R2 together = Finisher (القاضية), Options/Menu = pause, Share/View = swap player
-const GP = { slots: {}, prev: {}, kind: {}, blocked: false, anyPress: false, start: false, seen: false };
+const GP = { slots: {}, prev: {}, mask: {}, pt: {}, fr: 0, kind: {}, blocked: false, anyPress: false, start: false, seen: false };
 const GPS = [{ h: {}, p: {} }, { h: {}, p: {} }];
 function gpKind(id) {
   const s = (id || '').toLowerCase();
@@ -259,7 +259,7 @@ addEventListener('gamepaddisconnected', e => {
   if (sl !== undefined) { delete GP.slots[e.gamepad.index]; delete GP.prev[e.gamepad.index]; toast(`انفصلت يد التحكم (اللاعب ${sl + 1})`); }
 });
 function gpPoll() {
-  GPS[0] = { h: {}, p: {} }; GPS[1] = { h: {}, p: {} }; GP.anyPress = false; GP.start = false;
+  GPS[0] = { h: {}, p: {} }; GPS[1] = { h: {}, p: {} }; GP.anyPress = false; GP.start = false; GP.fr++;
   for (const g of gpList()) {
     gpAssign(g);
     const sl = GP.slots[g.index]; if (sl === undefined) continue;
@@ -269,6 +269,14 @@ function gpPoll() {
       up: B(12) || ay < -0.5, down: B(13) || ay > 0.5, left: B(14) || ax < -0.5, right: B(15) || ax > 0.5,
       b1: B(2), b2: B(3), b3: B(0), b4: B(1), sp: B(10) || B(11), c12: B(5), c34: B(7), c13: B(4), dg: B(6), ra: B(6) && B(7), ok: B(0) || B(9), back: B(1), start: B(9), sel: B(8), tp: B(17),
     };
+    if (G.scene === 'fight') {
+      cur.c24 = B(8) || B(17);
+      const M = GP.mask[g.index] || (GP.mask[g.index] = {}), pv0 = GP.prev[g.index] || {};
+      for (const k in M) { if (!cur[k]) delete M[k]; else cur[k] = false; }
+      const T = GP.pt[g.index] || (GP.pt[g.index] = {}), fr = GP.fr; for (const k of ['b1', 'b2', 'b3', 'b4']) if (cur[k] && !pv0[k]) T[k] = fr;
+      // only presses that land within 4 frames of each other count as a slip; a quick 1-2 string still works
+      for (const [a, b] of [['b1', 'b2'], ['b3', 'b4'], ['b1', 'b3'], ['b2', 'b4']]) if (cur[a] && cur[b] && Math.abs((T[a] | 0) - (T[b] | 0)) <= 4) { const drop = !pv0[b] ? b : a; M[drop] = 1; cur[drop] = false; }
+    } else if (GP.mask[g.index]) GP.mask[g.index] = {};
     const pv = GP.prev[g.index] || {};
     const st = GPS[sl];
     for (const k in cur) { if (cur[k]) st.h[k] = true; if (cur[k] && !pv[k]) { st.p[k] = true; GP.anyPress = true; } }
@@ -305,7 +313,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.53';
+const GAME_VER = '1.54';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -4493,7 +4501,7 @@ function drawMoveList(F) {
     COMBO_KEYS.forEach((k, i) => {
       const y = 205 + i * 66, a = +k[0], b = +k[1];
       padGlyph(GLYPH[a], cx + 230, y, 14); txt('+', cx + 205, y, { size: 22, font: FE, weight: 700, color: '#fff', rtl: false }); padGlyph(GLYPH[b], cx + 180, y, 14);
-      const sh = { '12': 'R1', '34': 'R2', '13': 'L1' }[k];
+      const sh = { '12': 'R1', '34': 'R2', '13': 'L1', '24': 'Share' }[k];
       if (sh) txt(sh, cx - 250, y + 1, { size: 22, font: FE, weight: 700, color: '#ff8a8a', rtl: false });
       txt(`${KEYS_P[s][a]}+${KEYS_P[s][b]}`, cx + 120, y + 1, { size: 22, font: FE, weight: 700, color: 'rgba(255,255,255,0.6)', rtl: false });
       txt(MV[COMBOS[f.ci][k]].cname, cx + 70, y, { size: 26, weight: 800, color: '#fff', align: 'right' });
