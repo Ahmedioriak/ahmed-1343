@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.63';
+const GAME_VER = '1.64';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2040,7 +2040,16 @@ function maskedProps(f, front) { if (!front || !f.J || f.hp <= 0 && f.state === 
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(e[0], e[1], 1, e[0], e[1], 26 * s * k / 0.7); g.addColorStop(0, 'rgba(255,240,240,1)'); g.addColorStop(0.3, 'rgba(255,30,50,0.9)'); g.addColorStop(1, 'rgba(255,0,30,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(e[0], e[1], 26 * s * k / 0.7, 0, 7); ctx.fill();
   if (G.frame % 5 === 0) FX.push({ t: 'p', x: f.x + rnd(-50, 50), y: f.hipY - rnd(40, 360), vx: 0, vy: -rnd(0.5, 2), life: 16, max: 16, c: TECHC[G.frame % 2], sz: rnd(2, 3) });
   ctx.restore();
-  for (const d of f.drones || []) drawDrone(d.x, d.y, d.t); }
+  for (const d of f.drones || []) drawDrone(d.x, d.y, d.t);
+  // the beams themselves (they were only hit shapes before — now you see them)
+  const mv = f.state === 'attack' && f.mv; if (!mv) return; const on = f.mt >= mv.st && f.mt < mv.st + mv.ac, flick = 1 + 0.18 * Math.sin(G.frame * 1.3);
+  if (mv.name === 'mklaser') { if (!on && f.mt < mv.st) { const u = f.mt / mv.st; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(e[0], e[1], 2, e[0], e[1], 70 * u); g.addColorStop(0, 'rgba(255,240,240,1)'); g.addColorStop(0.4, 'rgba(255,30,50,0.8)'); g.addColorStop(1, 'rgba(255,0,30,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(e[0], e[1], 70 * u, 0, 7); ctx.fill(); ctx.restore(); }
+    else if (on) { const b = visorBeam(f); drawBeam(b.e[0], b.e[1], b.t[0], b.t[1], 15 * flick, 1); } }
+  else if (mv.name === 'mkgrid' && on) { const u = (f.mt - mv.st) / mv.ac, x = f.x + f.facing * lerp(60, 900, u); drawBeam(f.x + f.facing * 50, -22, x, -22, 10 * flick, 0.9); drawBeam(x, -10, x, -240, 9 * flick, 0.95); drawBeam(x - f.facing * 50, -10, x - f.facing * 50, -150, 5, 0.6); }
+  else if (mv.cname === 'شفرة الأرض' && on) drawBeam(f.x + f.facing * 60, -24, f.x + f.facing * 280, -24, 13 * flick, 1);
+  else if (mv.name === 'mkemp' && f.mt < mv.st) { const u = f.mt / mv.st; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,40,60,${0.4 + 0.5 * u})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(f.x, f.hipY - 150, 40 + 200 * (1 - u), 0, 7); ctx.stroke(); ctx.restore(); }
+  else if (mv.name === 'mkport' && f.mt >= 18 && f.mt < 26) { const w = f.toWorld(f.J.fH); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(w[0], w[1], 2, w[0], w[1], 60); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.4, 'rgba(255,40,60,0.8)'); g.addColorStop(1, 'rgba(255,0,30,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(w[0], w[1], 60, 0, 7); ctx.fill(); ctx.restore(); }
+  else if (mv.cname === 'لكمة البلازما' && on) { const w = f.toWorld(f.J.fH); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(w[0], w[1], 2, w[0], w[1], 50); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.5, 'rgba(255,40,60,0.7)'); g.addColorStop(1, 'rgba(255,0,30,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(w[0], w[1], 50, 0, 7); ctx.fill(); ctx.restore(); } }
 function drawDrone(x, y, t) { ctx.save(); ctx.translate(x, y); ctx.fillStyle = '#16171c'; ctx.strokeStyle = '#ff2a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(0, -10); ctx.lineTo(22, 0); ctx.lineTo(0, 10); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = 'rgba(255,255,255,0.5)'; for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sx * 22, -10, 12, 3, Math.sin(t) * 0.3, 0, 7); ctx.stroke(); }
   ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ff2030'; ctx.beginPath(); ctx.arc(0, 0, 4 + Math.sin(t * 0.5) * 1.5, 0, 7); ctx.fill(); ctx.restore(); }
