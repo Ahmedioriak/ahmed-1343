@@ -304,7 +304,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.52';
+const GAME_VER = '1.53';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2005,7 +2005,8 @@ SKILL2[MALALI] = 'sk_tendril'; SKILL2_LINE[MALALI] = 'من تحتك!'; SKILL2_NA
 Object.assign(BOSS_NAMES, { sk_void: 'كرة الظلام', sk_tendril: 'أذرع الظلام', sk_shstep: 'خطوة الظل', sk_dwave: 'موجة الظلام', sk_eclipse: 'الكسوف' });
 Object.assign(BOSS_LINES, { sk_void: 'ابلعه يا ظلام!', sk_tendril: 'من تحتك!', sk_shstep: 'أنا وراك…', sk_dwave: 'اقفز… إذا تقدر!', sk_eclipse: 'انطفى نورك!' });
 // his eyes burn purple in the dark
-function drawMalaliEyes(f) { if (!f.J || f.hp <= 0 && f.state === 'ko') return; const e = eyePos(f), k = f.R.k, s = 1 + 0.25 * Math.sin(G.frame * 0.2);
+function drawMalaliEyes(f) { if (f.invis > 0) { ctx.save(); ctx.globalAlpha = Math.max(ctx.globalAlpha, 0.6); drawMalaliEyes0(f); ctx.restore(); } else drawMalaliEyes0(f); }
+function drawMalaliEyes0(f) { if (!f.J || f.hp <= 0 && f.state === 'ko') return; const e = eyePos(f), k = f.R.k, s = 1 + 0.25 * Math.sin(G.frame * 0.2);
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (const dx of [0, -f.facing * f.J.hr * 0.5 * k]) { const g = ctx.createRadialGradient(e[0] + dx, e[1], 1, e[0] + dx, e[1], 16 * s); g.addColorStop(0, 'rgba(255,230,255,1)'); g.addColorStop(0.3, 'rgba(208,112,255,0.9)'); g.addColorStop(1, 'rgba(120,0,200,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(e[0] + dx, e[1], 16 * s, 0, 7); ctx.fill(); }
   ctx.restore(); }
 // the inventor's battle suit (story): a bigger, steel-plated المبرمج with a glowing reactor
@@ -2168,7 +2169,7 @@ class Fighter {
     this.connected = false; this.hitThis = false; this.lowHit = false; this.blockLow = false;
     this.airUsed = false; this.jumpDir = 0; this.J = null; this.hipY = 0; this.hurt = null; this.shakeT = 0; this.vic = null;
     this.sk = 0; this.spBuf = 0; this.cartGone = false; this.rollAng = 0; this.cbCD = 0;
-    this.z = 0; this.lastUp = -99; this.lastDown = -99; this.upHold = 0;
+    this.z = 0; this.lastUp = -99; this.lastDown = -99; this.upHold = 0; this.invis = 0; this.invisCD = 0;
     this.in = { h: {}, p: {} }; this.animate();
   }
   get rage() { return !this.rageUsed && this.hp > 0 && this.hp <= this.maxHp * 0.3; }
@@ -2215,6 +2216,10 @@ class Fighter {
     const P = PERSONA[this.ci] || {}; const line = text || (P[kind] && pickLine(P[kind])); if (!line) return;
     this.bubble = { text: line, t: 0, dur: kind === 'win' ? 160 : 95 }; charSpeak(this.ci, kind, line);
   }
+  useInvis() {
+    this.spBuf = 0; this.buf = null; this.upHold = 0; this.invis = 240; this.invisCD = 720; this.talk('skill', 'أنا وراك…'); SFX.skill(); SFX.whoosh(1);
+    G.fight.skBanner = { slot: this.slot, text: 'الاختفاء 🌑', t: 0, small: 1 }; for (let i = 0; i < 3; i++) dust(this.x + (i - 1) * 40, 6, i - 1); popText('اختفى…', this.x, -330, '#c77dff', 34);
+  }
   useSkill2() {
     this.talk('skill', SKILL2_LINE[this.ci]); this.spBuf = 0; this.buf = null; this.sk2CD = SK2_CD; this.startMove(SKILL2[this.ci]); this.vx = 0;
     SFX.skill(); G.fight.skBanner = { slot: this.slot, text: SKILL2_NAMES[this.ci], t: 0, small: 1 };
@@ -2250,6 +2255,7 @@ class Fighter {
     if (this.invuln > 0) this.invuln--;
     if (this.dgCD > 0) this.dgCD--;
     if (this.sk2CD > 0 && G.fight && G.fight.phase === 'fight') this.sk2CD--;
+    if (this.invisCD > 0 && G.fight && G.fight.phase === 'fight') this.invisCD--; if (this.invis > 0 && --this.invis === 0) { popText('ظهر! 🌑', this.x, -330, '#c77dff', 32); SFX.whoosh(1); }
     if (this.bubble && ++this.bubble.t > this.bubble.dur) this.bubble = null;
     // L2+R2 / touch button = القاضية (cancels a dodge or R2 combo started a few frames earlier)
     if (this.in.h.ra && this.canFin && G.fight && G.fight.phase === 'fight' && (NEUTRAL.has(this.state) || ['block', 'land', 'dash', 'side'].includes(this.state) || (this.state === 'dodge' && this.t <= 6) || (this.state === 'attack' && this.mv && this.mv.combo && this.mt <= 4))) {
@@ -2304,6 +2310,7 @@ class Fighter {
     if (this.eatPend && G.fight && G.fight.phase === 'fight' && this.state !== 'air' && !this.jumping) { this.eatPend = false; this.eatN = 0; this.startMove('ab_eat'); return; }
     if (p.fwd) { if (this.clock - this.lastFwd < 13) { this.setState('dash'); this.dashBack = false; this.vx = this.facing * 11 * this.C.spd; dust(this.x, 5, -this.facing); this.lastFwd = -99; SFX.whoosh(0); return; } this.lastFwd = this.clock; }
     if (p.back) { if (this.clock - this.lastBack < 15) { this.setState('dash'); this.dashBack = true; this.vx = -this.facing * 19 * this.C.spd; dust(this.x, 8, this.facing); this.lastBack = -99; SFX.whoosh(1); return; } this.lastBack = this.clock; }
+    if (this.spBuf > 0 && h.up && (this.C.malali || this.bossAs === MALALI) && !(this.invisCD > 0) && G.fight && G.fight.phase === 'fight') { this.useInvis(); return; }
     if (this.spBuf > 0 && h.down && SKILL2[this.ci] && this.sk2CD <= 0 && G.fight && G.fight.phase === 'fight') { this.useSkill2(); return; }
     if (this.spBuf > 0 && this.sk >= SKMAX && !(h.down && SKILL2[this.ci])) { this.useSkill(); return; }
     if (this.cbBuf) { const k = this.cbBuf.k; this.cbBuf = null; if (this.tryCombo(k)) return; }
@@ -2500,6 +2507,7 @@ class CPUPad {
     const fK = me.facing > 0 ? 'right' : 'left', bK = me.facing > 0 ? 'left' : 'right';
     const press = (...ks) => { for (const k of ks) { p[k] = true; h[k] = true; } };
     const dist = Math.abs(op.x - me.x);
+    if (op.invis > 0 && op.invis < 230) { this.blockT = 0; if (Math.random() < 0.85) { if (NEUTRAL.has(me.state) && Math.random() < 0.03) press(pick(['b1', 'b3', 'b2'])); else if (Math.random() < 0.3) h[Math.random() < 0.5 ? fK : bK] = true; return; } }
     if (this.blockT > 0) { this.blockT--; h[bK] = true; if (this.blockLow) h.down = true; return; }
     if (op.state === 'attack' && op.mv && (op.mv.skill || op.mv.combo) && op.mt < op.mv.st + 4 && me.dgCD <= 0 && NEUTRAL.has(me.state) && Math.random() < 0.06) { me.dodge(); return; }
     if (op.state === 'attack' && op.mv && op.mt < op.mv.st && dist < 280 && NEUTRAL.has(me.state) && !op.mv.track && Math.random() < 0.04) { me.sidestep(Math.random() < 0.5 ? 1 : -1); return; }
@@ -2517,6 +2525,7 @@ class CPUPad {
     if (op.state === 'juggle' && dist < 190) { if (Math.random() < 0.5) press('b1'); else press('b2'); return; }
     this.cd--;
     if (me.rage && dist < 230 && Math.random() < 0.03) { press('b1', 'b2'); return; }
+    if ((me.C.malali || me.bossAs === MALALI) && !(me.invisCD > 0) && !(me.invis > 0) && dist > 200 && Math.random() < 0.006) { h.up = true; press('sp'); return; }
     if (SKILL2[me.ci] && me.sk2CD <= 0 && dist > 240 && dist < 760 && Math.random() < 0.025) { h.down = true; press('sp'); return; }
     if (me.sk >= SKMAX && Math.random() < 0.035) {
       const proj = [3, 4, 5].includes(me.ci), close = me.ci === 1;
@@ -2920,7 +2929,9 @@ function drawBubble(f) {
   ctx.restore();
 }
 function depthS(zz) { return D0 / (D0 + (zz || 0)); }
-function withDepth(f, camz, fn) {
+function fInvA(f) { const t = f.invis | 0; if (t <= 0) return 1; if (t > 225) return 0.1 + (t - 225) / 15 * 0.9; if (t < 20) return 0.1 + (20 - t) / 20 * 0.9; return 0.1 + 0.05 * Math.sin(G.frame * 0.3); }
+function withDepth(f, camz, fn) { if (!(f && f.invis > 0)) return withDepth0(f, camz, fn); ctx.save(); ctx.globalAlpha *= fInvA(f); try { withDepth0(f, camz, fn); } finally { ctx.restore(); } }
+function withDepth0(f, camz, fn) {
   const sc = depthS(f.z); if (Math.abs(sc - 1) < 0.002) { fn(); return; }
   ctx.save(); ctx.translate(f.x, (GSY - HORIZON) * (sc - 1) / camz); ctx.scale(sc, sc); ctx.translate(-f.x, 0); fn(); ctx.restore();
 }
@@ -4190,6 +4201,8 @@ class Fight {
     if (stunned && a.comboT > 0) { a.combo++; } else { a.combo = 1; a.comboDmg = 0; }
     const scale = fixed ? 1 : Math.max(0.45, 1 - (a.combo - 1) * 0.12);
     dmg = Math.round(dmg * a.C.dmg * scale * (a.rage ? 1.1 : 1) * (a.dmgMul || 1) * (d.defMul || 1));
+    if (a.invis > 0 && !fixed) { dmg = Math.round(dmg * 1.35); a.invis = 0; popText('من الظلام! 🌑', d.x, -360, '#c77dff', 38); }
+    if (d.invis > 0) { d.invis = 0; popText('انكشف!', d.x, -330, '#ff9a9a', 32); }
     d.hp = Math.max(0, d.hp - dmg); d.trailT = 40;
     rumble(d.slot, Math.min(1, 0.35 + dmg / 30), 0.5, 110 + dmg * 4); rumble(a.slot, 0, 0.35, 70); a.comboDmg += dmg; a.comboT = 90;
     d.flash = 4; d.shakeT = 8;
@@ -4385,7 +4398,9 @@ class Fight {
         const dc = f.dgCD / 120, by3 = by2 + 11; ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx0 - 2, by3 - 1, sw2 * 0.6 + 4, 7); ctx.fillStyle = dc > 0 ? 'rgba(255,255,255,0.35)' : '#7fd6ff'; const w3 = sw2 * 0.6 * (1 - dc); if (!rev) ctx.fillRect(sx0, by3, w3, 5); else ctx.fillRect(sx0 + sw2 - w3, by3, w3, 5);
         txt(dc > 0 ? `تفادي ${(f.dgCD / 60).toFixed(1)}` : 'تفادي ✓', rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by3 + 3, { size: 12, weight: 800, color: dc > 0 ? 'rgba(255,255,255,0.6)' : '#7fd6ff', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 });
         if (SKILL2[f.ci]) { const c2 = f.sk2CD / SK2_CD, by4 = by3 + 11; ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx0 - 2, by4 - 1, sw2 * 0.6 + 4, 7); ctx.fillStyle = c2 > 0 ? 'rgba(255,255,255,0.35)' : '#ffb04d'; const w4 = sw2 * 0.6 * (1 - c2); if (!rev) ctx.fillRect(sx0, by4, w4, 5); else ctx.fillRect(sx0 + sw2 - w4, by4, w4, 5);
-          txt(c2 > 0 ? `${SKILL2_NAMES[f.ci]} ${(f.sk2CD / 60).toFixed(1)}` : `${SKILL2_NAMES[f.ci]} ✓ (⬇+★)`, rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by4 + 3, { size: 12, weight: 800, color: c2 > 0 ? 'rgba(255,255,255,0.6)' : '#ffb04d', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 }); } }
+          txt(c2 > 0 ? `${SKILL2_NAMES[f.ci]} ${(f.sk2CD / 60).toFixed(1)}` : `${SKILL2_NAMES[f.ci]} ✓ (⬇+★)`, rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by4 + 3, { size: 12, weight: 800, color: c2 > 0 ? 'rgba(255,255,255,0.6)' : '#ffb04d', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 }); }
+        if (f.C.malali || f.bossAs === MALALI) { const c5 = f.invis > 0 ? 1 : (f.invisCD | 0) / 720, by5 = by3 + 22; ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx0 - 2, by5 - 1, sw2 * 0.6 + 4, 7); ctx.fillStyle = c5 > 0 ? 'rgba(199,125,255,0.45)' : '#c77dff'; const w5 = sw2 * 0.6 * (1 - c5) || (f.invis > 0 ? sw2 * 0.6 * f.invis / 240 : 0); if (!rev) ctx.fillRect(sx0, by5, w5, 5); else ctx.fillRect(sx0 + sw2 - w5, by5, w5, 5);
+          txt(f.invis > 0 ? 'مختفي 🌑' : c5 > 0 ? 'الاختفاء ' + ((f.invisCD | 0) / 60).toFixed(1) : 'الاختفاء ✓ (⬆+★)', rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by5 + 3, { size: 12, weight: 800, color: c5 > 0 && !(f.invis > 0) ? 'rgba(255,255,255,0.6)' : '#c77dff', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 }); } }
       txt(label, rev ? sx0 - 10 : sx0 + sw2 + 10, sy + 4, { size: 15, weight: 800, color: full ? '#ffd34d' : 'rgba(255,255,255,0.75)', align: rev ? 'right' : 'left', stroke: '#000', sw: 3 });
     }
     if (f.rage || (this.train && f.canFin)) txt('القاضية جاهزة 💥', rev ? x + 30 : x + w - 30, y + h + 20, { size: 20, weight: 900, color: '#ff2a3a', align: rev ? 'left' : 'right', stroke: '#000', sw: 4, glow: '#ff0020' });
@@ -4487,7 +4502,7 @@ function drawMoveList(F) {
     txt('L3/R3', cx + 205, y + 26, { size: 18, font: FE, weight: 700, color: '#7dffb0', rtl: false });
     txt(s === 0 ? 'E' : 'U', cx + 205, y - 6, { size: 24, font: FE, weight: 700, color: '#7dffb0', rtl: false });
     txt('المهارة: ' + SKILL_NAMES[f.ci] + ' (كل 10 ثواني)', cx + 70, y - (SKILL2[f.ci] ? 12 : 0), { size: SKILL2[f.ci] ? 19 : 22, weight: 800, color: '#7dffb0', align: 'right' });
-    if (SKILL2[f.ci]) txt('⬇ + ★: ' + SKILL2_NAMES[f.ci] + ' (كل 4 ثواني)', cx + 70, y + 14, { size: 18, weight: 800, color: '#ffb04d', align: 'right' });
+    if (SKILL2[f.ci]) txt('⬇ + ★: ' + SKILL2_NAMES[f.ci] + ' (كل 4 ثواني)' + (f.C.malali ? ' · ⬆ + ★: الاختفاء 🌑' : ''), cx + 70, y + 14, { size: 18, weight: 800, color: '#ffb04d', align: 'right' });
     txt(`تفادي: ${s === 0 ? 'Q' : 'Y'} أو L2 (كل ثانيتين)`, cx, y + 40, { size: 17, weight: 700, color: '#7fd6ff' });
     txt('💥 القاضية: ' + (FIN[f.ci] || FIN[0]).name + '  ·  L2+R2 (أو □+△) لما دمك يقل', cx, y + 64, { size: 17, weight: 700, color: '#ff8080' });
   });
@@ -6434,7 +6449,7 @@ function updWorldPick(W, p, q, ok, back, tap) {
   if (p.right || q.right) { W.cur = (W.cur + 1) % NCH; W.o = 0; SFX.move(); }
   if (p.up || q.up || p.down || q.down) { W.cur = (W.cur + CUP_GRID.per) % (CUP_GRID.per * 2); if (W.cur >= NCH) W.cur = NCH - 1; W.o = 0; SFX.move(); }
   if ((p.sp || q.sp || hitBtn(VW / 2, 392, 260, 44)) && L.length > 1) { W.o = (W.o + 1) % L.length; SFX.move(); }
-  { const sv = sgLoad(); if (sv && sv.done && hitBtn(VW / 2 - 40, 332, 300, 44)) { sagaRestart(); SFX.ok(); return; } }
+  { const sv = sgLoad(W.cur); if (sv && sv.done && hitBtn(VW / 2 - 40, 332, 300, 44)) { sagaRestart(W.cur); W.sgA = null; SFX.ok(); return; } }
   let go = false; if (tap) for (let i = 0; i < NCH; i++) { const [x, y] = cupGridPos(i); if (Math.abs(tap[0] - x) < 44 && Math.abs(tap[1] - y) < 48) { if (W.cur === i) go = true; else { W.cur = i; W.o = 0; SFX.move(); } } }
   if ((ok && W.t > 8) || go || hitBtn(VW - 160, 660, 260, 64)) { SFX.ready(); worldStart(W.cur, W.o); return; }
   if ((back && W.t > 8) || hitBtn(110, 660, 180, 64)) { SFX.move(); G.world = null; G.toTitle(); }
@@ -6446,12 +6461,16 @@ function drawWorldPick(W) {
   const im = IMG['front' + (ci + 1)]; if (im) { const hgt = 250, w = im.width * hgt / im.height; ctx.drawImage(im, VW / 2 + 60, 115, w, hgt); }
   txt(CHARS[ci].name, VW / 2 - 40, 200, { size: 44, weight: 900, color: '#fff', stroke: '#000', sw: 6 });
   if (W.sv && W.sv.ci === W.cur) txt('📍 بتكمل من ' + ((WMAPS[W.sv.map] || {}).name || ''), VW / 2 - 40, 250, { size: 20, weight: 800, color: '#7dffb0' });
-  { const sv = sgLoad(); if (sv && sv.done) { txt('🏆 خلصت حرب الخالين', VW / 2 - 40, 290, { size: 20, weight: 900, color: '#ffd34d' }); ctx.fillStyle = 'rgba(176,48,255,0.85)'; rrect(VW / 2 - 190, 312, 300, 40, 20); ctx.fill(); txt('🔁 ابدأ القصة من جديد', VW / 2 - 40, 333, { size: 18, weight: 900, color: '#fff' }); }
-    else { const c = sv ? clamp(sv.ch | 0, 0, SAGA.length - 1) : 0; txt('📜 حرب الخالين — الفصل ' + SG_ORD[c] + ': ' + SAGA[c].n, VW / 2 - 40, 292, { size: 20, weight: 900, color: '#ffd34d' }); } }
+  { const sv = sgLoad(W.cur); if (sv && sv.done) { txt('🏆 ختم القصة — تم الإتمام ✅', VW / 2 - 40, 290, { size: 20, weight: 900, color: '#ffd34d' }); ctx.fillStyle = 'rgba(176,48,255,0.85)'; rrect(VW / 2 - 190, 312, 300, 40, 20); ctx.fill(); txt('🔁 ابدأ القصة من جديد', VW / 2 - 40, 333, { size: 18, weight: 900, color: '#fff' }); }
+    else { const c = sv ? clamp(sv.ch | 0, 0, SAGA.length - 1) : 0; txt((sv && (sv.ch || sv.st) ? '⏳ جاري الإتمام — الفصل ' : sv && sv.ever ? '🔁 يعيدها من جديد — الفصل ' : '🆕 القصة من الصفر — الفصل ') + SG_ORD[c] + ': ' + SAGA[c].n, VW / 2 - 40, 292, { size: 20, weight: 900, color: '#ffd34d' }); } }
   if (L.length > 1) { ctx.fillStyle = 'rgba(255,211,77,0.9)'; rrect(VW / 2 - 130, 370, 260, 44, 22); ctx.fill(); txt('👕 ' + O.name + (TOUCH_ON ? ' · المس للتغيير' : ' · E للتغيير'), VW / 2, 393, { size: 19, weight: 900, color: '#111' }); }
   for (let i = 0; i < NCH; i++) { const [x, y] = cupGridPos(i), on = i === W.cur, f = IMG['face' + (i + 1)];
     ctx.save(); rrect(x - 40, y - 40, 80, 80, 12); ctx.fillStyle = 'rgba(10,12,24,0.9)'; ctx.fill(); ctx.clip(); if (f) ctx.drawImage(f, x - 40, y - 40, 80, 80); ctx.restore();
-    ctx.lineWidth = on ? 4 : 1.5; ctx.strokeStyle = on ? '#ffd34d' : 'rgba(255,255,255,0.25)'; rrect(x - 40, y - 40, 80, 80, 12); ctx.stroke(); }
+    ctx.lineWidth = on ? 4 : 1.5; ctx.strokeStyle = on ? '#ffd34d' : 'rgba(255,255,255,0.25)'; rrect(x - 40, y - 40, 80, 80, 12); ctx.stroke();
+    { const R = (W.sgA || (W.sgA = sgAll()))[i]; if (R && (R.done || R.ever || R.ch || R.st)) { const fin = R.done || (R.ever && !R.ch && !R.st), lb = fin ? '✓' : String((R.ch | 0) + 1);
+      ctx.fillStyle = fin ? '#22c55e' : '#ff9f1a'; ctx.beginPath(); ctx.arc(x + 31, y - 31, 15, 0, 7); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#000'; ctx.stroke(); txt(lb, x + 31, y - 30, { size: fin ? 19 : 15, weight: 900, color: '#fff', rtl: false });
+      if (R.ever && !fin) { ctx.fillStyle = '#22c55e'; ctx.beginPath(); ctx.arc(x - 31, y - 31, 10, 0, 7); ctx.fill(); txt('✓', x - 31, y - 30, { size: 13, weight: 900, color: '#fff', rtl: false }); } } } }
+  txt('✓ أخضر = تم الإتمام · رقم برتقالي = جاري الإتمام (رقم الفصل)', VW / 2, 652, { size: 15, weight: 800, color: 'rgba(255,255,255,0.7)' });
   ctx.fillStyle = 'rgba(230,20,40,0.92)'; rrect(VW - 290, 628, 260, 64, 16); ctx.fill(); txt('ادخل العالم ←', VW - 160, 661, { size: 26, weight: 900, color: '#fff' });
   ctx.fillStyle = 'rgba(255,255,255,0.1)'; rrect(20, 628, 180, 64, 16); ctx.fill(); txt('رجوع', 110, 661, { size: 24, weight: 900, color: '#fff' });
 }
@@ -7010,10 +7029,15 @@ const SG_SUB = { adel: 'النوخذة', salah: 'الرئيس', inv: 'المبر
 const SG_COL = { adel: '#3cb4ff', salah: '#d4a640', malali: '#b030ff', inv: '#ff2a3a', P: '#3ea0ff', N: '#9fd8ff', '?': '#ff3b4a', jadd: '#ffd34d' };
 const SG_STAND = [4, 9, 10, 11, 3, 1, 0];
 Object.assign(VOICE_RATE, { 98: 0.78, 97: 0.86 });
-function sgLoad() { try { return JSON.parse(localStorage.getItem('shilla_saga')) || null; } catch (e) { return null; } }
-var SAGA_DONE = (() => { const s = sgLoad(); return !!(s && (s.done || s.ever)); })();
+function sgAll() { let A = null; try { A = JSON.parse(localStorage.getItem('shilla_saga_by')); } catch (e) { }
+  if (A && typeof A === 'object') return A; A = {};   // first run: the old single save belongs to the hero you were playing
+  try { const old = JSON.parse(localStorage.getItem('shilla_saga')); if (old) { let ci = 0; try { const w = JSON.parse(localStorage.getItem('shilla_world')); if (w && w.ci != null) ci = w.ci; } catch (e) { } A[ci] = old; localStorage.setItem('shilla_saga_by', JSON.stringify(A)); } } catch (e) { } return A; }
+function sgPut(ci, rec) { const A = sgAll(); A[ci] = rec; try { localStorage.setItem('shilla_saga_by', JSON.stringify(A)); } catch (e) { } if (G.world) G.world.sgA = null; }
+function sgHero() { const W = G.world; return W && W.P && W.P.base != null ? W.P.base : W && W.cur != null ? W.cur : 0; }
+function sgLoad(ci) { return sgAll()[ci == null ? sgHero() : ci] || null; }
+var SAGA_DONE = (() => { try { const o = JSON.parse(localStorage.getItem('shilla_saga')); if (o && (o.done || o.ever)) return true; } catch (e) { } return Object.values(sgAll()).some(s => s && (s.done || s.ever)); })();
 function sagaUnlocked() { return SAGA_DONE; }
-function sgSave(S) { if (S.done || S.ever) SAGA_DONE = true; try { localStorage.setItem('shilla_saga', JSON.stringify({ ch: S.ch, st: S.st, done: S.done ? 1 : 0, ever: S.ever || S.done ? 1 : 0, wd: S.wait != null ? S.wait : undefined })); } catch (e) { } }
+function sgSave(S) { if (S.done || S.ever) SAGA_DONE = true; const rec = { ch: S.ch, st: S.st, done: S.done ? 1 : 0, ever: S.ever || S.done ? 1 : 0, wd: S.wait != null ? S.wait : undefined }; sgPut(S.base != null ? S.base : sgHero(), rec); try { localStorage.setItem('shilla_saga', JSON.stringify(Object.assign({}, rec, { ever: SAGA_DONE ? 1 : 0 }))); } catch (e) { } }
 function sgDue(W) { const S = W.saga, d = wDay(W); return S.wait == null || d > S.wait || (d === S.wait && wHour(W) >= 7); }
 function sgCast(base, eff) { const cast = Object.assign({}, SG_CI), mine = new Set([base, eff]), used = new Set(Object.values(cast));
   for (const r in cast) if (mine.has(cast[r])) { if (r === 'malali' && !mine.has(0)) { cast[r] = 0; continue; } const s = SG_STAND.find(c => !mine.has(c) && !used.has(c)); if (s !== undefined) { cast[r] = s; used.add(s); } }
@@ -7043,15 +7067,15 @@ window.__storyVoices = () => { if (window.VOICE_STORY) Object.assign(VOX.txt, wi
 setTimeout(() => { if (proVoices.fail) storyVoices(); }, 5000);
 function sagaBegin(W) {
   storyVoices();
-  const sv = sgLoad() || { ch: 0, st: 0 };
-  const S = W.saga = { ch: clamp(sv.ch | 0, 0, SAGA.length - 1), st: sv.st | 0, done: !!sv.done, ever: !!(sv.ever || sv.done), cast: sgCast(W.P.base, W.P.ci), figs: {}, place: {}, un: new Set(), k: 0 };
+  const sv = sgLoad(W.P.base) || { ch: 0, st: 0 };
+  const S = W.saga = { ch: clamp(sv.ch | 0, 0, SAGA.length - 1), st: sv.st | 0, done: !!sv.done, ever: !!(sv.ever || sv.done), base: W.P.base, cast: sgCast(W.P.base, W.P.ci), figs: {}, place: {}, un: new Set(), k: 0 };
   if (S.st >= SAGA[S.ch].steps.length) S.st = 0; S.wait = sv.wd != null && !S.done && S.st === 0 ? sv.wd : null;
   sgReplay(S); if (S.wait != null && !sgDue(W)) S.place = {}; else S.wait = null; sgApplyPlace(W);
   if (S.wait != null) { W.toast = { t: '📅 الفصل ' + SG_ORD[S.ch] + ' يوم ' + wDateStr(S.wait) + ' — نام 🛏️ لين يجي الوقت', k: 0 }; return; }
   if (S.done) { W.msg = { t: '🏆 خلصت حرب الخالين… العالم كله لك!', k: 0, c: '#ffd34d' }; return; }
   if (S.st === 0) sgCard(W); else sgStep(W, true);
 }
-function sagaRestart() { try { localStorage.setItem('shilla_saga', JSON.stringify({ ch: 0, st: 0, done: 0, ever: SAGA_DONE ? 1 : 0 })); } catch (e) { } }
+function sagaRestart(ci) { if (ci == null) ci = sgHero(); const o = sgLoad(ci); sgPut(ci, { ch: 0, st: 0, done: 0, ever: o && (o.ever || o.done) ? 1 : 0 }); }
 function sgCard(W) { const S = W.saga; S.card = { k: 0, ch: S.ch, part: S.ch === 0 || SAGA[S.ch - 1].part !== SAGA[S.ch].part }; W.dlg = null; W.menu = null; W.mapOpen = false; SFX.whoosh(1); }
 function sgStep(W, resume) {
   const S = W.saga, st = sgCur(S); if (!st) { sgChapterEnd(W); return; }
