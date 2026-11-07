@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.64';
+const GAME_VER = '1.65';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2261,7 +2261,7 @@ class Fighter {
     this.connected = false; this.hitThis = false; this.lowHit = false; this.blockLow = false;
     this.airUsed = false; this.jumpDir = 0; this.J = null; this.hipY = 0; this.hurt = null; this.shakeT = 0; this.vic = null;
     this.sk = 0; this.spBuf = 0; this.cartGone = false; this.rollAng = 0; this.cbCD = 0;
-    this.z = 0; this.lastUp = -99; this.lastDown = -99; this.upHold = 0; this.invis = 0; this.invisCD = 0;
+    this.z = 0; this.lastUp = -99; this.lastDown = -99; this.upHold = 0; this.invis = 0; this.invisCD = 0; this.mkCD = 0;
     this.in = { h: {}, p: {} }; this.animate();
   }
   get rage() { return !this.rageUsed && this.hp > 0 && this.hp <= this.maxHp * 0.3; }
@@ -2347,6 +2347,7 @@ class Fighter {
     if (this.invuln > 0) this.invuln--;
     if (this.dgCD > 0) this.dgCD--;
     if (this.sk2CD > 0 && G.fight && G.fight.phase === 'fight') this.sk2CD--;
+    if (this.mkCD > 0 && G.fight && G.fight.phase === 'fight') this.mkCD--;
     if (this.invisCD > 0 && G.fight && G.fight.phase === 'fight') this.invisCD--; if (this.invis > 0 && --this.invis === 0) { popText('ظهر! 🌑', this.x, -330, '#c77dff', 32); SFX.whoosh(1); }
     if (this.bubble && ++this.bubble.t > this.bubble.dur) this.bubble = null;
     // L2+R2 / touch button = القاضية (cancels a dodge or R2 combo started a few frames earlier)
@@ -2402,6 +2403,8 @@ class Fighter {
     if (this.eatPend && G.fight && G.fight.phase === 'fight' && this.state !== 'air' && !this.jumping) { this.eatPend = false; this.eatN = 0; this.startMove('ab_eat'); return; }
     if (p.fwd) { if (this.clock - this.lastFwd < 13) { this.setState('dash'); this.dashBack = false; this.vx = this.facing * 11 * this.C.spd; dust(this.x, 5, -this.facing); this.lastFwd = -99; SFX.whoosh(0); return; } this.lastFwd = this.clock; }
     if (p.back) { if (this.clock - this.lastBack < 15) { this.setState('dash'); this.dashBack = true; this.vx = -this.facing * 19 * this.C.spd; dust(this.x, 8, this.facing); this.lastBack = -99; SFX.whoosh(1); return; } this.lastBack = this.clock; }
+    if (this.spBuf > 0 && this.C.masked && !(this.mkCD > 0) && G.fight && G.fight.phase === 'fight') { const id = h.down && h.back ? 'sk_mk_grid' : h.up ? 'sk_mk_emp' : h.fwd && !h.down ? 'sk_mk_port' : h.back && !h.down ? 'sk_mk_missiles' : null;
+      if (id) { this.spBuf = 0; this.buf = null; this.upHold = 0; this.mkCD = 300; this.startMove(id); this.talk('skill', BOSS_LINES[id]); G.fight.skBanner = { slot: this.slot, text: BOSS_NAMES[id], t: 0, small: 1 }; return; } }
     if (this.spBuf > 0 && h.up && (this.C.malali || this.bossAs === MALALI) && !(this.invisCD > 0) && G.fight && G.fight.phase === 'fight') { this.useInvis(); return; }
     if (this.spBuf > 0 && h.down && SKILL2[this.ci] && this.sk2CD <= 0 && G.fight && G.fight.phase === 'fight') { this.useSkill2(); return; }
     if (this.spBuf > 0 && this.sk >= SKMAX && !(h.down && SKILL2[this.ci])) { this.useSkill(); return; }
@@ -2617,6 +2620,7 @@ class CPUPad {
     if (op.state === 'juggle' && dist < 190) { if (Math.random() < 0.5) press('b1'); else press('b2'); return; }
     this.cd--;
     if (me.rage && dist < 230 && Math.random() < 0.03) { press('b1', 'b2'); return; }
+    if (me.C.masked && !me.bossAI && !(me.mkCD > 0) && Math.random() < 0.012) { const r = Math.random(); if (r < 0.25) h.up = true; else if (r < 0.5) h[fK] = true; else if (r < 0.75) h[bK] = true; else { h.down = true; h[bK] = true; } press('sp'); return; }
     if ((me.C.malali || me.bossAs === MALALI) && !(me.invisCD > 0) && !(me.invis > 0) && dist > 200 && Math.random() < 0.006) { h.up = true; press('sp'); return; }
     if (SKILL2[me.ci] && me.sk2CD <= 0 && dist > 240 && dist < 760 && Math.random() < 0.025) { h.down = true; press('sp'); return; }
     if (me.sk >= SKMAX && Math.random() < 0.035) {
@@ -4569,6 +4573,8 @@ class Fight {
         txt(dc > 0 ? `تفادي ${(f.dgCD / 60).toFixed(1)}` : 'تفادي ✓', rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by3 + 3, { size: 12, weight: 800, color: dc > 0 ? 'rgba(255,255,255,0.6)' : '#7fd6ff', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 });
         if (SKILL2[f.ci]) { const c2 = f.sk2CD / SK2_CD, by4 = by3 + 11; ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx0 - 2, by4 - 1, sw2 * 0.6 + 4, 7); ctx.fillStyle = c2 > 0 ? 'rgba(255,255,255,0.35)' : '#ffb04d'; const w4 = sw2 * 0.6 * (1 - c2); if (!rev) ctx.fillRect(sx0, by4, w4, 5); else ctx.fillRect(sx0 + sw2 - w4, by4, w4, 5);
           txt(c2 > 0 ? `${SKILL2_NAMES[f.ci]} ${(f.sk2CD / 60).toFixed(1)}` : `${SKILL2_NAMES[f.ci]} ✓ (⬇+★)`, rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by4 + 3, { size: 12, weight: 800, color: c2 > 0 ? 'rgba(255,255,255,0.6)' : '#ffb04d', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 }); }
+        if (f.C.masked) { const c6 = (f.mkCD | 0) / 300, by6 = by3 + 22; ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx0 - 2, by6 - 1, sw2 * 0.6 + 4, 7); ctx.fillStyle = c6 > 0 ? 'rgba(255,60,80,0.45)' : '#ff3040'; const w6 = sw2 * 0.6 * (1 - c6); if (!rev) ctx.fillRect(sx0, by6, w6, 5); else ctx.fillRect(sx0 + sw2 - w6, by6, w6, 5);
+          txt(c6 > 0 ? 'التقنية ' + ((f.mkCD | 0) / 60).toFixed(1) : 'التقنية ✓ (اتجاه + ★)', rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by6 + 3, { size: 12, weight: 800, color: c6 > 0 ? 'rgba(255,255,255,0.6)' : '#ff6a7a', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 }); }
         if (f.C.malali || f.bossAs === MALALI) { const c5 = f.invis > 0 ? 1 : (f.invisCD | 0) / 720, by5 = by3 + 22; ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx0 - 2, by5 - 1, sw2 * 0.6 + 4, 7); ctx.fillStyle = c5 > 0 ? 'rgba(199,125,255,0.45)' : '#c77dff'; const w5 = sw2 * 0.6 * (1 - c5) || (f.invis > 0 ? sw2 * 0.6 * f.invis / 240 : 0); if (!rev) ctx.fillRect(sx0, by5, w5, 5); else ctx.fillRect(sx0 + sw2 - w5, by5, w5, 5);
           txt(f.invis > 0 ? 'مختفي 🌑' : c5 > 0 ? 'الاختفاء ' + ((f.invisCD | 0) / 60).toFixed(1) : 'الاختفاء ✓ (⬆+★)', rev ? sx0 + sw2 * 0.4 - 8 : sx0 + sw2 * 0.6 + 8, by5 + 3, { size: 12, weight: 800, color: c5 > 0 && !(f.invis > 0) ? 'rgba(255,255,255,0.6)' : '#c77dff', align: rev ? 'right' : 'left', stroke: '#000', sw: 2 }); } }
       txt(label, rev ? sx0 - 10 : sx0 + sw2 + 10, sy + 4, { size: 15, weight: 800, color: full ? '#ffd34d' : 'rgba(255,255,255,0.75)', align: rev ? 'right' : 'left', stroke: '#000', sw: 3 });
@@ -4672,7 +4678,7 @@ function drawMoveList(F) {
     txt('L3/R3', cx + 205, y + 26, { size: 18, font: FE, weight: 700, color: '#7dffb0', rtl: false });
     txt(s === 0 ? 'E' : 'U', cx + 205, y - 6, { size: 24, font: FE, weight: 700, color: '#7dffb0', rtl: false });
     txt('المهارة: ' + SKILL_NAMES[f.ci] + ' (كل 10 ثواني)', cx + 70, y - (SKILL2[f.ci] ? 12 : 0), { size: SKILL2[f.ci] ? 19 : 22, weight: 800, color: '#7dffb0', align: 'right' });
-    if (SKILL2[f.ci]) txt('⬇ + ★: ' + SKILL2_NAMES[f.ci] + ' (كل 4 ثواني)' + (f.C.malali ? ' · ⬆ + ★: الاختفاء 🌑' : ''), cx + 70, y + 14, { size: 18, weight: 800, color: '#ffb04d', align: 'right' });
+    if (SKILL2[f.ci]) txt('⬇ + ★: ' + SKILL2_NAMES[f.ci] + ' (كل 4 ثواني)' + (f.C.malali ? ' · ⬆ + ★: الاختفاء 🌑' : '') + (f.C.masked ? ' · ⬆★ EMP · ➡★ انتقال · ⬅★ صواريخ · ↙★ شبكة ليزر' : ''), cx + 70, y + 14, { size: 18, weight: 800, color: '#ffb04d', align: 'right' });
     txt(`تفادي: ${s === 0 ? 'Q' : 'Y'} أو L2 (كل ثانيتين)`, cx, y + 40, { size: 17, weight: 700, color: '#7fd6ff' });
     txt('💥 القاضية: ' + (FIN[f.ci] || FIN[0]).name + '  ·  L2+R2 (أو □+△) لما دمك يقل', cx, y + 64, { size: 17, weight: 700, color: '#ff8080' });
   });
