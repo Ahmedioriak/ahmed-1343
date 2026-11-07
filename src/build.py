@@ -31,3 +31,8 @@ build((), 'v2', 'معركة الشلة 2', '/firebase-config.js')
 fba = '\n'.join(rd(f).replace('//# sourceMappingURL=' + f + '.map', '') for f in ['firebase-app-compat.js', 'firebase-database-compat.js', 'firebase-auth-compat.js'])
 a = rd('admin.html').replace('/*FB*/', fba.replace('</script', '<\\/script')).replace('</head>', '<style>' + rd('fonts.css') + '</style></head>', 1)
 open(os.path.join(R, 'admin.html'), 'w', encoding='utf-8').write(a); print('built admin', len(a) // 1024, 'KB')
+
+# the ElevenLabs recorder page (/record.html): the game's line list inlined, so it also works opened from a file
+tp = os.path.join(R, 'tools', 'voice', 'elevenlabs', 'record.template.html'); lp = os.path.join(R, 'voice-lines.json')
+if os.path.exists(tp) and os.path.exists(lp):
+    open(os.path.join(R, 'record.html'), 'w', encoding='utf-8').write(open(tp, encoding='utf-8').read().replace('/*VOICE_LINES*/', 'window.VOICE_LINES=' + open(lp, encoding='utf-8').read().strip() + ';', 1)); print('built record.html')
