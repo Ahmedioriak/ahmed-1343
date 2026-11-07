@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.55';
+const GAME_VER = '1.56';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1380,6 +1380,7 @@ function bossPick(ci, d) {
   const pick = L => { let w = 0; for (const [, x] of L) w += x; let q = r * w; for (const [id, x] of L) { q -= x; if (q <= 0) return id; } return L[L.length - 1][0]; };
   if (ci === RAIS) return d < 260 ? pick([['sk_ring', 3], ['sk_stomp', 2], ['sk_cash', 2], ['sk_gold', 1]]) : d < 520 ? pick([['sk_chain', 3], ['sk_ring', 2], ['sk_gold', 2], ['sk_limo', 2], ['sk_cash', 1.5], ['sk_stomp', 1]]) : pick([['sk_limo', 3], ['sk_gold', 2.5], ['sk_cash', 2], ['sk_stomp', 1]]);
   if (ci === NASSER || ci === HAMAD) return bossPickNH(ci, d, r);
+  if (ci === MASKED || ci === MYST) return bossPickMM(ci, d, r);
   if (ci === MALALI) return d > 380 ? pick([['sk_void', 3], ['sk_tendril', 3], ['sk_dwave', 2.5], ['sk_shstep', 2], ['sk_eclipse', 1.2]]) : pick([['sk_shstep', 2.5], ['sk_tendril', 2.5], ['sk_dwave', 1.5], ['sk_void', 1.5], ['sk_eclipse', 1]]);
   if (ci === RAIS2) return d > 320 ? pick([['sk_eyes', 2.5], ['sk_redshot', 2], ['sk_feathers', 2.5], ['sk_tornado', 2], ['sk_meteor', 2], ['sk_dive', 1.5]]) : pick([['sk_ring', 2], ['sk_dive', 2], ['sk_meteor', 2], ['sk_eyes', 1.5], ['sk_tornado', 1.5], ['sk_feathers', 1]]);
   return null;
@@ -1391,7 +1392,7 @@ function bossTick(f, opp) {
   if (f.bossCD > 0 || !NEUTRAL.has(f.state) || opp.state === 'down' || opp.state === 'rageVic') return;
   const bci = f.bossAs !== undefined ? f.bossAs : f.ci, id = bossPick(bci, Math.abs(opp.x - f.x));
   if (!id) { f.bossCD = 30; return; }
-  f.startMove(id); f.vx = 0; f.buf = null; f.bossCD = (f.ci === RAIS2 ? 115 : f.ci === NOKH ? 170 : bci === NASSER ? 92 : bci === HAMAD ? 100 : bci === MALALI ? 105 : 160) + ((Math.random() * 70) | 0);
+  f.startMove(id); f.vx = 0; f.buf = null; f.bossCD = (f.ci === RAIS2 ? 115 : f.ci === NOKH ? 170 : bci === MASKED ? 74 : bci === MYST ? 130 : bci === NASSER ? 92 : bci === HAMAD ? 100 : bci === MALALI ? 105 : 160) + ((Math.random() * 70) | 0);
   f.talk('skill', BOSS_LINES[id]); F.skBanner = { slot: f.slot, text: BOSS_NAMES[id], t: 0 };
 }
 // ---- drawings
@@ -2024,9 +2025,85 @@ function bossPickNH(ci, d, r) { const pick = L => { let w = 0; for (const [, x] 
   if (ci === HAMAD) return d > 380 ? pick([['sk_hm_case', 3], ['sk_hm_gold', 2.5], ['sk_hm_bribe', 2], ['sk2_hm_spray', 1.5], ['sk_hm_king', 1]]) : pick([['sk_hm_swing', 3], ['sk2_hm_spray', 2.5], ['sk_hm_bribe', 1.5], ['sk_hm_king', 1.2], ['sk_hm_case', 1]]);
   return null; }
 
+// ================= «مملكة الدم»: المجهول (حارس الظل) والقائد المقنّع (المخترع بدرعه التقني) — story-only =================
+const MYST = CHARS.length;
+CHARS.push({ name: 'حارس الظل', en: 'SHADE', h: 0.92, tag: 'بلا وجه… بلا اسم', hp: 1.0, dmg: 1.02, spd: 1.06, color: '#ff2a3a', stats: [3, 5, 3], quote: '…', story: 1, myst: 1 });
+const MASKED = CHARS.length;
+CHARS.push({ name: 'القائد المقنّع', en: 'THE MASK', h: 0.98, tag: 'درع تقني خارق', hp: 1.95, dmg: 1.45, spd: 1.06, color: '#ff1030', stats: [5, 5, 5], quote: 'أنا اللي صنعت اللعبة كلها.', story: 1, masked: 1, props: maskedProps });
+SKILL_IDS[MYST] = 'sk_shstep'; SKILL_NAMES[MYST] = 'خطوة الظل'; SKILL2[MYST] = 'sk_dwave'; SKILL2_LINE[MYST] = '…'; SKILL2_NAMES[MYST] = 'موجة الظلام';
+const TECHC = ['#ff1030', '#ff6a5a', '#ffffff', '#ffb0a8'];
+// his visor burns red; a reactor glows in his chest; drones hover around him when they're out
+function maskedProps(f, front) { if (!front || !f.J || f.hp <= 0 && f.state === 'ko') return; const e = eyePos(f), k = f.R.k, s = 1 + 0.2 * Math.sin(G.frame * 0.3);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(e[0], e[1], 1, e[0], e[1], 26 * s * k / 0.7); g.addColorStop(0, 'rgba(255,240,240,1)'); g.addColorStop(0.3, 'rgba(255,30,50,0.9)'); g.addColorStop(1, 'rgba(255,0,30,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(e[0], e[1], 26 * s * k / 0.7, 0, 7); ctx.fill();
+  if (G.frame % 5 === 0) FX.push({ t: 'p', x: f.x + rnd(-50, 50), y: f.hipY - rnd(40, 360), vx: 0, vy: -rnd(0.5, 2), life: 16, max: 16, c: TECHC[G.frame % 2], sz: rnd(2, 3) });
+  ctx.restore();
+  for (const d of f.drones || []) drawDrone(d.x, d.y, d.t); }
+function drawDrone(x, y, t) { ctx.save(); ctx.translate(x, y); ctx.fillStyle = '#16171c'; ctx.strokeStyle = '#ff2a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(0, -10); ctx.lineTo(22, 0); ctx.lineTo(0, 10); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sx * 22, -10, 12, 3, Math.sin(t) * 0.3, 0, 7); ctx.stroke(); }
+  ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ff2030'; ctx.beginPath(); ctx.arc(0, 0, 4 + Math.sin(t * 0.5) * 1.5, 0, 7); ctx.fill(); ctx.restore(); }
+function drawBeam(x1, y1, x2, y2, w, k) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+  for (const [lw, c] of [[w * 3.2, `rgba(255,0,30,${0.25 * k})`], [w * 1.6, `rgba(255,40,60,${0.8 * k})`], [w * 0.55, `rgba(255,240,240,${k})`]]) { ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+  ctx.restore(); }
+// ليزر القناع — a beam from the visor, sweeping down onto you
+function visorBeam(f) { const e = eyePos(f), L = 900, u = clamp((f.mt - f.mv.st) / f.mv.ac, 0, 1), o = bossOpp(f), aim = o ? Math.atan2((o.hurt.y0 + o.hipY) / 2 - e[1], Math.max(80, Math.abs(o.x - e[0]))) : 0.1, a = aim + lerp(-0.14, 0.14, u); return { e, t: [e[0] + f.facing * L * Math.cos(a), e[1] + L * Math.sin(a)] }; }
+MV.sk_mk_laser = { name: 'mklaser', skill: 1, limb: null, lvl: 'mid', st: 16, ac: 28, rc: 20, dmg: 4.2, hs: 12, bs: 6, push: 6, stop: 3, p: 0.9, multi: 5,
+  hitboxFn: f => { if (!f.active()) return null; const b = visorBeam(f); return { x: b.t[0], y: b.t[1], x2: b.e[0], y2: b.e[1], ar: 22, r: 22 }; },
+  onStep: f => { if (f.mt === 2) SFX.zap(); if (f.active()) { if (f.mt % 4 === 0) SFX.zap(); if (f.mt % 2 === 0) { const b = visorBeam(f); finBurst(b.e[0], b.e[1], 2, TECHC, 4, 3); } } },
+  kf: [[0, {}], [10, { lean: -10, ua: 30, fa: 130, bua: 26, bfa: 140, th: 26, bth: -20 }], [16, { lean: 6, ua: 30, fa: 130, bua: 26, bfa: 140, th: 30, bth: -24 }], [44, { lean: 14, ua: 30, fa: 130 }], [52, {}], [64, null]] };
+// الدرونات — two drones fly out and fire
+function droneTick(p) { const o = p.owner, op = o && bossOpp(o); if (!o || !op) return; const tx = op.x - o.facing * 40 + Math.sin(p.t * 0.06 + p.ph) * 90, ty = op.hipY - 380 + Math.cos(p.t * 0.08 + p.ph) * 40;
+  p.x = lerp(p.x, tx, 0.06); p.y = lerp(p.y, ty, 0.06); if (p.t > 24 && p.t % 22 === p.ph % 22) { SFX.zap(); const dx = op.x - p.x, dy = (op.hipY - 150) - p.y, n = Math.hypot(dx, dy) || 1;
+    spawnProj({ kind: 'bolt', owner: o, x: p.x, y: p.y, vx: dx / n * 22, vy: dy / n * 22, g: 0, r: 12, life: 40, draw: q => drawBeam(q.x - q.vx * 2, q.y - q.vy * 2, q.x, q.y, 6, 1), m: { dmg: 3.4, lvl: 'mid', hs: 12, bs: 6, push: 6, stop: 3, p: 0.8 } }); } }
+function spawnDrones(f) { SFX.skill(); const h = f.toWorld(f.J.fH); [0, 11].forEach(ph => spawnProj({ kind: 'drone', owner: f, noHit: true, x: h[0], y: h[1] - 40, vx: 0, vy: 0, g: 0, r: 20, life: 150, ph, keep: 1, tick: droneTick, draw: p => { drawDrone(p.x, p.y, p.t); } })); }
+MV.sk2_mk_drones = { name: 'mkdrones', skill: 1, sk2: 1, limb: null, lvl: 'mid', st: 14, ac: 1, rc: 18, p: 1, spawnAt: 14, spawn: spawnDrones, projLimit: 0,
+  kf: [[0, {}], [8, { ua: 120, fa: 60, lean: -6 }], [14, { ua: 170, fa: 10, lean: -10 }], [24, {}], [33, null]] };
+// نبضة EMP — a red shockwave all around him: knocks you back and freezes you
+MV.sk_mk_emp = M({ name: 'mkemp', skill: 1, limb: null, lvl: 'mid', st: 22, ac: 6, rc: 26, dmg: 12, hs: 40, bs: 16, push: 70, stop: 10, p: 1.4, kd: 1,
+  hitboxFn: f => f.active() ? { x: f.x, y: f.hipY - 150, r: 260 } : null,
+  onStep: f => { if (f.mt === 4) { SFX.rage(); } if (f.mt < 22 && f.mt % 3 === 0) FX.push({ t: 'ring', x: f.x, y: f.hipY - 150, life: 10, max: 10, c: 'rgba(255,40,60,0.7)', r0: 200, r1: 40 });
+    if (f.mt === 22) { SFX.thud(); SFX.zap(); if (G.fight) G.fight.shake(18); for (let i = 0; i < 3; i++) finRing(f.x, f.hipY - 150, i % 2 ? '#ffffff' : '#ff1030', 260 + i * 120, 16 + i * 4); finBurst(f.x, f.hipY - 150, 40, TECHC, 12, 6); } },
+  kf: [[0, {}], [10, { ...CROUCH, ua: 60, fa: 140, bua: 60, bfa: 140, lean: 30 }], [22, { ua: 170, fa: 10, bua: 166, bfa: 14, lean: -12, th: 30, bth: -26 }], [30, { ua: 170, fa: 10, bua: 166, bfa: 14 }], [40, {}], [54, null]] });
+// صواريخ الكتف — missiles rise, then dive at where you stand
+function drawMissile(p) { const a = Math.atan2(p.vy, p.vx); ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a); ctx.fillStyle = '#2a2c32'; rrect(-26, -7, 44, 14, 6); ctx.fill(); ctx.fillStyle = '#ff2030'; ctx.beginPath(); ctx.moveTo(18, -7); ctx.lineTo(30, 0); ctx.lineTo(18, 7); ctx.closePath(); ctx.fill();
+  ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(-26, 0, -80, 0); g.addColorStop(0, 'rgba(255,200,120,0.95)'); g.addColorStop(1, 'rgba(255,40,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-26, -6); ctx.lineTo(-80, 0); ctx.lineTo(-26, 6); ctx.closePath(); ctx.fill(); ctx.restore(); }
+function missileTick(p) { const o = p.owner, op = o && bossOpp(o); if (!op) return; if (p.t === p.up) { const dx = op.x + op.vx * 10 - p.x, dy = -40 - p.y, n = Math.hypot(dx, dy) || 1; p.vx = dx / n * 19; p.vy = dy / n * 19; SFX.whoosh(1); }
+  if (p.t % 2 === 0) FX.push({ t: 'p', x: p.x, y: p.y, vx: rnd(-1, 1), vy: rnd(-1, 1), life: 14, max: 14, c: 'rgba(160,160,170,0.5)', sz: rnd(4, 7) }); if (p.y > -30 && p.t > p.up) { p.life = 0; dust(p.x, 10); SFX.rock(); finRing(p.x, -20, '#ff1030', 120, 12); } }
+MV.sk_mk_missiles = { name: 'mkmiss', skill: 1, limb: null, lvl: 'high', st: 16, ac: 24, rc: 20, p: 1.2, projLimit: 0,
+  onStep: f => { const k = f.mt - 16; if (k < 0 || k > 20 || k % 5 !== 0) return; SFX.throw(); const s = f.toWorld(f.J.torso ? [f.J.hd[0] - 30, f.J.hd[1] + 60] : f.J.fH);
+    spawnProj({ kind: 'missile', owner: f, x: s[0] - f.facing * 20, y: s[1], vx: -f.facing * 3 + rnd(-2, 2), vy: -16, g: 0, r: 22, life: 140, up: 22 + k, tick: missileTick, draw: drawMissile, m: { dmg: 7, lvl: 'high', hs: 16, bs: 10, push: 14, stop: 6, p: 1.2, kd: k === 20 ? 1 : 0 } }); },
+  kf: [[0, {}], [10, { lean: -14, ua: 20, fa: 130, bua: 20, bfa: 130, th: 26, bth: -22 }], [40, { lean: -14 }], [48, {}], [60, null]] };
+// الانتقال الكمّي — he glitches out and reappears behind you with a plasma punch
+function mkPortStep(f) { const o = bossOpp(f); if (!o) return; if (f.mt === 4) { SFX.zap(); finBurst(f.x, -160, 24, TECHC, 8, 5); } if (f.mt >= 4 && f.mt < 20) f.invuln = Math.max(f.invuln, 2);
+  if (f.mt === 12) { const side = f.x < o.x ? 1 : -1; f.x = clamp(o.x + side * 120, -STAGE + 60, STAGE - 60); f.facing = o.x > f.x ? 1 : -1; finBurst(f.x, -160, 24, TECHC, 8, 5); SFX.zap(); } }
+MV.sk_mk_port = { name: 'mkport', skill: 1, limb: 'fH', lvl: 'mid', st: 20, ac: 5, rc: 20, dmg: 17, hs: 24, bs: 16, push: 70, stop: 10, r: 54, p: 1.6, kd: 1, vanish: [6, 14], onStep: mkPortStep,
+  kf: [[0, {}], [6, { ...CROUCH, lean: 24 }], [16, { ua: 30, fa: 140, lean: -6 }], [20, { ua: 94, fa: 0, lean: 24, dx: 20, th: 40, bth: -32 }], [28, { ua: 90, fa: 4, lean: 20, dx: 16 }], [34, {}], [45, null]] };
+// شبكة الليزر — beams sweep the floor: jump!
+MV.sk_mk_grid = { name: 'mkgrid', skill: 1, limb: null, lvl: 'low', st: 18, ac: 30, rc: 20, dmg: 9, hs: 18, bs: 10, push: 20, stop: 6, p: 1.2, kd: 1,
+  hitboxFn: f => { if (!f.active()) return null; const u = (f.mt - 18) / 30, x = f.x + f.facing * lerp(60, 900, u); return { x, y: -30, x2: x - f.facing * 40, y2: -30, ar: 30, r: 30 }; },
+  onStep: f => { if (f.mt === 16) SFX.zap(); if (f.active()) { const u = (f.mt - 18) / 30, x = f.x + f.facing * lerp(60, 900, u); if (f.mt % 2 === 0) FX.push({ t: 'p', x, y: -20, vx: rnd(-2, 2), vy: -rnd(1, 4), life: 12, max: 12, c: TECHC[f.mt % 3], sz: rnd(3, 5) }); } },
+  kf: [[0, {}], [12, { ...CROUCH, ua: 60, fa: 20, lean: 40 }], [48, { ...CROUCH, ua: 60, fa: 20, lean: 40 }], [56, {}], [68, null]] };
+COMBOS[MASKED] = {
+  '12': ['لكمة البلازما', dashMove({ st: 8, ac: 10, rc: 18, sp: 20, trail: 1, limb: 'fH', r: 50, dmg: 15, p: 1.5, kd: 1, pose: PZ.punch, onStep: f => { if (f.mt === 8) { SFX.zap(); const w = f.toWorld(f.J.fH); finBurst(w[0], w[1], 14, TECHC, 8, 5); } } })],
+  '23': ['رصاصة ليزر', projMove(8, 16, { ua: 90, fa: 4, lean: 6 }, { ua: 92, fa: 0, lean: 10, dx: 6 }, f => { SFX.zap(); const w = f.toWorld(f.J.fH); spawnProj({ kind: 'bolt', owner: f, x: w[0], y: w[1], vx: f.facing * 30, vy: 0, g: 0, r: 16, life: 40, draw: q => drawBeam(q.x - q.vx * 3, q.y, q.x, q.y, 9, 1), m: { dmg: 10, lvl: 'mid', hs: 16, bs: 8, push: 14, stop: 5, p: 1.1 } }); })],
+  '24': ['شفرة الأرض', M({ lvl: 'low', st: 12, ac: 8, rc: 20, dmg: 13, kd: 1, push: 30, p: 1.4, hitboxFn: f => f.active() ? { x: f.x + f.facing * 260, y: -24, x2: f.x + f.facing * 60, y2: -24, ar: 24, r: 24 } : null,
+    onStep: f => { if (f.mt === 12) { SFX.zap(); finBurst(f.x + f.facing * 160, -20, 16, TECHC, 8, 4); } }, kf: [[0, {}], [8, { ...CROUCH, ua: 120, fa: 40 }], [12, { ...CROUCH, ua: 40, fa: 0, lean: 44 }], [20, { ...CROUCH, ua: 30, fa: 0, lean: 44 }], [30, {}], [40, null]] })],
+  '13': ['صاروخ', projMove(12, 18, { lean: -10, ua: 20, fa: 130 }, { lean: -14 }, f => { const o = bossOpp(f); SFX.throw(); spawnProj({ kind: 'missile', owner: f, x: f.x - f.facing * 20, y: f.hipY - 330, vx: 0, vy: -16, g: 0, r: 22, life: 140, up: 18, tick: missileTick, draw: drawMissile, m: { dmg: 12, lvl: 'high', hs: 18, bs: 10, push: 16, stop: 6, p: 1.3, kd: 1 } }); void o; })],
+  '14': ['رشاش النانو', flurryMove({ st: 6, ac: 28, rc: 16, multi: 6, dmg: 2.8, hs: 14, bs: 7, push: 3, stop: 2, r: 42, mvx: [[6, 34, 2]], onStep: f => { barrageStep(f); if (f.active() && f.mt % 3 === 0) { const w = f.toWorld(f.J.fH); FX.push({ t: 'p', x: w[0], y: w[1], vx: f.facing * rnd(3, 8), vy: rnd(-2, 2), life: 10, max: 10, c: TECHC[f.mt % 3], sz: 4 }); } } })],
+  '34': ['ركلة الدفع النفاث', M({ st: 12, ac: 6, rc: 20, limb: 'fT', r: 50, dmg: 15, push: 80, kick: 1, p: 1.5, kd: 1, mvx: [[8, 18, 10]], onStep: f => { if (f.mt >= 8 && f.mt < 20 && f.mt % 2 === 0) { const w = f.toWorld(f.J.fT); FX.push({ t: 'p', x: w[0] - f.facing * 30, y: w[1], vx: -f.facing * rnd(3, 6), vy: rnd(-1, 1), life: 12, max: 12, c: '#ffb070', sz: 6 }); } if (f.mt === 12) SFX.zap(); },
+    kf: [[0, {}], [8, PZ.stompUp], [12, { th: 90, sh: 0, ft: -40, ffl: 0, lean: -14, dx: 10 }], [18, { th: 90, sh: 0, ft: -40, ffl: 0, lean: -14, dx: 10 }], [24, {}], [38, null]] })],
+};
+SKILL_IDS[MASKED] = 'sk_mk_laser'; SKILL_NAMES[MASKED] = 'ليزر القناع';
+SKILL2[MASKED] = 'sk2_mk_drones'; SKILL2_LINE[MASKED] = 'الدرونات… هاجموا.'; SKILL2_NAMES[MASKED] = 'الدرونات';
+Object.assign(BOSS_NAMES, { sk_mk_laser: 'ليزر القناع', sk2_mk_drones: 'الدرونات', sk_mk_emp: 'نبضة EMP', sk_mk_missiles: 'صواريخ الكتف', sk_mk_port: 'الانتقال الكمّي', sk_mk_grid: 'شبكة الليزر' });
+Object.assign(BOSS_LINES, { sk_mk_laser: 'شوف… واحترق.', sk2_mk_drones: 'الدرونات… هاجموا.', sk_mk_emp: 'النظام… توقّف!', sk_mk_missiles: 'الهدف… مقفول.', sk_mk_port: 'أنا وين ما أبي.', sk_mk_grid: 'نط… إذا تقدر!' });
+function bossPickMM(ci, d, r) { const pick = L => { let w = 0; for (const [, x] of L) w += x; let q = r * w; for (const [id, x] of L) { q -= x; if (q <= 0) return id; } return L[L.length - 1][0]; };
+  if (ci === MASKED) return d > 360 ? pick([['sk_mk_laser', 3], ['sk_mk_missiles', 3], ['sk2_mk_drones', 2], ['sk_mk_grid', 2.5], ['sk_mk_port', 2.5]]) : pick([['sk_mk_emp', 3], ['sk_mk_port', 2], ['sk_mk_grid', 2], ['sk_mk_laser', 1.5], ['sk_mk_missiles', 1]]);
+  if (ci === MYST) return d > 360 ? pick([['sk_dwave', 3], ['sk_shstep', 2]]) : pick([['sk_shstep', 3], ['sk_dwave', 1]]);
+  return null; }
+
 const COMBO_NAME = {};
 COMBOS.forEach((set, ci) => { for (const k of COMBO_KEYS) { const [name, mv] = set[k]; const id = `cb${ci}_${k}`; MV[id] = mv; mv.cname = name; COMBO_NAME[id] = name; set[k] = id; } });
-COMBOS[NOKH] = COMBOS[9]; COMBOS[RAIS] = COMBOS[1]; COMBOS[RAIS2] = COMBOS[1]; COMBOS[MALALI] = COMBOS[0];
+COMBOS[NOKH] = COMBOS[9]; COMBOS[RAIS] = COMBOS[1]; COMBOS[RAIS2] = COMBOS[1]; COMBOS[MALALI] = COMBOS[0]; COMBOS[MYST] = COMBOS[0];
 for (const id of ['spin', 'k4', 'sweep', 'hook', 'rage', 'sk_rush', 'sk_cart', 'sk_roll', 'sk_barrage', 'sk_ship', 'sk_boat', 'sk_ring', 'sk_car']) MV[id].track = 1;
 for (const id in MV) {
   const m = MV[id]; m.id = id; m.total = m.st + m.ac + m.rc;
@@ -4030,6 +4107,36 @@ FIN[HAMAD] = { name: 'صفقة العمر', line: 'وقّع هني… بدمك.'
   back(F, a, d, t) { const S = a.finS; if (!S || t < 22 || t >= 104) return; drawMoneyStorm(S.x0, -120, t, Math.min(1, (t - 22) / 10) * (t > 94 ? (104 - t) / 10 : 1)); } };
 window.__nh = { NASSER, HAMAD, MV, SKILL_IDS, SKILL2, COMBOS, CHARS };
 
+// ---- حارس الظل والقائد المقنّع: الصوت والقاضيات
+PERSONA[MYST] = { vo: 'deep', intro: ['…'], skill: ['…'], win: ['…'], st: { lean: 4, th: 10, bth: -10 }, br: 0.03 };
+PERSONA[MASKED] = { vo: 'deep', intro: ['أنا اللي صنعت اللعبة كلها.', 'تأخرتوا… كل شي محسوب.'], skill: ['النظام… جاهز.', 'الهدف مقفول.'], win: ['كل شي… كان محسوب.'], st: { lean: -4, th: 8, bth: -8 }, br: 0.03 };
+VOICE_RATE[MASKED] = 0.78; VOICE_RATE[MYST] = 0.8; if (window.VOICE_TTS) { window.VOICE_TTS[MASKED] = [0.45, 0.84]; window.VOICE_TTS[MYST] = [0.5, 0.86]; }
+FIN[MYST] = FIN[MALALI];
+// نهاية النظام — he locks on, the drones circle, the laser cage closes and the reactor fires one last beam
+FIN[MASKED] = { name: 'نهاية النظام', line: 'النظام… قرر نهايتك.', col: '#ff1030',
+  run(F, a, d, t) {
+    const f = a.facing; if (!a.finS || a.finS.fin !== F.fin) a.finS = { fin: F.fin, x0: clamp(a.x + f * 300, -STAGE + 90, STAGE - 90) }; const S = a.finS;
+    if (t < 30) { finHold(d, S.x0); a.rageP = G2({ ua: 90, fa: 4, bua: 30, bfa: 120, lean: 4 }); d.finP = FPZ.hurt({ lean: -6 }); const h = finHead(d); S.ret = { x: h[0], y: h[1], s: lerp(130, 40, finSeg(t, 0, 28)), a: 1 };
+      if (t === 2) { SFX.click(); popText('الهدف… مقفول.', a.x, -500, '#ff6a5a', 40); } finCam(F, lerp(a.x, d.x, 0.5), -260, 1.05); return; }
+    S.ret = 0;
+    if (t < 80) { finHold(d, S.x0, -160 * easeOut(finSeg(t, 30, 50))); a.rageP = G2({ ua: 170, fa: 10, bua: 166, bfa: 14, lean: -10 }); d.finP = FPZ.hurt({ lean: 18 * Math.sin(t * 0.6), r: -6 });
+      S.dr = [0, 1, 2, 3].map(i => { const an = t * 0.12 + i * Math.PI / 2; return { x: S.x0 + Math.cos(an) * 170, y: -330 + Math.sin(an) * 70, t }; });
+      if (t % 6 === 0) { const q = S.dr[(t / 6) % 4 | 0]; S.zap = { x1: q.x, y1: q.y, t }; finHit(F, a, d, 2.5, finChest(d), 2); SFX.zap(); } finCam(F, (a.x + S.x0) / 2, -320, 1.0); return; }
+    if (t < 104) { finHold(d, S.x0, -160); S.dr = null; a.rageP = G2({ ...CROUCH, ua: 60, fa: 140, bua: 60, bfa: 140, lean: 30 }); d.finP = FPZ.hurt({ lean: -20 });
+      if (t === 92) { SFX.thud(); SFX.zap(); F.shake(24); for (let i = 0; i < 3; i++) finRing(S.x0, -260, i % 2 ? '#ffffff' : '#ff1030', 200 + i * 120, 16); finHit(F, a, d, 5, finChest(d), 6); popText('EMP!', S.x0, -480, '#ff6a5a', 50); }
+      finCam(F, (a.x + S.x0) / 2, -300, 1.05); return; }
+    if (t < 140) { const u = finSeg(t, 104, 120); finHold(d, S.x0, lerp(-160, 0, u * u)); a.rageP = G2({ ua: 94, fa: 0, bua: 90, bfa: 6, lean: 16, dx: 10, th: 40, bth: -32 }); d.finP = FPZ.hurt({ lean: 26 });
+      if (t === 104) { SFX.rage(); popText('آخر طلقة…', a.x, -520, '#ffd0c0', 40); } if (t >= 122) { S.beam = 1; if (t % 3 === 0) { finHit(F, a, d, 2, finChest(d), 2); F.shake(10); } } finCam(F, lerp(a.x, S.x0, 0.5), -260, lerp(1.0, 1.15, finSeg(t, 104, 140))); return; }
+    if (t === 140) { S.beam = 0; const c = finChest(d); finHit(F, a, d, 24, c, 18, true); finLaunch(d, f * 16, -24); SFX.thud(); SFX.rock(); F.shake(44); for (let i = 0; i < 3; i++) finRing(c[0], c[1], i % 2 ? '#ffffff' : '#ff1030', 260 + i * 130, 20 + i * 6); finBurst(c[0], c[1], 60, TECHC, 16, 8); popText('نهاية النظام!', c[0], c[1] - 90, '#ff3a4a', 60); return; }
+    if (t < 180) { a.rageP = G2({ ua: 40, fa: 120, lean: -4 }); finCam(F, lerp(a.x, d.x, 0.5), -240, 1.0); return; }
+    return true;
+  },
+  back(F, a, d, t) { const k = Math.min(1, t / 20) * (t > 160 ? Math.max(0, (180 - t) / 20) : 1); ctx.save(); ctx.fillStyle = `rgba(20,0,4,${0.55 * k})`; ctx.fillRect(-4000, -4000, 8000, 8000); ctx.restore(); },
+  front(F, a, d, t) { const S = a.finS; if (!S) return; if (S.ret) finReticle(S.ret.x, S.ret.y, S.ret.s, S.ret.a);
+    if (S.dr) { for (const q of S.dr) drawDrone(q.x, q.y, t); if (S.zap && t - S.zap.t < 3) { const c = finChest(d); drawBeam(S.zap.x1, S.zap.y1, c[0], c[1], 6, 1); } }
+    if (S.beam) { const e = a.J ? a.toWorld(a.J.fH) : [a.x, a.hipY - 200], c = finChest(d); drawBeam(e[0], e[1], c[0] + a.facing * 400, c[1], 34 + 6 * Math.sin(t), 1); } } };
+window.__mm = { MYST, MASKED };
+
 // ================= FIGHT =================
 class Fight {
   constructor(c1, c2, mode) {
@@ -5172,7 +5279,7 @@ function drawStory() {
   }
   // dialogue
   const L = S.lines[S.li] || ['N', ''], who = L[0], role = CH_ROLE[S.ch], boss = role === 'shadow', big = role !== 'reg', bcol = CH_GLOW[role], oc = storyOpp(S.ch);
-  const OFs = outfitOf(S.pc, S.pcOutfit), pimg = imgOf('vs', S.pc, OFs && OFs.id), oimg0 = IMG['vs' + (oc + 1)], oimg = boss ? shadowOf(oimg0) : oimg0;
+  const OFs = outfitOf(S.pc, S.pcOutfit), pimg = imgOf('vs', S.pc, OFs && OFs.id), oimg0 = IMG['vs' + (oc + 1)], oimg = boss ? (IMG['vs' + (MYST + 1)] || shadowOf(oimg0)) : oimg0;
   const drawP = (im, cx, flip, on, hh = 560) => { const h = hh, w = im.width * h / im.height; ctx.save(); ctx.globalAlpha = on ? 1 : 0.38; if (flip) { ctx.translate(cx * 2, 0); ctx.scale(-1, 1); } ctx.drawImage(im, cx - w / 2, VH - h - (on ? 6 : 0), w, h); ctx.restore(); };
   drawP(pimg, 300, false, who === 'P', 560 * pimg.height / IMG['vs' + (S.pc + 1)].height); drawP(oimg, VW - 300, true, who === 'O');
   if (big) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(VW - 300, 380, 30, VW - 300, 380, 330); g.addColorStop(0, bcol + (role === 'rais2' ? '77' : '44')); g.addColorStop(1, bcol + '00'); ctx.fillStyle = g; ctx.fillRect(VW - 640, 40, 640, 680); ctx.restore(); }
@@ -6329,6 +6436,9 @@ function wMapsSaga() {
     ],
     exits: [{ x: 940, y: 1450, w: 120, h: 50, to: 'fareej', at: [1180, 760], label: 'الفريج ⬇' }] };
   for (const id of ['qasr', 'halba', 'base', 'qalaa']) WMAPS[id].glows = (WMAPS[id].glows || []).concat(WMAPS[id].objs.filter(o => o.glow).map(o => o.glow));
+  const tint = (src, col) => function (c, M) { src.call(this, c, M); c.save(); c.globalCompositeOperation = 'source-atop'; c.fillStyle = col; c.fillRect(0, 0, M.W, M.H); c.restore(); };
+  WMAPS.nasq = Object.assign({}, WMAPS.base, { name: 'قلعة ناصر', icon: '🏴', ambient: 'rgba(60,0,0,0.3)', floor: tint(WMAPS.base.floor, 'rgba(140,10,20,0.28)') });
+  WMAPS.hisn = Object.assign({}, WMAPS.qalaa, { name: 'حصن المقنّع', icon: '🛡️', ambient: 'rgba(60,0,10,0.34)', floor: tint(WMAPS.qalaa.floor, 'rgba(200,10,30,0.3)') });
 }
 // where each of the gang hangs out
 const W_HOME = [
@@ -6500,7 +6610,7 @@ function updWorldPick(W, p, q, ok, back, tap) {
   if (p.right || q.right) { W.cur = (W.cur + 1) % NCH; W.o = 0; SFX.move(); }
   if (p.up || q.up || p.down || q.down) { W.cur = (W.cur + CUP_GRID.per) % (CUP_GRID.per * 2); if (W.cur >= NCH) W.cur = NCH - 1; W.o = 0; SFX.move(); }
   if ((p.sp || q.sp || hitBtn(VW / 2, 392, 260, 44)) && L.length > 1) { W.o = (W.o + 1) % L.length; SFX.move(); }
-  { const sv = sgLoad(W.cur); if (sv && sv.done && hitBtn(VW / 2 - 40, 332, 300, 44)) { sagaRestart(W.cur); W.sgA = null; SFX.ok(); return; } }
+  { const sv = sgLoad(W.cur); for (const b of sgPickBtns(sv)) if (hitBtn(b.x, 332, 280, 44)) { if (b.a === 1) sagaRestart(W.cur); else sgStart2(W.cur); W.sgA = null; SFX.ok(); return; } }
   let go = false; if (tap) for (let i = 0; i < NCH; i++) { const [x, y] = cupGridPos(i); if (Math.abs(tap[0] - x) < 44 && Math.abs(tap[1] - y) < 48) { if (W.cur === i) go = true; else { W.cur = i; W.o = 0; SFX.move(); } } }
   if ((ok && W.t > 8) || go || hitBtn(VW - 160, 660, 260, 64)) { SFX.ready(); worldStart(W.cur, W.o); return; }
   if ((back && W.t > 8) || hitBtn(110, 660, 180, 64)) { SFX.move(); G.world = null; G.toTitle(); }
@@ -6512,16 +6622,17 @@ function drawWorldPick(W) {
   const im = IMG['front' + (ci + 1)]; if (im) { const hgt = 250, w = im.width * hgt / im.height; ctx.drawImage(im, VW / 2 + 60, 115, w, hgt); }
   txt(CHARS[ci].name, VW / 2 - 40, 200, { size: 44, weight: 900, color: '#fff', stroke: '#000', sw: 6 });
   if (W.sv && W.sv.ci === W.cur) txt('📍 بتكمل من ' + ((WMAPS[W.sv.map] || {}).name || ''), VW / 2 - 40, 250, { size: 20, weight: 800, color: '#7dffb0' });
-  { const sv = sgLoad(W.cur); if (sv && sv.done) { txt('🏆 ختم القصة — تم الإتمام ✅', VW / 2 - 40, 290, { size: 20, weight: 900, color: '#ffd34d' }); ctx.fillStyle = 'rgba(176,48,255,0.85)'; rrect(VW / 2 - 190, 312, 300, 40, 20); ctx.fill(); txt('🔁 ابدأ القصة من جديد', VW / 2 - 40, 333, { size: 18, weight: 900, color: '#fff' }); }
-    else { const c = sv ? clamp(sv.ch | 0, 0, SAGA.length - 1) : 0; txt((sv && (sv.ch || sv.st) ? '⏳ جاري الإتمام — الفصل ' : sv && sv.ever ? '🔁 يعيدها من جديد — الفصل ' : '🆕 القصة من الصفر — الفصل ') + SG_ORD[c] + ': ' + SAGA[c].n, VW / 2 - 40, 292, { size: 20, weight: 900, color: '#ffd34d' }); } }
+  { const sv = sgLoad(W.cur), c0 = sv ? clamp(sv.ch | 0, 0, SAGA.length - 1) : 0; for (const b of sgPickBtns(sv)) { ctx.fillStyle = b.col; rrect(b.x - 140, 312, 280, 40, 20); ctx.fill(); txt(b.t, b.x, 333, { size: 17, weight: 900, color: '#fff' }); }
+    if (sv && sv.done) { txt(sgIs2(c0) ? '🏆 ختم القصتين — تم الإتمام ✅' : '🏆 ختم «حرب الخالين» — تم الإتمام ✅', VW / 2 - 40, 290, { size: 20, weight: 900, color: '#ffd34d' }); }
+    else { const c = sv ? clamp(sv.ch | 0, 0, SAGA.length - 1) : 0; txt(sgStoryName(c) + ' · ' + (sv && (sv.ch || sv.st) ? '⏳ جاري الإتمام — الفصل ' : sv && sv.ever ? '🔁 يعيدها من جديد — الفصل ' : '🆕 القصة من الصفر — الفصل ') + SG_ORD[c] + ': ' + SAGA[c].n, VW / 2 - 40, 292, { size: 20, weight: 900, color: '#ffd34d' }); } }
   if (L.length > 1) { ctx.fillStyle = 'rgba(255,211,77,0.9)'; rrect(VW / 2 - 130, 370, 260, 44, 22); ctx.fill(); txt('👕 ' + O.name + (TOUCH_ON ? ' · المس للتغيير' : ' · E للتغيير'), VW / 2, 393, { size: 19, weight: 900, color: '#111' }); }
   for (let i = 0; i < NCH; i++) { const [x, y] = cupGridPos(i), on = i === W.cur, f = IMG['face' + (i + 1)];
     ctx.save(); rrect(x - 40, y - 40, 80, 80, 12); ctx.fillStyle = 'rgba(10,12,24,0.9)'; ctx.fill(); ctx.clip(); if (f) ctx.drawImage(f, x - 40, y - 40, 80, 80); ctx.restore();
     ctx.lineWidth = on ? 4 : 1.5; ctx.strokeStyle = on ? '#ffd34d' : 'rgba(255,255,255,0.25)'; rrect(x - 40, y - 40, 80, 80, 12); ctx.stroke();
-    { const R = (W.sgA || (W.sgA = sgAll()))[i]; if (R && (R.done || R.ever || R.ch || R.st)) { const fin = R.done || (R.ever && !R.ch && !R.st), lb = fin ? '✓' : String((R.ch | 0) + 1);
-      ctx.fillStyle = fin ? '#22c55e' : '#ff9f1a'; ctx.beginPath(); ctx.arc(x + 31, y - 31, 15, 0, 7); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#000'; ctx.stroke(); txt(lb, x + 31, y - 30, { size: fin ? 19 : 15, weight: 900, color: '#fff', rtl: false });
+    { const R = (W.sgA || (W.sgA = sgAll()))[i]; if (R && (R.done || R.ever || R.ch || R.st)) { const s2 = (R.ch | 0) >= S1_LEN, fin = R.done || (R.ever && !R.ch && !R.st), lb = fin ? (s2 ? '✓✓' : '✓') : String((R.ch | 0) - (s2 ? S1_LEN : 0) + 1);
+      ctx.fillStyle = fin ? '#22c55e' : s2 ? '#ff1030' : '#ff9f1a'; ctx.beginPath(); ctx.arc(x + 31, y - 31, 15, 0, 7); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#000'; ctx.stroke(); txt(lb, x + 31, y - 30, { size: fin ? 19 : 15, weight: 900, color: '#fff', rtl: false });
       if (R.ever && !fin) { ctx.fillStyle = '#22c55e'; ctx.beginPath(); ctx.arc(x - 31, y - 31, 10, 0, 7); ctx.fill(); txt('✓', x - 31, y - 30, { size: 13, weight: 900, color: '#fff', rtl: false }); } } } }
-  txt('✓ أخضر = تم الإتمام · رقم برتقالي = جاري الإتمام (رقم الفصل)', VW / 2, 652, { size: 15, weight: 800, color: 'rgba(255,255,255,0.7)' });
+  txt('✓ تم الإتمام (✓✓ القصتين) · رقم برتقالي = حرب الخالين · رقم أحمر = مملكة الدم', VW / 2, 652, { size: 15, weight: 800, color: 'rgba(255,255,255,0.7)' });
   ctx.fillStyle = 'rgba(230,20,40,0.92)'; rrect(VW - 290, 628, 260, 64, 16); ctx.fill(); txt('ادخل العالم ←', VW - 160, 661, { size: 26, weight: 900, color: '#fff' });
   ctx.fillStyle = 'rgba(255,255,255,0.1)'; rrect(20, 628, 180, 64, 16); ctx.fill(); txt('رجوع', 110, 661, { size: 24, weight: 900, color: '#fff' });
 }
@@ -6902,9 +7013,9 @@ function sqDrawWorld(W) { const S = W.sq; if (!S) return; const bob = Math.sin(G
 // (portrait + recorded voice + typed text), places to reach, things to find, people to talk to, story fights,
 // escapes from falling buildings and one choice. ملالي is الزعيم who chose the dark.
 // ---- the script. who: 'N' narrator · 'P' you · '?' unknown voice · 'jadd' grandfather · or a role. {P} = your name, {role} = that role's name
-const SG_PARTS = [['الجزء الأول', 'ميثاق العائلة وحرب الخيانة', '#ffd34d'], ['الجزء الثاني', 'الناجون وبطولة الملوك', '#3cb4ff'], ['الجزء الثالث', 'الحرب الأخيرة الأولى', '#ff3b4a'], ['الجزء الرابع', 'انتقام ملالي', '#b030ff'], ['الجزء الخامس والأخير', 'الملك الأخير', '#ffd34d']];
+const SG_PARTS = [['الجزء الأول', 'ميثاق العائلة وحرب الخيانة', '#ffd34d'], ['الجزء الثاني', 'الناجون وبطولة الملوك', '#3cb4ff'], ['الجزء الثالث', 'الحرب الأخيرة الأولى', '#ff3b4a'], ['الجزء الرابع', 'انتقام ملالي', '#b030ff'], ['الجزء الخامس والأخير', 'الملك الأخير', '#ffd34d'], ['مملكة الدم — الجزء الأول', 'أبناء العمومة', '#e8b923'], ['مملكة الدم — الجزء الثاني', 'الخائن', '#ff5a3a'], ['مملكة الدم — الجزء الثالث والأخير', 'سقوط الأقنعة', '#ff1030']];
 const SG_ORD = ['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر', 'الحادي عشر', 'الثاني عشر', 'الثالث عشر', 'الرابع عشر', 'الخامس عشر', 'السادس عشر', 'السابع عشر', 'الثامن عشر', 'التاسع عشر', 'العشرون', 'الحادي والعشرون', 'الثاني والعشرون', 'الثالث والعشرون', 'الرابع والعشرون', 'الخامس والعشرون'];
-const SG_IDLE = { adel: 'البحر علّمني الصبر… والعرش علّمني الطمع.', salah: 'أخوي… ولو صار اللي صار.', malali: '…الظلام يسمع كل شي.', inv: 'لا تلمس شي في عدّتي!', dragon: 'أدوّر على خصم يستاهل.', chef: 'جوعان؟ كل شي بوقته.', captain: 'خلك جاهز… أي لحظة نتحرك.', moalem: 'التدريب… هو السر.', bull: 'أي باب تبيه ينكسر؟', dajaj: 'كاك كاك! 🐔', teer: 'سيارتي جاهزة دايم.', gamer: 'لحظة… أخلص الجولة.', abd: 'الحرية… تستاهل القتال.', guard: 'محد يعدّي من هني!' };
+const SG_IDLE = { nasser: 'الشارع… كله لي.', hamad: 'تبي شي؟ كل شي له سعر.', mask: '…', shade: '…', adel: 'البحر علّمني الصبر… والعرش علّمني الطمع.', salah: 'أخوي… ولو صار اللي صار.', malali: '…الظلام يسمع كل شي.', inv: 'لا تلمس شي في عدّتي!', dragon: 'أدوّر على خصم يستاهل.', chef: 'جوعان؟ كل شي بوقته.', captain: 'خلك جاهز… أي لحظة نتحرك.', moalem: 'التدريب… هو السر.', bull: 'أي باب تبيه ينكسر؟', dajaj: 'كاك كاك! 🐔', teer: 'سيارتي جاهزة دايم.', gamer: 'لحظة… أخلص الجولة.', abd: 'الحرية… تستاهل القتال.', guard: 'محد يعدّي من هني!' };
 const SAGA = [
   // ======================= الجزء الأول =======================
   { part: 0, n: 'مملكة الظلال', coins: 40, place: { adel: ['diwan', 560, 360, 'down'], salah: ['diwan', 840, 360, 'down'], malali: ['diwan', 1180, 330, 'left'] }, steps: [
@@ -7072,12 +7183,109 @@ const SAGA = [
     { say: [['N', 'رجعت العائلة للمملكة… وبقى صلاح حاكم، وعادل حامي لها.'], ['N', 'ورجع ملالي للعائلة… وفتح المخترع ورشته.'], ['N', 'وقاد {dragon} الحرس… ورجع {chef} لمطعمه، و{dajaj} يحرس بابه بطريقته الغريبة.'], ['N', 'ودرّب {captain} الجيش… وصار {bull} بطل القوة، و{teer} يحمي القصر.'], ['N', 'واهتم {gamer} بالتكنولوجيا… وعاش {abd} حر، يختار مستقبله بنفسه.'], ['N', 'وفي صباح مشرق… وقف عادل وصلاح وملالي، قدام الراية الجديدة.', 'banner'], ['adel', 'القوة… مو إنك تهزم الكل.'], ['salah', 'القوة… إنك تحافظ على اللي تحبهم.'], ['malali', 'والخيانة… تبدأ بكلمة. بس ممكن تهدم عائلة كاملة.'], ['adel', 'يا {P}… أنت اللي جمعتنا. هذي الراية… لك.', 'banner'], ['N', 'وارتفعت راية العائلة… وانتهت حرب الخالين أخيراً.', 'banner']] },
     { end: 1 },
   ] },
+  // ===================================================================================================
+  // ======================= «مملكة الدم» — القصة الثانية (3 أجزاء · 13 فصل) =======================
+  // ======================= الجزء الأول: أبناء العمومة =======================
+  { part: 5, s2: 1, n: 'الضيوف', coins: 50, place: { adel: ['qasr', 900, 420, 'down'], salah: ['qasr', 1100, 420, 'down'], nasser: ['qasr', 760, 560, 'right'], hamad: ['qasr', 1240, 560, 'left'], chef: ['qasr', 480, 600, 'left'], dajaj: ['qasr', 1520, 600, 'right'], malali: ['qasr', 1700, 330, 'left'], abd: ['qasr', 1700, 960, 'left'] }, steps: [
+    { say: [['N', 'مرّت شهور على نهاية حرب الخالين… والمملكة عايشة بسلام.'], ['N', 'لين وصل خبر غريب… أبناء العمومة رجعوا.'], ['adel', 'يا {P}، ناصر وحمد… عيال عمي. صار لهم سنين برا المملكة.'], ['adel', 'الليلة عزيمتهم في القصر. تعال… ولا تتأخر.']] },
+    { go: ['qasr', 1000, 760], goal: 'روح القصر 🏰 — عزيمة أبناء العمومة' },
+    { say: [['N', 'دخل ناصر وحمد القصر… وكأن القصر قصرهم.'], ['hamad', 'السلام عليكم يا العائلة! جبت لكم هدايا… عطور ما شمّيتوا مثلها.'], ['nasser', 'وأنا جبت شي أحسن من الهدايا… جبت نفسي.'], ['salah', 'هلا بعيال العم… بس ليش رجعتوا الحين؟'], ['nasser', 'نبي حقنا في المملكة. لا أكثر… ولا أقل.'], ['N', 'وساد صمت ثقيل في القاعة.']] },
+    { talks: { hamad: [['hamad', 'خذ يا {P}… هذا عطر الملوك. ريحته تفتح كل الأبواب.'], ['P', 'وكم سعره؟'], ['hamad', 'كل شي له سعر… بس الحين، هدية.']], malali: [['malali', 'ريحة هالعطر… ريحة خيانة.'], ['P', 'تشك فيهم؟'], ['malali', 'أنا شفت الظلام من داخل… وأعرفه لما أشوفه.']], abd: [['abd', 'ناصر سلّم علي… وكأنه يعرفني من زمان.'], ['P', 'تعرفه؟'], ['abd', '…لا. أبداً.']] }, goal: 'سلّم على الضيوف: {hamad} · {malali} · {abd}' },
+    { say: [['N', 'وفي آخر الليل… شاف {P} ناصر طالع من الباب الخلفي.'], ['N', 'كان يكلّم أحد بالتلفون… بصوت واطي.', ['phone', '?']], ['?', 'الخطة ماشية؟', ['phone', '?']], ['nasser', 'ماشية… العائلة ما تدري بشي.'], ['?', 'زين. لا تخلي أحد يشك… لين آمرك.', ['phone', '?']], ['N', 'ومن كان على الخط… محد يعرف.', 'eyes']] },
+  ] },
+  { part: 5, s2: 1, n: 'شراء المدينة', coins: 50, place: { chef: ['rest', 650, 420, 'down'], shade: ['shop', 820, 600, 'left'] }, steps: [
+    { say: [['N', 'من ثاني يوم… بدأ حمد يشتري كل شي في المدينة.'], ['chef', '{P}! تعال المطعم… بسرعة!', ['phone', 'chef']]] },
+    { go: ['rest', 650, 640], goal: 'روح المطعم 🍽️ — {chef} يبيك' },
+    { say: [['chef', 'حمد عرض علي فلوس… يبي يشتري مطعمي!'], ['chef', 'وقال: «إذا ما بعت… بتبيع غصب».'], ['P', 'محد بيشتري شي غصب. وين هو؟'], ['chef', 'شفت رجاله رايحين البقالة… لابسين أسود، وما لهم وجوه.']] },
+    { go: ['shop', 600, 640], goal: 'روح البقالة 🛒 — الحق على رجال حمد' },
+    { say: [['N', 'وفي البقالة… كان واقف رجّال غريب. بلا وجه… بلا اسم.', 'eyes'], ['P', 'منو أنت؟'], ['shade', '…الأوامر واضحة. محد يتدخل.'], ['P', 'أوامر منو؟'], ['shade', '…']] },
+    { fight: 'shade', stage: 'hosh', lvl: 1.6, hp: 1, name: 'حارس الظل', win: [['shade', '…']], lose: [['shade', '…ارجع بيتك.']] },
+    { say: [['N', 'واختفى الحارس… كأنه دخان.', 'fog'], ['P', 'طاح منه شي… أوراق.']] },
+    { find: [['shop', 1010, 600, '🧾'], ['fareej', 1850, 740, '🧾'], ['beach', 1300, 820, '🧾']], goal: 'دوّر على أوراق صفقات حمد 🧾 — البقالة · الفريج · الكورنيش' },
+    { say: [['P', 'هذي عقود… حمد اشترى نص المدينة!'], ['N', 'وفي آخر ورقة… توقيع غريب: مثلث أحمر.', 'letter'], ['P', 'المثلث هذا… شفته قبل. بس وين؟']] },
+  ] },
+  { part: 5, s2: 1, n: 'صفقة على الكورنيش', coins: 60, place: { hamad: ['beach', 1520, 600, 'left'] }, steps: [
+    { say: [['N', 'وصلت رسالة من رقم مجهول…', ['phone', '?']], ['?', 'إذا تبي تعرف وش يخطط له حمد… تعال الكورنيش الليلة.', ['phone', '?']]] },
+    { time: 21, go: ['beach', 1300, 640], goal: 'روح الكورنيش 🌊 — الليلة' },
+    { say: [['hamad', 'جيت بروحك؟ شجاع… أو غبي.'], ['P', 'أنت اللي أرسلت الرسالة؟'], ['hamad', 'أنا؟ لا… أنا ما أرسل رسايل. أنا أشتري ناس.'], ['hamad', 'خذ هالشنطة… فيها مليون. وانسى كل شي شفته.'], ['P', 'احتفظ بفلوسك يا حمد.'], ['hamad', 'خسارة… كنت أبيك صاحب. بتكون… خصم.']] },
+    { fight: 'hamad', stage: 'port', lvl: 2.2, hp: 0.75, boss: 1, name: 'حمد — قوة المال', win: [['hamad', 'هذي… مجرد بداية. ناصر بيخليك تندم.']], lose: [['hamad', 'قلت لك… كل شي له سعر. وأنت رخيص.']] },
+    { say: [['N', 'وهرب حمد في قارب سريع…', 'dash'], ['N', 'بس طاح من شنطته… جوال.', ['phone', 'hamad']], ['P', 'آخر رسالة فيه: «{abd} معنا. الخطوة الجاية: القلعة».'], ['P', '…{abd}؟!']] },
+  ] },
+  // ======================= الجزء الثاني: الخائن =======================
+  { part: 6, s2: 1, n: 'الخائن', coins: 60, place: { adel: ['diwan', 600, 360, 'down'], salah: ['diwan', 800, 360, 'down'], captain: ['diwan', 300, 420, 'right'], gamer: ['diwan', 1100, 420, 'left'], abd: ['halba', 900, 470, 'down'] }, steps: [
+    { go: ['diwan', 700, 640], goal: 'ارجع الديوانية 🏠 — خبّر خوالك' },
+    { say: [['P', 'لقيت هالجوال مع حمد… وفيه اسم {abd}.', ['phone', 'abd']], ['adel', '{abd}؟ بعد كل اللي صار في حرب الخالين؟'], ['captain', 'من أسبوع وهو يختفي بالليل… وأنا كنت شاك.'], ['salah', 'لا نحكم قبل لا نتأكد. يا {P}… دوّر على دليل.']] },
+    { talks: { gamer: [['gamer', 'جواله يرسل إشارات كل ليلة… لنفس الرقم. والرقم مشفّر.'], ['P', 'مشفّر؟ منو يقدر يشفّر بهالطريقة؟'], ['gamer', 'واحد يفهم في التقنية… واجد.']], captain: [['captain', 'آخر مرة شفته رايح الحلبة… بروحه.']] }, goal: 'اسأل {gamer} و{captain}' },
+    { go: ['halba', 900, 640], goal: 'روح الحلبة 🥊 — {abd} هناك' },
+    { say: [['abd', 'كنت أدري إنك بتجي يا {P}.'], ['P', 'ليش يا {abd}؟ العائلة سامحتك مرة… وترجع تخونها؟'], ['abd', 'العائلة؟ العائلة دايماً تشوفني الخاين… حتى لما وقفت معهم.'], ['abd', 'ناصر وعدني بمكان… بقيمة. شي ما عطوني إياه أبداً.'], ['P', 'وأنت صدّقته؟'], ['abd', 'صدّقت اللي بغيت أصدّقه. يلا… خلنا نخلص.']] },
+    { fight: 'abd', stage: 'arena', lvl: 2.3, hp: 1.2, name: '{abd} — الخائن', win: [['abd', '…روح. القلعة بتنفجر قبل لا توصل.']], lose: [['abd', 'آسف يا {P}… الطريق اخترته.']] },
+    { say: [['abd', 'ناصر حاط قنبلة في قلعته… يبي يفجّرها وأنتم داخلها!'], ['abd', 'وهو مو الزعيم الحقيقي… في أحد فوقه. أحد ما شفت وجهه أبداً.'], ['N', 'وقبل لا يكمّل… هرب {abd} في الظلام.', 'dark']] },
+  ] },
+  { part: 6, s2: 1, n: 'قلعة ناصر', coins: 80, place: { captain: ['nasq', 1080, 1040, 'right'], bull: ['nasq', 1180, 1040, 'left'], shade: ['nasq', 1330, 470, 'left'] }, steps: [
+    { unlock: 'nasq', say: [['N', 'رسم {captain} خطة الهجوم… على قلعة ناصر.'], ['captain', '{bull} يكسر البوابة… وأنا ورجالي نغطي الأطراف. وأنت يا {P}… للقلب.'], ['bull', 'البوابة؟ اعتبرها طاحت!']] },
+    { go: ['nasq', 600, 900], goal: 'روح قلعة ناصر 🏴 — الهجوم' },
+    { say: [['N', 'حطّم {bull} البوابة…', 'boom'], ['N', 'وطلعوا لهم حراس الظل… من كل زاوية.', 'eyes'], ['captain', 'روح يا {P}! إحنا نشغلهم!']] },
+    { fight: 'shade', stage: 'dark', lvl: 2, hp: 1.2, name: 'حارس الظل', win: [['shade', '…']], lose: [['shade', '…']] },
+    { place: { nasser: ['nasq', 1500, 360, 'left'], shade: null }, go: ['nasq', 1330, 470], goal: 'ادخل لعمق القلعة — ناصر ينتظر' },
+    { say: [['nasser', 'وصلت أخيراً… عيال عمي ما يعرفون يربّون.'], ['P', 'خلصت يا ناصر. حمد هرب… و{abd} قال كل شي.'], ['nasser', '{abd}؟ {abd} أداة. وحمد أداة. وأنت… بتكون أداة مكسورة.'], ['nasser', 'الشارع علّمني شي واحد: اللي يضرب أول… يعيش.']] },
+    { fight: 'nasser', stage: 'dark', lvl: 2.6, hp: 0.8, dmg: 1.05, boss: 1, name: 'ناصر — زعيم الشر', win: [['nasser', 'هههه… فزت؟ شوف الساعة.']], lose: [['nasser', 'قلت لك… الشارع لي.']] },
+  ] },
+  { part: 6, s2: 1, n: 'انفجار القلعة', coins: 80, place: { nasser: ['nasq', 1500, 360, 'left'] }, steps: [
+    { say: [['N', 'وبدأ العد التنازلي…', 'alarm'], ['nasser', 'القلعة كلها بتطير! بس أنا… ما أموت هني.'], ['N', 'واختفى ناصر في ممر سري.', 'dash']] },
+    { escape: ['nasq', [1330, 470], [190, 900]], time: 30, goal: 'القلعة بتنفجر! اطلع قبل لا تطير ⏱️' },
+    { place: { adel: ['fareej', 1320, 760, 'left'], salah: ['fareej', 1460, 760, 'left'], malali: ['fareej', 2000, 760, 'left'], abd: ['fareej', 2140, 720, 'left'] }, say: [['N', 'وانفجرت قلعة ناصر…', 'boom'], ['N', 'وطلع الكل سالمين… بس ناصر وحمد اختفوا.'], ['adel', 'خلصت الحرب يا عيال. خلصت.'], ['malali', '…ما أظن.', 'eyes'], ['N', 'وبعد أيام… رجع {abd} للعائلة بنفسه، وسلّم نفسه.'], ['abd', 'أنا غلطت… وبتحمّل مسؤوليتي. بس اسمعوني: الحرب ما خلصت.']] },
+  ] },
+  // ======================= الجزء الثالث والأخير: سقوط الأقنعة =======================
+  { part: 7, s2: 1, n: 'ظهور القائد المجهول', coins: 60, place: { adel: ['diwan', 600, 360, 'down'], salah: ['diwan', 800, 360, 'down'], captain: ['diwan', 300, 420, 'right'], bull: ['diwan', 1100, 420, 'left'], chef: ['diwan', 300, 640, 'right'], malali: ['diwan', 1180, 330, 'left'], abd: ['diwan', 1100, 640, 'left'], inv: ['diwan', 980, 760, 'up'] }, steps: [
+    { go: ['diwan', 700, 640], goal: 'روح الديوانية 🏠 — العائلة مجتمعة' },
+    { say: [['N', 'بعد انفجار قلعة ناصر… ظنّت العائلة إن الحرب انتهت.'], ['N', 'بس في نص الليل… وصلت رسالة لكل واحد فيهم.', ['phone', '?']], ['?', 'الحرب ما خلصت. قدامكم ثلاث أيام بس… وبعدها تطيحون كلكم.', ['phone', '?']], ['N', 'وظهر على الشاشة… رجّال لابس قناع أسود.', ['mask', 'tech']], ['mask', 'ناصر وحمد و{abd}… ما كانوا إلا أدوات.', ['mask', 'tech']], ['mask', 'أنا اللي حرّكت الخيوط من البداية… وأنا اللي بقرر كيف تخلص هالحرب.', ['mask', 'tech']], ['N', 'وانقطع البث…', 'dark'], ['abd', '…الشعار اللي على كتف القناع. المثلث الأحمر.'], ['P', 'نفس التوقيع اللي على أوراق حمد!'], ['abd', 'شفته قبل… في ملفات قديمة. ملفات تخص… المخترع.'], ['inv', 'ملفاتي؟ أكيد أحد سرقها! أنا من يوم الحرب وأنا في ورشتي.']] },
+    { talks: { inv: [['inv', 'لو تبون، أسوي لكم جهاز يتتبع الإشارة. عطوني يومين.'], ['P', 'يومين؟ قدامنا ثلاث بس.'], ['inv', '…أدري. بسوي أحسن ما أقدر.']], malali: [['malali', 'هذا القناع… مو ظلام. هذا عقل. وأخطر من الظلام.']], abd: [['abd', 'أدري إنكم ما تثقون فيني… وما ألومكم.'], ['P', 'الثقة ترجع بالأفعال يا {abd}.']] }, goal: 'تكلّم مع {inv} · {malali} · {abd}' },
+  ] },
+  { part: 7, s2: 1, n: 'عودة ناصر وحمد', coins: 60, place: { nasser: ['fareej', 2140, 720, 'left'], hamad: ['fareej', 2320, 720, 'left'], captain: ['fareej', 1640, 700, 'left'] }, steps: [
+    { say: [['N', 'ظهر ناصر وحمد… عند أطراف المدينة.'], ['captain', '{P}! ناصر وحمد عند طرف الفريج… بس شكلهم مو جايين يقاتلون.', ['phone', 'captain']]] },
+    { go: ['fareej', 2000, 760], goal: 'روح طرف الفريج — ناصر وحمد' },
+    { say: [['hamad', 'كنا نحسب إننا نستخدمه… عشان نوصل لأهدافنا.'], ['hamad', 'بس طلع هو اللي يستخدمنا. وكان ناوي يتخلّص منا بعد ما نخلّص شغلنا.'], ['nasser', 'القنبلة اللي في القلعة… مو أنا اللي حطيتها. هو. كان يبيني أموت معكم.'], ['nasser', 'خذ. هذا مخطط مخبأه… حصن المقنّع.', 'scroll'], ['nasser', 'نبي هدنة. بس لين يطيح.'], ['P', 'ما نسامحكم يا ناصر.'], ['nasser', 'ما طلبت سماح. طلبت هدنة.'], ['P', '…تمام. هدنة. لين يطيح.']] },
+    { unlock: 'hisn', say: [['N', 'وانضاف للخريطة… حصن المقنّع.', 'scroll']] },
+  ] },
+  { part: 7, s2: 1, n: 'المواجهات الأخيرة', coins: 80, place: { bull: ['hisn', 760, 1100, 'right'], hamad: ['hisn', 860, 1000, 'left'], captain: ['hisn', 1260, 1100, 'up'], nasser: ['hisn', 1440, 900, 'left'], dragon: ['hisn', 760, 900, 'right'], shade: ['hisn', 1000, 600, 'down'] }, steps: [
+    { go: ['hisn', 1000, 1200], goal: 'روح حصن المقنّع 🛡️ — المعركة الكبيرة' },
+    { say: [['N', 'وصلت العائلة للقلعة المحصنة… وبدأت المعارك في ساحتها.', 'boom'], ['N', 'تواجه {bull} وحمد… قتال عنيف، والفلوس تطير في كل مكان.', ['vs', 'bull', 'hamad']], ['N', 'وتصدّى {captain} لرجال ناصر.'], ['N', 'وكل واحد من {dragon} و{malali} و{chef} و{dajaj} و{teer} و{moalem}… مسك موقعه، عشان ما يوصل الحراس للقاعة الرئيسية.'], ['captain', '{P}! قائد الحراس قدامك… وقّفه!']] },
+    { fight: 'shade', stage: 'dark', lvl: 2.6, hp: 1.4, dmg: 1.1, boss: 1, name: 'قائد حراس الظل', win: [['shade', '…']], lose: [['shade', '…']] },
+    { say: [['N', 'وتقدّمت العائلة… خطوة بعد خطوة.'], ['nasser', 'غرفة التحكم من هني! أنا رايح لها.'], ['hamad', 'وأنا أشغل الحراس… روحوا!'], ['N', 'لين انفتحت أبواب القاعة الكبرى.', 'boom']] },
+  ] },
+  { part: 7, s2: 1, n: 'نزع القناع', coins: 80, place: { mask: ['hisn', 1000, 330, 'down'], abd: ['hisn', 1000, 600, 'up'] }, steps: [
+    { go: ['hisn', 1000, 760], goal: 'ادخل القاعة الكبرى 👑' },
+    { say: [['N', 'دخل {abd} القاعة أول واحد…'], ['N', 'ولقى القائد المقنّع واقف قدام شاشة ضخمة… تعرض كل تحركات العائلة من بداية الحرب.', 'screen'], ['mask', 'تأخرت يا {abd}. للحين ما فهمت إني أنا اللي صنعت هالحرب؟'], ['abd', 'أبي أعرف منو أنت. منو اللي خلّانا نتقاتل؟'], ['N', 'ضحك… ورفع إيدينه بشويش… ونزع القناع قدام الكل.', ['mask', 'tech']], ['N', 'ساد صمت ثقيل… ما كان غريب، ولا عدو مجهول.'], ['N', 'كان… المخترع!', ['unmask', 'inv']], ['inv', 'شفتوني مخترع يسوي أدوات… بس أنا كنت أسوي اللعبة كلها.', ['unmask', 'inv']], ['inv', 'أنا اللي وصّلت المعلومات لناصر وحمد… وأنا اللي أقنعت {abd} بالخيانة… وأنا اللي رتّبت البطولة، عشان أحطكم كلكم في المكان اللي أبيه.'], ['abd', 'أنت اللي دفعتني أخون أهلي!'], ['inv', 'وأنت اخترت الخيانة بنفسك. لا تحاول تلقي ذنبك كله علي.'], ['N', 'كانت كلماته قاسية… بس صحيحة.'], ['abd', '…صح. القرار كان قراري. بس هالمرة… قراري ضدك.']] },
+  ] },
+  { part: 7, s2: 1, n: 'التحالف ضد المخترع', coins: 100, place: { mask: ['hisn', 1000, 330, 'down'], abd: ['hisn', 1000, 600, 'up'], nasser: ['hisn', 860, 600, 'up'], captain: ['hisn', 1140, 600, 'up'] }, steps: [
+    { say: [['inv', 'خلاص… لعبتوا كفاية.'], ['N', 'رفع المخترع إيده… وانقفلت أبواب القاعة، وبدأ نظام القلعة يشغّل الفخ الأخير.', 'alarm'], ['N', 'بس المخترع غلط غلطته الكبيرة… ظن إن العائلة بتبقى متفرقة.'], ['N', 'وقف ناصر جنب {captain}… وواجه حمد الحراس مع {bull}.'], ['N', 'وساعد {moalem} و{malali} و{chef} و{dajaj} و{teer} و{dragon}… في تعطيل أجهزة القلعة، وإطلاع العائلة من الممرات المحاصرة.'], ['inv', 'للحين ما تفهمون! أنا أعرف كل نقطة ضعف فيكم!'], ['abd', 'يمكن تعرف أسرارنا… بس ما تقدر تتحكم في قرارنا بعد اليوم.'], ['inv', 'إذن… شوفوا وش سويت لنفسي.'], ['N', 'ولبس المخترع درعه الأخير… درع تقني ما شافت المملكة مثله.', ['mask', 'tech']], ['P', 'يا {abd}… خلنا ننهيها مع بعض.']] },
+    { fight: 'mask', stage: 'dark', lvl: 3.2, hp: 1.15, dmg: 1.25, boss: 1, final: 2, name: 'المخترع — الدرع الأخير', win: [['inv', 'مستحيل… حسبتها… حسبت كل شي…']], lose: [['inv', 'كل شي… كان محسوب.']] },
+    { say: [['N', 'وصل ناصر للوحة التحكم… وطفّى النظام برمز الإيقاف، اللي حطه المخترع بنفسه في المخطط.', 'machine'], ['nasser', 'كل مخطط له مفتاح… وأنت نسيت إني أقرأ المخططات.'], ['N', 'وفقد المخترع سيطرته على القلعة.']] },
+  ] },
+  { part: 7, s2: 1, n: 'سقوط الزعيم', coins: 100, place: { mask: ['hisn', 1000, 330, 'down'], abd: ['hisn', 1000, 600, 'up'] }, steps: [
+    { say: [['N', 'واستغل {abd} اللحظة… وواجه المخترع في قتال أخير.'], ['N', 'كان المخترع قوي وماكر… بس {abd} كمّل لين طيّحه على الأرض.', 'hit'], ['inv', 'عايلتك… ما بتسامحك أبداً. حتى لو أنقذتها اليوم.'], ['abd', 'صح. أنا ما أطلب منهم ينسون خيانتي.'], ['abd', 'بس ما بخليك تدمّرهم مرة ثانية.'], ['N', 'ووصلت العائلة… وانأخذ المخترع أسير.', ['chains', 'inv']], ['N', 'وهكذا طاح الزعيم اللي حرّك ناصر وحمد و{abd}… وانتهت إمبراطوريته.']] },
+  ] },
+  { part: 7, s2: 1, n: 'الحساب الأخير', coins: 300, place: { adel: ['qasr', 900, 420, 'down'], salah: ['qasr', 1100, 420, 'down'], abd: ['qasr', 1000, 600, 'up'], nasser: ['qasr', 760, 560, 'right'], hamad: ['qasr', 1240, 560, 'left'], malali: ['qasr', 1700, 330, 'left'], chef: ['qasr', 480, 600, 'left'], dajaj: ['qasr', 1520, 600, 'right'], captain: ['qasr', 760, 880, 'right'], bull: ['qasr', 1240, 880, 'left'] }, steps: [
+    { go: ['qasr', 1000, 760], goal: 'ارجع القصر 🏰 — الحساب الأخير' },
+    { say: [['abd', 'أنا خنتكم… وسرّبت أسراركم، وأذيتكم.'], ['abd', 'ما أطلب ترجع الثقة على طول… بس أتحمّل مسؤوليتي.'], ['adel', 'بتبقى معنا يا {abd}… بس بعيد عن القيادة. والثقة… ترجع بالأفعال.'], ['nasser', 'وإحنا بعد… نتحمّل اللي سويناه.'], ['hamad', 'الفلوس ما تشتري كل شي… تعلّمتها متأخر.'], ['N', 'ورجعت العائلة لمقرها… ورفعت شعارها من جديد.', 'banner'], ['N', 'ما انتصروا لأنهم ما غلطوا… انتصروا لأنهم واجهوا الحقيقة، ووقفوا عن السماح للغير يفرّقهم.'], ['N', 'وفي المشهد الأخير… القلعة فاضية، والقناع الأسود طايح على الأرض جنب أدوات المخترع.', ['mask', 'tech']], ['N', 'تقرب الكاميرا من القناع… وتنطفي الشاشة.', 'dark'], ['N', 'قد يخفي القناع وجه صاحبه… بس الحقيقة ما تبقى مخفية للأبد.'], ['N', 'والخيانة قد تجرح العائلة… بس ما تقدر تهزم اللي يتّحدون عشان يواجهون الخطر.']] },
+    { end: 1 },
+  ] },
 ];
+const S1_LEN = SAGA.findIndex(c => c.s2);   // «مملكة الدم» starts here
+for (let i = S1_LEN; i < SAGA.length; i++) SG_ORD[i] = SG_ORD[i - S1_LEN];
+const sgIs2 = ch => ch >= S1_LEN, sgStoryName = ch => sgIs2(ch) ? '🩸 مملكة الدم' : '⚔️ حرب الخالين';
+function sgStart2(ci) { const o = sgLoad(ci); sgPut(ci, { ch: S1_LEN, st: 0, done: 0, ever: o && (o.ever || o.done) ? 1 : 0, s2: 1 }); }
+// the pick screen's story buttons (draw + tap share them)
+function sgPickBtns(sv) { const c = sv ? sv.ch | 0 : 0, two = (a, b) => [Object.assign(a, { x: VW / 2 - 40 + 155 }), Object.assign(b, { x: VW / 2 - 40 - 155 })];
+  if (sv && sv.done && !sgIs2(c)) return two({ t: '🔁 حرب الخالين من جديد', a: 1, col: 'rgba(176,48,255,0.85)' }, { t: '🩸 ابدأ مملكة الدم', a: 2, col: 'rgba(200,16,40,0.92)' });
+  if (sv && sv.done) return two({ t: '🔁 حرب الخالين من جديد', a: 1, col: 'rgba(176,48,255,0.85)' }, { t: '🔁 مملكة الدم من جديد', a: 2, col: 'rgba(200,16,40,0.92)' });
+  if (sgIs2(c)) return [{ t: '🔁 حرب الخالين من البداية', a: 1, col: 'rgba(176,48,255,0.6)', x: VW / 2 - 40 }];
+  return [{ t: '🩸 القصة الثانية: مملكة الدم', a: 2, col: 'rgba(200,16,40,0.75)', x: VW / 2 - 40 }]; }
 // ---- engine
-const SG_CI = { adel: NOKH, salah: RAIS, malali: MALALI, inv: CODER, dragon: 7, chef: CHEF, captain: 2, moalem: 6, bull: 5, dajaj: 8, teer: 14, gamer: 13, abd: 12, guard: 4 };
-const SG_TITLE = { adel: 'الخال عادل', salah: 'الخال صلاح', malali: 'ملالي', inv: 'المخترع' };
-const SG_SUB = { adel: 'النوخذة', salah: 'الرئيس', inv: 'المبرمج', malali: 'سيد الظلام' };
-const SG_COL = { adel: '#3cb4ff', salah: '#d4a640', malali: '#b030ff', inv: '#ff2a3a', P: '#3ea0ff', N: '#9fd8ff', '?': '#ff3b4a', jadd: '#ffd34d' };
+const SG_CI = { nasser: NASSER, hamad: HAMAD, mask: MASKED, shade: MYST, adel: NOKH, salah: RAIS, malali: MALALI, inv: CODER, dragon: 7, chef: CHEF, captain: 2, moalem: 6, bull: 5, dajaj: 8, teer: 14, gamer: 13, abd: 12, guard: 4 };
+const SG_TITLE = { nasser: 'ناصر', hamad: 'حمد', mask: 'القائد المقنّع', shade: 'حارس الظل', adel: 'الخال عادل', salah: 'الخال صلاح', malali: 'ملالي', inv: 'المخترع' };
+const SG_SUB = { nasser: 'ابن العم · زعيم الشر', hamad: 'ابن العم · قوة المال', mask: '؟؟؟', shade: 'بلا وجه', adel: 'النوخذة', salah: 'الرئيس', inv: 'المبرمج', malali: 'سيد الظلام' };
+const SG_COL = { nasser: '#e0102a', hamad: '#e8b923', mask: '#ff1030', shade: '#ff3b4a', adel: '#3cb4ff', salah: '#d4a640', malali: '#b030ff', inv: '#ff2a3a', P: '#3ea0ff', N: '#9fd8ff', '?': '#ff3b4a', jadd: '#ffd34d' };
 const SG_STAND = [4, 9, 10, 11, 3, 1, 0];
 Object.assign(VOICE_RATE, { 98: 0.78, 97: 0.86 });
 function sgAll() { let A = null; try { A = JSON.parse(localStorage.getItem('shilla_saga_by')); } catch (e) { }
@@ -7095,7 +7303,7 @@ function sgCast(base, eff) { const cast = Object.assign({}, SG_CI), mine = new S
   return cast; }
 function sgName(W, r) { if (r === 'P') return CHARS[W.P.ci === MALALI ? W.P.base : W.P.ci].name; if (r === 'N') return 'الراوي'; if (r === '?') return '؟؟؟'; if (r === 'jadd') return 'الجد'; return SG_TITLE[r] || CHARS[W.saga.cast[r]].name; }
 function sgTok(W, s) { return s.replace(/\{(\w+)\}/g, (m, r) => sgName(W, r)); }
-function sgCiOf(W, r) { return r === 'P' ? W.P.ci : r === '?' ? W.saga.cast.moalem : W.saga.cast[r]; }
+function sgCiOf(W, r) { return r === 'P' ? W.P.ci : r === '?' ? MYST : W.saga.cast[r]; }
 function sgColOf(W, r) { return SG_COL[r] || (CHARS[sgCiOf(W, r)] || {}).color || '#ff6b6b'; }
 function sgCur(S) { const C = SAGA[S.ch]; return C && C.steps[S.st]; }
 // ---- placing the cast in the world (they become NPCs; the hang-out copy of the same fighter steps aside)
@@ -7107,7 +7315,7 @@ function sgApplyPlace(W) {
   for (const n of W.npcs) if (!n.sg && !n.cit) { if (n.hmap === undefined) n.hmap = n.map; n.map = used.has(n.ci) ? '__' : n.hmap; }
 }
 function sgReplay(S) { S.un = new Set(); for (let c = 0; c <= S.ch && c < SAGA.length; c++) SAGA[c].steps.forEach((st, i) => { if (c < S.ch || i <= S.st) { if (st.unlock) S.un.add(st.unlock); } });
-  if (S.done) { S.place = {}; for (const id in WMAPS) if (WMAPS[id].lock) S.un.add(id); return; }
+  if (S.done) { S.place = {}; for (const id in WMAPS) if (WMAPS[id].lock && (sgIs2(S.ch) || (id !== 'nasq' && id !== 'hisn'))) S.un.add(id); return; }
   S.place = Object.assign({}, SAGA[S.ch].place); SAGA[S.ch].steps.forEach((st, i) => { if (i <= S.st && st.place) Object.assign(S.place, st.place); }); }
 function wMapList() { const S = G.world && G.world.saga; return Object.keys(WMAPS).filter(id => !WMAPS[id].lock || (S && S.un.has(id))); }
 function wOpenMap(W) { if (W.saga && W.saga.esc) { W.msg = { t: 'ما في وقت! اهرب 🏃', k: 0, c: '#ff8080' }; SFX.move(); return; } const L = wMapList(); W.mapOpen = true; W.mapSel = Math.max(0, L.indexOf(W.map)); SFX.ok(); }
@@ -7123,7 +7331,7 @@ function sagaBegin(W) {
   if (S.st >= SAGA[S.ch].steps.length) S.st = 0; S.wait = sv.wd != null && !S.done && S.st === 0 ? sv.wd : null;
   sgReplay(S); if (S.wait != null && !sgDue(W)) S.place = {}; else S.wait = null; sgApplyPlace(W);
   if (S.wait != null) { W.toast = { t: '📅 الفصل ' + SG_ORD[S.ch] + ' يوم ' + wDateStr(S.wait) + ' — نام 🛏️ لين يجي الوقت', k: 0 }; return; }
-  if (S.done) { W.msg = { t: '🏆 خلصت حرب الخالين… العالم كله لك!', k: 0, c: '#ffd34d' }; return; }
+  if (S.done) { W.msg = sgIs2(S.ch) ? { t: '🏆 خلصت مملكة الدم… الأقنعة طاحت!', k: 0, c: '#ff6a5a' } : { t: '🏆 خلصت حرب الخالين… «مملكة الدم» تنتظرك (من شاشة الاختيار)', k: 0, c: '#ffd34d' }; return; }
   if (S.st === 0) sgCard(W); else sgStep(W, true);
 }
 function sagaRestart(ci) { if (ci == null) ci = sgHero(); const o = sgLoad(ci); sgPut(ci, { ch: 0, st: 0, done: 0, ever: o && (o.ever || o.done) ? 1 : 0 }); }
@@ -7142,10 +7350,10 @@ function sgStep(W, resume) {
 }
 function sgNext(W) { const S = W.saga; S.st++; sgSave(S); if (S.st >= SAGA[S.ch].steps.length) sgChapterEnd(W); else sgStep(W); }
 function sgChapterEnd(W) { const S = W.saga, C = SAGA[S.ch]; if (C.coins) profAward(PROF.cur, C.coins);
-  if (S.ch >= SAGA.length - 1) { sgFinish(W); return; }
+  if (S.ch >= SAGA.length - 1 || S.ch === S1_LEN - 1) { sgFinish(W); return; }
   const gap = SAGA[S.ch + 1].part !== C.part ? 2 : 1; S.ch++; S.st = 0; S.wait = wDay(W) + gap; sgSave(S); S.place = {}; sgApplyPlace(W); W.msg = { t: `✅ خلص الفصل +${C.coins} 🪙`, k: 0, c: '#ffd34d' };
   W.toast = { t: '📅 الفصل الجاي ' + (gap === 1 ? 'بكرة الصبح' : 'بعد يومين') + ' (' + wDateStr(S.wait) + ') — نام 🛏️ أو العب لين يجي الوقت', k: 0 }; }
-function sgFinish(W) { const S = W.saga; if (S.done) return; S.done = true; S.ever = true; sgSave(S); SAGA_DONE = true; profAward(PROF.cur, SAGA[SAGA.length - 1].coins || 0);
+function sgFinish(W) { const S = W.saga; if (S.done) return; S.done = true; S.ever = true; sgSave(S); SAGA_DONE = true; profAward(PROF.cur, SAGA[S.ch].coins || 0);
   S.place = {}; sgApplyPlace(W); S.credits = { k: 0 }; SFX.ready(); }
 function sgEnsure(W, r) { const S = W.saga; if (S.place[r]) return; const P = W.P; let at = [P.x + 150, P.y];
   for (const [dx, dy] of [[150, 0], [-150, 0], [0, 130], [0, -130], [210, 90]]) { if (wFree(W, P.x + dx, P.y + dy, WD.R, null)) { at = [P.x + dx, P.y + dy]; break; } }
@@ -7169,15 +7377,19 @@ function sgSayEnd(W) { const S = W.saga, D = S.say; voiceStop(); try { window.sp
 function sgFight(W, st) { const S = W.saga; worldSave(); W.dlg = null; S.fightLater = false; voiceStop();
   const oc = S.cast[st.fight]; W.sagaF = st; G.mode = 'cpu';
   G.sel = { cur: [W.P.base, oc], done: [true, true], t: 0, readyT: 0, outfit: [W.P.o, 0] };
-  G.stageId = st.stage || 'arena'; G.vsName = [null, st.name || sgName(W, st.fight)]; SFX.ok(); G.toVS(); }
+  G.stageId = st.stage || 'arena'; G.vsName = [null, st.name ? sgTok(W, st.name) : sgName(W, st.fight)]; SFX.ok(); G.toVS(); }
 function sagaSetupFight(F) { const W = G.world, st = W && W.sagaF; if (!st) return; const me = F.f[0], op = F.f[1];
   me.dmgMul = 1.3; me.defMul = 0.85; me.storyBuff = true; F.pads[1].lvl = st.lvl || 1;
   if (st.hp) { op.maxHp = Math.round(op.maxHp * st.hp); op.hp = op.trailHp = op.maxHp; } if (st.dmg) op.dmgMul = st.dmg;
-  op.dispName = st.name || sgName(W, st.fight);
+  op.dispName = st.name ? sgTok(W, st.name) : sgName(W, st.fight);
   if (st.fight === 'malali' && op.ci !== MALALI) { op.shadow = true; op.bossAs = MALALI; }
   if (st.boss) { op.bossAI = 1; op.bossCD = 110; }
   if (st.mech) { op.mech = 1; op.R = mechRig(op.R); op.bossAI = 1; op.bossCD = 90; }
-  if (st.final) F.sagaTick = sagaFinalTick; }
+  if (st.final) F.sagaTick = st.final === 2 ? sagaFinalTick2 : sagaFinalTick; }
+// the last fight of «مملكة الدم»: ناصر shuts the fortress down, then العبد jumps in
+function sagaFinalTick2(F) { if (F.phase !== 'fight' || F.fin) return; const me = F.f[0], op = F.f[1], r = op.hp / op.maxHp, d = Math.sign(op.x - me.x) || 1;
+  if (!F.sgA1 && r < 0.6) { F.sgA1 = 1; SFX.zap(); SFX.thud(); F.shake(16); op.bossCD = Math.max(op.bossCD | 0, 420); op.defMul = 1.25; op.flash = 10; finBurst(op.x, op.hipY - 200, 40, ['#ff1030', '#ffffff'], 10, 6); F.banner = { text: '🔌 ناصر: رمز الإيقاف… النظام طفى!', ar: true, t: 0, dur: 80 }; }
+  if (!F.sgA2 && r < 0.3) { F.sgA2 = 1; SFX.whoosh(1); F.shake(10); for (let i = 0; i < 3; i++) spawnProj({ kind: 'abdhit', owner: me, x: me.x - d * (300 + i * 60), y: -160 - i * 60, vx: d * (13 + i), vy: 0, g: 0, r: 46, life: 120, big: 1, draw: p => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, 60); g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.4, 'rgba(120,200,255,0.7)'); g.addColorStop(1, 'rgba(0,120,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, 60, 0, 7); ctx.fill(); ctx.restore(); }, m: { dmg: 8, lvl: 'mid', hs: 22, bs: 14, push: 40, stop: 8, p: 1.4, kd: i === 2 ? 1 : 0 } }); F.banner = { text: '🥋 ' + sgName(G.world, 'abd') + ': هالمرة… قراري ضدك!', ar: true, t: 0, dur: 80 }; } }
 // the last fight: the two uncles help you when ملالي gets weaker
 function sagaFinalTick(F) { if (F.phase !== 'fight' || F.fin) return; const me = F.f[0], op = F.f[1], r = op.hp / op.maxHp, d = Math.sign(op.x - me.x) || 1;
   if (!F.sgA1 && r < 0.66) { F.sgA1 = 1; SFX.whoosh(1); F.shake(10); spawnProj({ kind: 'seawave', owner: me, x: me.x - d * 380, y: -100, vx: d * 11, vy: 0, g: 0, r: 100, life: 150, big: 1, m: { dmg: 14, lvl: 'mid', hs: 24, bs: 16, push: 60, stop: 10, p: 1.5, kd: 1 } }); F.banner = { text: '🌊 الخال عادل: البحر معك!', ar: true, t: 0, dur: 70 }; }
@@ -7191,7 +7403,7 @@ function sgEscape(W, st) { const S = W.saga, [map, sp, tp] = st.escape; S.esc = 
 // ---- per-frame: overlays first (they freeze the world), then the walking checks
 function sagaUpd(W, p, q, ok, back, tap) { const S = W.saga; if (!S) return false; S.k++;
   if (S.card) { S.card.k++; if ((S.card.k > 40 && (ok || tap || back)) || S.card.k > 260) { S.card = null; SFX.move(); sgStep(W); } return true; }
-  if (S.credits) { S.credits.k++; if (S.credits.k > 90 && (ok || tap || back)) { S.credits = null; W.msg = { t: '🌑 فتحت ملالي! تلقاه مظهر للزعيم', k: 0, c: '#e0b0ff' }; SFX.ok(); } return true; }
+  if (S.credits) { S.credits.k++; if (S.credits.k > 90 && (ok || tap || back)) { S.credits = null; W.msg = sgIs2(S.ch) ? { t: '🩸 ختمت مملكة الدم! 🏆', k: 0, c: '#ff6a5a' } : { t: '🌑 فتحت ملالي! و«مملكة الدم» تنتظرك', k: 0, c: '#e0b0ff' }; SFX.ok(); } return true; }
   if (S.say) { const D = S.say, L = D.L[D.i]; D.t++; D.k = Math.min(L.text.length, D.k + 1.3);
     if ((tap && tap[0] > VW - 220 && tap[1] < 74) || back) { sgSayEnd(W); return true; }
     if ((ok || tap) && D.t > 5) { if (D.k < L.text.length) D.k = L.text.length; else { D.i++; if (D.i >= D.L.length) sgSayEnd(W); else sgLineStart(W); } }
@@ -7290,7 +7502,7 @@ function sgDrawEsc(W) { const E = W.saga.esc, s = Math.max(0, Math.ceil(E.T / 60
   txt('⏱️ ' + s, VW / 2, 50, { size: 40, weight: 900, color: low ? '#ff5050' : '#ffd34d', rtl: false });
   ctx.fillStyle = '#ff8a2a'; rrect(VW / 2 - 110, 74, 220 * E.T / E.max, 6, 3); ctx.fill();
   ctx.fillStyle = `rgba(255,30,0,${0.06 + 0.06 * p})`; ctx.fillRect(0, 0, VW, VH); }
-function sgPortraitImg(W, key) { const S = W.saga; if (key === 'P') return IMG['vs' + (W.P.ci + 1)]; if (key === '?') { const im = IMG['vs' + (S.cast.moalem + 1)]; return im && shadowOf(im); } if (key === 'jadd') return null; return IMG['vs' + (S.cast[key] + 1)]; }
+function sgPortraitImg(W, key) { const S = W.saga; if (key === 'P') return IMG['vs' + (W.P.ci + 1)]; if (key === '?') return IMG['vs' + (MYST + 1)]; if (key === 'jadd') return null; return IMG['vs' + (S.cast[key] + 1)]; }
 function sgDrawPortrait(W, key, cx, flip, on, t) { const im = sgPortraitImg(W, key), col = sgColOf(W, key);
   ctx.save(); if (on) { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(cx, 380, 30, cx, 380, 330); g.addColorStop(0, col + '55'); g.addColorStop(1, col + '00'); ctx.fillStyle = g; ctx.fillRect(cx - 340, 40, 680, 680); ctx.globalCompositeOperation = 'source-over'; }
   const rise = on ? Math.min(1, t / 8) * 8 : 0;
@@ -7317,12 +7529,12 @@ function sgDrawSay0(W) { const S = W.saga, D = S.say, L = D.L[D.i]; if (!L) retu
   if (D.k >= L.text.length && G.frame % 40 < 26) txt('▼', bx + 36, by + bh - 26, { size: 22, color: '#ffd34d', rtl: false });
   // top bar + skip
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, 52); const C = SAGA[S.ch];
-  txt('⚔️ حرب الخالين · الفصل ' + SG_ORD[S.ch] + ': ' + C.n, VW / 2, 26, { size: 18, weight: 800, color: SG_PARTS[C.part][2] });
+  txt(sgStoryName(S.ch) + ' · الفصل ' + SG_ORD[S.ch] + ': ' + C.n, VW / 2, 26, { size: 18, weight: 800, color: SG_PARTS[C.part][2] });
   ctx.fillStyle = 'rgba(255,255,255,0.12)'; rrect(VW - 200, 8, 180, 36, 12); ctx.fill(); txt(TOUCH_ON ? 'تخطّي ⏭' : 'تخطّي ⏭ (Esc)', VW - 110, 27, { size: 17, weight: 800, color: 'rgba(255,255,255,0.8)' });
   txt(D.i + 1 + ' / ' + D.L.length, 70, 27, { size: 15, weight: 700, color: 'rgba(255,255,255,0.45)', rtl: false });
   txt(TOUCH_ON ? 'المس للمتابعة' : 'Enter / ✕ = التالي', VW / 2, VH - 9, { size: 13, weight: 700, color: 'rgba(255,255,255,0.4)' }); }
 // ---- the pictures that show up in the talks
-function sgFace(W, r, x, y, R, col) { const S = W.saga, ci = r === 'P' ? W.P.ci : S.cast[r], im = IMG['face' + (ci + 1)]; ctx.save(); ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.closePath(); ctx.fillStyle = '#1a1c2a'; ctx.fill(); ctx.clip(); if (im) ctx.drawImage(im, x - R, y - R, R * 2, R * 2); ctx.restore(); ctx.strokeStyle = col || sgColOf(W, r); ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.stroke(); }
+function sgFace(W, r, x, y, R, col) { const S = W.saga, ci = r === 'P' ? W.P.ci : r === '?' ? MYST : S.cast[r], im = IMG['face' + (ci + 1)]; ctx.save(); ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.closePath(); ctx.fillStyle = '#1a1c2a'; ctx.fill(); ctx.clip(); if (im) ctx.drawImage(im, x - R, y - R, R * 2, R * 2); ctx.restore(); ctx.strokeStyle = col || sgColOf(W, r); ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.stroke(); }
 function sgFrame(x, y, w, h, col) { ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 24; ctx.fillStyle = 'rgba(8,8,16,0.95)'; rrect(x, y, w, h, 18); ctx.fill(); ctx.restore(); ctx.strokeStyle = col; ctx.lineWidth = 4; rrect(x, y, w, h, 18); ctx.stroke(); }
 function sgFxBack(W, fx, t) {
   if (fx === 'fog') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 6; i++) { const x = ((i * 300 + t * (1 + i % 3)) % (VW + 400)) - 200, y = 140 + (i * 97) % 400, g = ctx.createRadialGradient(x, y, 10, x, y, 260); g.addColorStop(0, 'rgba(150,40,255,0.22)'); g.addColorStop(1, 'rgba(90,0,180,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 260, 0, 7); ctx.fill(); } ctx.restore(); }
@@ -7347,16 +7559,17 @@ function sgFxPanel(W, A, t) { const fx = A[0], S = W.saga, cx = VW / 2, u = ease
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; const r = ctx.createRadialGradient(cx, 200, 4, cx, 200, 120); r.addColorStop(0, `rgba(255,220,120,${0.5 + 0.4 * g})`); r.addColorStop(1, 'rgba(255,180,40,0)'); ctx.fillStyle = r; ctx.beginPath(); ctx.arc(cx, 200, 120, 0, 7); ctx.fill(); ctx.restore();
     ctx.fillStyle = '#c8a040'; ctx.beginPath(); ctx.moveTo(cx - 40, 222); ctx.lineTo(cx - 40, 186); ctx.lineTo(cx - 20, 204); ctx.lineTo(cx, 176); ctx.lineTo(cx + 20, 204); ctx.lineTo(cx + 40, 186); ctx.lineTo(cx + 40, 222); ctx.closePath(); ctx.fill(); }
   else if (fx === 'phone' || fx === 'chains') { ctx.fillStyle = '#0c0c10'; rrect(cx - 120, 104, 240, 400, 34); ctx.fill(); ctx.strokeStyle = '#3a3a44'; ctx.lineWidth = 5; ctx.stroke(); const g = ctx.createLinearGradient(0, 130, 0, 480); g.addColorStop(0, '#1a2a4a'); g.addColorStop(1, '#0a0a14'); ctx.fillStyle = g; rrect(cx - 104, 130, 208, 350, 18); ctx.fill();
-    sgFace(W, fx === 'phone' ? 'adel' : 'salah', cx, 290, 80); if (fx === 'chains') { ctx.strokeStyle = '#9aa0aa'; ctx.lineWidth = 6; for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.ellipse(cx + i * 26, 290 + Math.abs(i) * 8 - 20, 13, 8, i * 0.3, 0, 7); ctx.stroke(); } for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.ellipse(cx + i * 26, 330 - Math.abs(i) * 6, 13, 8, -i * 0.3, 0, 7); ctx.stroke(); } }
+    sgFace(W, A[1] || (fx === 'phone' ? 'adel' : 'salah'), cx, 290, 80); if (fx === 'chains') { ctx.strokeStyle = '#9aa0aa'; ctx.lineWidth = 6; for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.ellipse(cx + i * 26, 290 + Math.abs(i) * 8 - 20, 13, 8, i * 0.3, 0, 7); ctx.stroke(); } for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.ellipse(cx + i * 26, 330 - Math.abs(i) * 6, 13, 8, -i * 0.3, 0, 7); ctx.stroke(); } }
     if (t % 40 < 26) { ctx.fillStyle = '#ff2a2a'; ctx.beginPath(); ctx.arc(cx - 70, 160, 7, 0, 7); ctx.fill(); txt('REC', cx - 40, 161, { size: 17, font: FE, weight: 700, color: '#ff2a2a', rtl: false }); }
     ctx.fillStyle = '#36e8ff'; for (let i = 0; i < 14; i++) { const h = 6 + Math.abs(Math.sin(t * 0.3 + i * 0.9)) * 30; ctx.fillRect(cx - 84 + i * 12, 430 - h / 2, 7, h); } }
   else if (fx === 'card') { sgFrame(cx - 240, 150, 480, 270, '#b030ff'); ctx.fillStyle = '#05030a'; rrect(cx - 220, 170, 440, 230, 12); ctx.fill(); ctx.strokeStyle = '#c8a040'; ctx.lineWidth = 3; rrect(cx - 206, 184, 412, 202, 8); ctx.stroke();
     txt('استمتعوا بالسلام…', cx, 230, { size: 24, weight: 800, color: '#e8c45a' }); txt('الملك الحقيقي ما ظهر بعد', cx, 268, { size: 20, weight: 700, color: 'rgba(232,196,90,0.75)' });
     txt('ملالي', cx + 40, 336, { size: 52, weight: 900, color: '#d070ff', italic: true, glow: '#b030ff', glowBlur: 24 }); ctx.fillStyle = '#6a1ab0'; ctx.beginPath(); ctx.arc(cx - 130, 336, 30, 0, 7); ctx.fill(); ctx.fillStyle = '#e0b0ff'; ctx.beginPath(); ctx.ellipse(cx - 130, 336, 16, 9, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#05030a'; ctx.beginPath(); ctx.arc(cx - 130, 336, 5, 0, 7); ctx.fill(); }
   else if (fx === 'mask' || fx === 'unmask') { sgFrame(cx - 270, 110, 540, 340, '#ff3b4a'); ctx.fillStyle = '#101018'; rrect(cx - 250, 130, 500, 300, 10); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.05)'; for (let y = 130; y < 430; y += 4) if ((y + t * 3) % 16 < 4) ctx.fillRect(cx - 250, y, 500, 2);
-    if (fx === 'mask') { ctx.fillStyle = '#05050a'; ctx.beginPath(); ctx.arc(cx, 260, 80, 0, 7); ctx.fill(); ctx.beginPath(); ctx.moveTo(cx - 150, 430); ctx.quadraticCurveTo(cx, 300, cx + 150, 430); ctx.fill(); ctx.fillStyle = '#1a1a22'; ctx.beginPath(); ctx.ellipse(cx, 262, 66, 50, 0, 0, 7); ctx.fill();
+    if (fx === 'mask' && A[1] === 'tech') { const im = IMG['vs' + (MASKED + 1)]; if (im) { const h = 300, w = im.width * h / im.height; ctx.save(); rrect(cx - 250, 130, 500, 300, 10); ctx.clip(); ctx.drawImage(im, cx - w / 2, 130, w, h); ctx.restore(); } }
+    else if (fx === 'mask') { ctx.fillStyle = '#05050a'; ctx.beginPath(); ctx.arc(cx, 260, 80, 0, 7); ctx.fill(); ctx.beginPath(); ctx.moveTo(cx - 150, 430); ctx.quadraticCurveTo(cx, 300, cx + 150, 430); ctx.fill(); ctx.fillStyle = '#1a1a22'; ctx.beginPath(); ctx.ellipse(cx, 262, 66, 50, 0, 0, 7); ctx.fill();
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (const sx of [-1, 1]) { const g = ctx.createRadialGradient(cx + sx * 26, 252, 1, cx + sx * 26, 252, 22); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,60,60,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(cx + sx * 26, 252, 22, 8, 0, 0, 7); ctx.fill(); } ctx.restore(); }
-    else { sgFace(W, 'moalem', cx, 270, 100, '#ff3b4a'); const k = Math.min(1, t / 30); ctx.save(); ctx.translate(cx + 120 * k, 270 + 160 * k); ctx.rotate(k * 2); ctx.fillStyle = '#1a1a22'; ctx.beginPath(); ctx.ellipse(0, 0, 66, 50, 0, 0, 7); ctx.fill(); ctx.restore(); } }
+    else { sgFace(W, A[1] || 'moalem', cx, 270, 100, '#ff3b4a'); const k = Math.min(1, t / 30); ctx.save(); ctx.translate(cx + 120 * k, 270 + 160 * k); ctx.rotate(k * 2); ctx.fillStyle = '#1a1a22'; ctx.beginPath(); ctx.ellipse(0, 0, 66, 50, 0, 0, 7); ctx.fill(); ctx.restore(); } }
   else if (fx === 'banner') { const px = cx - 220; ctx.fillStyle = '#c8a040'; ctx.fillRect(px - 6, 96, 12, 400); ctx.beginPath(); ctx.arc(px, 92, 12, 0, 7); ctx.fill();
     const Wd = 440, H = 250; ctx.save(); ctx.beginPath(); ctx.moveTo(px, 110); for (let x = 0; x <= Wd; x += 10) ctx.lineTo(px + x, 110 + Math.sin(x * 0.02 - t * 0.12) * 14 * (x / Wd)); for (let x = Wd; x >= 0; x -= 10) ctx.lineTo(px + x, 110 + H + Math.sin(x * 0.02 - t * 0.12 + 0.6) * 14 * (x / Wd)); ctx.closePath();
     const g = ctx.createLinearGradient(px, 0, px + Wd, 0); g.addColorStop(0, '#0e2a6a'); g.addColorStop(1, '#1a4ab0'); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = '#e8c45a'; ctx.lineWidth = 6; ctx.stroke(); ctx.clip();
@@ -7397,7 +7610,7 @@ function sgFxPanel(W, A, t) { const fx = A[0], S = W.saga, cx = VW / 2, u = ease
 function sgDrawCard(W) { const S = W.saga, K = S.card, C = SAGA[K.ch], P = SG_PARTS[C.part], k = K.k, a = Math.min(1, k / 20);
   ctx.fillStyle = '#05050a'; ctx.fillRect(0, 0, VW, VH); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(VW / 2, VH / 2, 20, VW / 2, VH / 2, 560); g.addColorStop(0, P[2] + '33'); g.addColorStop(1, P[2] + '00'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
   for (let i = 0; i < 50; i++) { const x = (i * 211 + k * (0.5 + i % 4 * 0.3)) % VW, y = VH - ((i * 97 + k * (0.6 + i % 3 * 0.4)) % VH); ctx.fillStyle = P[2] + '88'; ctx.fillRect(x, y, 2, 2); } ctx.restore();
-  ctx.save(); ctx.globalAlpha = a; txt('⚔️ حرب الخالين', VW / 2, 90, { size: 24, weight: 800, color: 'rgba(255,255,255,0.55)' });
+  ctx.save(); ctx.globalAlpha = a; txt(sgStoryName(K.ch), VW / 2, 90, { size: 24, weight: 800, color: 'rgba(255,255,255,0.55)' });
   if (K.part) { txt(P[0], VW / 2, 200, { size: 40, weight: 900, color: P[2] }); txt(P[1], VW / 2, 262, { size: 52, weight: 900, color: '#fff', glow: P[2], glowBlur: 30 }); }
   const y = K.part ? 410 : 330, u = easeOut(clamp((k - 14) / 20, 0, 1)); ctx.globalAlpha = a * u; ctx.strokeStyle = P[2]; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(VW / 2 - 260 * u, y - 52); ctx.lineTo(VW / 2 + 260 * u, y - 52); ctx.stroke();
   txt('الفصل ' + SG_ORD[K.ch], VW / 2, y, { size: 32, weight: 800, color: P[2] }); txt(C.n, VW / 2, y + 66, { size: 64, weight: 900, color: '#fff', stroke: '#000', sw: 6, glow: P[2], glowBlur: 24 });
@@ -7412,10 +7625,10 @@ function sgDrawRetry(W) { const R = W.saga.retry; ctx.fillStyle = 'rgba(3,4,10,0
   txt('😓 خسرت المواجهة', VW / 2, 290, { size: 44, weight: 900, color: '#fff' }); txt('القصة تنتظرك… تبي تعيد الحين؟', VW / 2, 345, { size: 22, weight: 700, color: '#ffd34d' });
   [['🔁 مرة ثانية', VW / 2 + 150], ['🚶 بعدين', VW / 2 - 150]].forEach(([l, x], i) => { const on = i === R.sel; ctx.fillStyle = on ? 'rgba(230,20,40,0.95)' : 'rgba(255,255,255,0.1)'; rrect(x - 130, 410, 260, 60, 16); ctx.fill(); if (on) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); } txt(l, x, 441, { size: 26, weight: 900, color: '#fff' }); }); }
 function sgDrawCredits(W) { const S = W.saga, k = S.credits.k, a = Math.min(1, k / 30); ctx.fillStyle = '#05050a'; ctx.fillRect(0, 0, VW, VH); ctx.save(); ctx.globalAlpha = a;
-  txt('النهاية', VW / 2, 110, { size: 90, weight: 900, color: '#ffd34d', glow: '#ff8a00', glowBlur: 40 }); txt('وانتهت حرب الخالين… وارتفعت راية العائلة', VW / 2, 180, { size: 26, weight: 800, color: '#fff' });
-  const R = ['adel', 'salah', 'malali', 'inv', 'dragon', 'chef', 'captain', 'moalem', 'bull', 'dajaj', 'teer', 'gamer', 'abd'];
+  txt('النهاية', VW / 2, 110, { size: 90, weight: 900, color: '#ffd34d', glow: '#ff8a00', glowBlur: 40 }); txt(sgIs2(S.ch) ? 'وطاحت الأقنعة… وبقيت العائلة واقفة' : 'وانتهت حرب الخالين… وارتفعت راية العائلة', VW / 2, 180, { size: 26, weight: 800, color: '#fff' });
+  const R = sgIs2(S.ch) ? ['nasser', 'hamad', 'abd', 'inv', 'malali', 'adel', 'salah', 'captain', 'bull', 'chef', 'dajaj', 'teer', 'dragon'] : ['adel', 'salah', 'malali', 'inv', 'dragon', 'chef', 'captain', 'moalem', 'bull', 'dajaj', 'teer', 'gamer', 'abd'];
   R.forEach((r, i) => { const row = i < 7 ? 0 : 1, n = row ? 6 : 7, j = row ? i - 7 : i, x = VW / 2 + ((n - 1) / 2 - j) * 150, y = 290 + row * 160, u = easeOut(clamp((k - 20 - i * 5) / 20, 0, 1)); ctx.globalAlpha = a * u; sgFace(W, r, x, y, 52); txt(sgName(W, r), x, y + 76, { size: 18, weight: 900, color: '#fff' }); });
-  ctx.globalAlpha = a; txt('🌑 فتحت: ملالي — مظهر جديد للزعيم', VW / 2, 600, { size: 26, weight: 900, color: '#e0b0ff' }); txt('شكراً إنك لعبت يا ' + CHARS[W.P.ci].name + ' 🎉', VW / 2, 645, { size: 22, weight: 800, color: '#ffd34d' });
+  ctx.globalAlpha = a; txt(sgIs2(S.ch) ? '🩸 ختمت «مملكة الدم» — القصتين خلصن!' : '🌑 فتحت: ملالي — مظهر جديد للزعيم', VW / 2, 600, { size: 26, weight: 900, color: '#e0b0ff' }); txt('شكراً إنك لعبت يا ' + CHARS[W.P.ci].name + ' 🎉', VW / 2, 645, { size: 22, weight: 800, color: '#ffd34d' });
   if (k > 90 && G.frame % 50 < 34) txt(TOUCH_ON ? 'المس للمتابعة' : 'Enter للمتابعة', VW / 2, VH - 26, { size: 17, weight: 800, color: 'rgba(255,255,255,0.6)' }); ctx.restore(); }
 window.__sagaAPI = { SAGA, sgCast, sagaRestart, cov(base, eff) { const cast = sgCast(base, eff), nm = r => r === 'P' ? CHARS[eff === MALALI ? base : eff].name : r === 'X' ? CHARS[cast.chef].name : SG_TITLE[r] || CHARS[cast[r]].name, miss = new Set();
     for (const x of window.__sagaAPI.texts()) { const t = x.split('|').slice(1).join('|').replace(/\{(\w+)\}/g, (m, r) => nm(r)); for (const sg of voiceSegs(t)) if (!VOX.txt[sg.t]) miss.add(sg.t); } return [...miss]; }, go(ch, st) { const W = G.world; W.saga.ch = ch; W.saga.st = st; W.saga.done = false; W.saga.wait = null; W.saga.say = null; W.saga.card = null; W.saga.choice = W.saga.retry = W.saga.esc = W.saga.credits = W.saga.items = null; sgReplay(W.saga); sgApplyPlace(W); sgStep(W, false); }, talk(r) { const W = G.world, n = W.npcs.find(n => n.sg === r); if (n) { W.map = n.map; sagaTalk(W, n); } return !!n; }, S: () => G.world.saga, tgt: () => sgTarget(G.world), goal: () => sgGoal(G.world), adv(n) { for (let i = 0; i < n; i++) { const W = G.world, D = W.saga.say; if (!D) break; D.i++; if (D.i >= D.L.length) sgSayEnd(W); else sgLineStart(W); } }, texts: () => { const T = new Set(); const add = L => (L || []).forEach(l => T.add(l[0] + '|' + l[1]));
