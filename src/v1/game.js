@@ -144,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.50';
+const GAME_VER = '1.51';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -5330,7 +5330,7 @@ const ASK = (() => {
 function profAdd() { ASK('اسم الحساب الجديد', '', n => { if (n) { PROF.cur = profNew(n); profSave(); if (G.shop) { shopMsg('حساب جديد: ' + n + ' · معك ' + START_COINS + ' 🪙'); shopPrev(); } } }); }
 function profRename() { const P = profCur(); ASK('غيّر اسم الحساب', P.name, n => { if (n) { P.name = n.slice(0, 20); profSave(); if (G.shop) shopMsg('الاسم: ' + P.name); } }); }
 const SHOP_UI = { gx: 26, gy: 150, gs: 66, gc: 4, cx: 560, tabY: 132, tw: 90, th: 54, ix: 790, iy: 196, iw: 226, ih: 104 };
-function shopLeave() { const S = G.shop; SFX.move(); G.shop = null; if (S && S.back === 'select') G.toSelect(); else if (S && S.back === 'world' && G.world) { G.scene = 'world'; G.world.cam = null; } else G.toTitle(); }
+function shopLeave() { const S = G.shop; SFX.move(); G.shop = null; if (S && S.back === 'select') G.toSelect(); else if (S && S.back === 'world' && G.world) { G.scene = 'world'; G.world.cam = null; wDress(G.world); } else G.toTitle(); }
 function shopPress(id) { const S = G.shop; S.fx = { id, k: 0 }; }   // a quick flash on whatever was touched
 function updShop() {
   const S = G.shop; if (!S) { G.toTitle(); return; } S.t++; G.t++; if (S.msg) S.msg.k++; if (S.fx) S.fx.k++;
@@ -6110,7 +6110,7 @@ function worldOpen() { wMaps(); const sv = worldLoad(); G.world = { phase: 'pick
 function worldStart(ci, o) {
   const W = G.world, sv = W.sv, eff = (() => { const O = outfitOf(ci, o); return O && O.as !== undefined ? O.as : ci; })();
   const map = sv && sv.ci === ci && WMAPS[sv.map] ? sv.map : 'fareej', M = WMAPS[map];
-  W.P = { fig: wMakeFig(eff, eqOfProf(profCur(), eff)), face: 1, base: ci, o, ci: eff, x: map === (sv && sv.map) && sv.ci === ci ? sv.x : M.spawn[0], y: map === (sv && sv.map) && sv.ci === ci ? sv.y : M.spawn[1], dir: 'down', ph: 0, moving: false };
+  W.P = { fig: wMakeFig(eff, wEqFor(ci, eff)), face: 1, base: ci, o, ci: eff, x: map === (sv && sv.map) && sv.ci === ci ? sv.x : M.spawn[0], y: map === (sv && sv.map) && sv.ci === ci ? sv.y : M.spawn[1], dir: 'down', ph: 0, moving: false };
   W.en = sv && sv.en !== undefined ? sv.en : 100; W.th = sv && sv.th !== undefined ? sv.th : 100; W.fridge = sv ? sv.fr | 0 : 0; W.jaddDay = sv ? sv.jd : -1; W.ev = sv && sv.ev || null; W.evNote = sv && sv.evn !== undefined ? sv.evn : -1;
   W.npcs = W_HOME.filter(h => h[0] !== ci && h[0] !== eff).map(([nci, mp, x, y, dir, line, role]) => ({ ci: nci, map: mp, x, y, hx: x, hy: y, dir, d0: dir, line, role, ph: Math.random() * 6, wait: 60 + Math.random() * 200, tx: null, ty: null, fig: wMakeFig(nci, null), face: dir === 'left' ? -1 : 1 }));
   W.phase = 'walk'; W.map = map; W.cam = null; W.fade = 30; W.dlg = null; W.mapOpen = false; W.msg = { t: 'أهلاً في ' + M.name + ' 👋', k: 0 }; citSpawn(W); sqInit(W, sv && sv.sq); worldSave(); sagaBegin(W);
@@ -6271,7 +6271,7 @@ function updWorldPick(W, p, q, ok, back, tap) {
 function drawWorldPick(W) {
   drawCupBg('📜 حرب الخالين · العالم المفتوح', 'اختر شخصيتك… وبعدها تبدأ القصة');
   const L = outfitList(W.cur), O = L[W.o % L.length], ci = O && O.as !== undefined ? O.as : W.cur;
-  if (!W.pf || W.pf.ci !== ci) W.pf = { ci, fig: wMakeFig(ci, eqOfProf(profCur(), ci)), face: 1, x: VW / 2 - 250, y: 380, moving: false, ph: 0 }; wAnimFig(W.pf); drawFig(ctx, W.pf, 0.68);
+  if (!W.pf || W.pf.ci !== ci) W.pf = { ci, fig: wMakeFig(ci, wEqFor(ci, ci)), face: 1, x: VW / 2 - 250, y: 380, moving: false, ph: 0 }; wAnimFig(W.pf); drawFig(ctx, W.pf, 0.68);
   const im = IMG['front' + (ci + 1)]; if (im) { const hgt = 250, w = im.width * hgt / im.height; ctx.drawImage(im, VW / 2 + 60, 115, w, hgt); }
   txt(CHARS[ci].name, VW / 2 - 40, 200, { size: 44, weight: 900, color: '#fff', stroke: '#000', sw: 6 });
   if (W.sv && W.sv.ci === W.cur) txt('📍 بتكمل من ' + ((WMAPS[W.sv.map] || {}).name || ''), VW / 2 - 40, 250, { size: 20, weight: 800, color: '#7dffb0' });
@@ -7175,6 +7175,8 @@ window.__sagaAPI = { SAGA, sgCast, sagaRestart, cov(base, eff) { const cast = sg
     for (const x of window.__sagaAPI.texts()) { const t = x.split('|').slice(1).join('|').replace(/\{(\w+)\}/g, (m, r) => nm(r)); for (const sg of voiceSegs(t)) if (!VOX.txt[sg.t]) miss.add(sg.t); } return [...miss]; }, go(ch, st) { const W = G.world; W.saga.ch = ch; W.saga.st = st; W.saga.done = false; W.saga.wait = null; W.saga.say = null; W.saga.card = null; W.saga.choice = W.saga.retry = W.saga.esc = W.saga.credits = W.saga.items = null; sgReplay(W.saga); sgApplyPlace(W); sgStep(W, false); }, talk(r) { const W = G.world, n = W.npcs.find(n => n.sg === r); if (n) { W.map = n.map; sagaTalk(W, n); } return !!n; }, S: () => G.world.saga, tgt: () => sgTarget(G.world), goal: () => sgGoal(G.world), adv(n) { for (let i = 0; i < n; i++) { const W = G.world, D = W.saga.say; if (!D) break; D.i++; if (D.i >= D.L.length) sgSayEnd(W); else sgLineStart(W); } }, texts: () => { const T = new Set(); const add = L => (L || []).forEach(l => T.add(l[0] + '|' + l[1]));
   for (const C of SAGA) for (const st of C.steps) { add(st.say); add(st.win); add(st.lose); add(st.yes); add(st.no); add(st.after); if (st.talks) for (const k in st.talks) add(st.talks[k]); if (st.find) st.find.forEach(f => add(f[4])); } return [...T]; } };
 
+function wEqFor(base, eff) { const P = profCur(), e = eqOfProf(P, eff); return e && Object.values(e).some(Boolean) ? e : eqOfProf(P, base); }
+function wDress(W) { if (!W || !W.P) return; W.P.fig = wMakeFig(W.P.ci, wEqFor(W.P.base, W.P.ci)); W.pf = null; }
 // ================= studio voices (ElevenLabs): one voice per role, recorded once and kept inside the game =================
 // The pack (pro-voices.js → window.VOICE_PRO) holds clips keyed «tag|sentence». A line first looks for its speaker's studio
 // voice — whole sentence first, then sentence pieces split around names — and only falls back to the old voice when missing.
