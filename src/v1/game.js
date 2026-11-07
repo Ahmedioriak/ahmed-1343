@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.62';
+const GAME_VER = '1.63';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -561,7 +561,8 @@ const PARTS = ['torso', 'uarm', 'farm', 'thigh', 'shin', 'foot'];
 const RIGS = [], RIGSK = {};
 // ---- outfits: switch on the character-select screen (★ / E / U / L1-R1, or tap the outfit button) ----
 const OUTFITS = { 1: [{ id: '', name: 'الأساسي' }, { id: 'chef', name: 'طبّاخ', hat: 1 }] };
-function outfitList(ci) { const L = OUTFITS[ci] || [{ id: '', name: 'الأساسي' }]; return L.some(o => o.lock) ? L.filter(o => !o.lock || sagaUnlocked()) : L; }
+function outfitOpen(o) { return !o.lock || (o.lock === 'saga2' ? saga2Unlocked() : sagaUnlocked()); }
+function outfitList(ci) { const L = OUTFITS[ci] || [{ id: '', name: 'الأساسي' }]; return L.some(o => o.lock) ? L.filter(outfitOpen) : L; }
 const OPW = 380, OCW = 112, OCH = 236, OCY = 236; // outfit panel geometry
 function opanelCards(s, n) { const cx = s === 0 ? 200 : VW - 200, tot = n * OCW + (n - 1) * 12; return [...Array(n)].map((_, i) => [cx - tot / 2 + i * (OCW + 12), OCY]); }
 function drawOutfitPanel(S, s) {
@@ -2029,8 +2030,10 @@ function bossPickNH(ci, d, r) { const pick = L => { let w = 0; for (const [, x] 
 const MYST = CHARS.length;
 CHARS.push({ name: 'حارس الظل', en: 'SHADE', h: 0.92, tag: 'بلا وجه… بلا اسم', hp: 1.0, dmg: 1.02, spd: 1.06, color: '#ff2a3a', stats: [3, 5, 3], quote: '…', story: 1, myst: 1 });
 const MASKED = CHARS.length;
-CHARS.push({ name: 'القائد المقنّع', en: 'THE MASK', h: 0.98, tag: 'درع تقني خارق', hp: 1.95, dmg: 1.45, spd: 1.06, color: '#ff1030', stats: [5, 5, 5], quote: 'أنا اللي صنعت اللعبة كلها.', story: 1, masked: 1, props: maskedProps });
+CHARS.push({ name: 'القائد المقنّع', en: 'THE MASK', h: 0.98, tag: 'درع تقني خارق', hp: 1.3, dmg: 1.2, spd: 1.06, color: '#ff1030', stats: [5, 5, 5], quote: 'أنا اللي صنعت اللعبة كلها.', story: 1, masked: 1, props: maskedProps });
 SKILL_IDS[MYST] = 'sk_shstep'; SKILL_NAMES[MYST] = 'خطوة الظل'; SKILL2[MYST] = 'sk_dwave'; SKILL2_LINE[MYST] = '…'; SKILL2_NAMES[MYST] = 'موجة الظلام';
+// when «مملكة الدم» is finished, the armour is الدكتور's outfit (the inventor is المبرمج, الدكتور's other look)
+OUTFITS[3].push({ id: 'masked', name: 'القائد المقنّع 🛡️', as: MASKED, lock: 'saga2' });
 const TECHC = ['#ff1030', '#ff6a5a', '#ffffff', '#ffb0a8'];
 // his visor burns red; a reactor glows in his chest; drones hover around him when they're out
 function maskedProps(f, front) { if (!front || !f.J || f.hp <= 0 && f.state === 'ko') return; const e = eyePos(f), k = f.R.k, s = 1 + 0.2 * Math.sin(G.frame * 0.3);
@@ -5633,7 +5636,7 @@ function drawItemIcon0(it, x, y, s) {
   ctx.restore();
 }
 // ---- the wardrobe / shop scene
-function shopChars() { const L = []; for (let i = 0; i < NCH; i++) { L.push(i); const O = OUTFITS[i]; if (O) O.forEach(o => { if (o.as !== undefined && (!o.lock || sagaUnlocked())) L.push(o.as); }); } return L; }
+function shopChars() { const L = []; for (let i = 0; i < NCH; i++) { L.push(i); const O = OUTFITS[i]; if (O) O.forEach(o => { if (o.as !== undefined && outfitOpen(o)) L.push(o.as); }); } return L; }
 function shopOpen(back) { G.shop = { ci: 0, cat: 0, idx: -1, try: null, back: back || 'title', t: 0, msg: null, pf: null, fx: null }; G.scene = 'shop'; G.t = 0; SFX.ok(); shopPrev(true); }
 function shopEq() { const S = G.shop, P = profCur(), e = Object.assign({}, (P.eq[S.ci]) || {}); if (S.try) e[SHOP_BY[S.try].cat] = S.try; return eqClean(e); }
 function shopBuild() { const S = G.shop; if (!S) return; const e = shopEq(), key = S.ci + '|' + JSON.stringify(e || {}); if (S.pf && S.pfKey === key) return;
@@ -7267,7 +7270,7 @@ const SAGA = [
   ] },
   { part: 7, s2: 1, n: 'التحالف ضد المخترع', coins: 100, place: { mask: ['hisn', 1000, 330, 'down'], abd: ['hisn', 1000, 600, 'up'], nasser: ['hisn', 860, 600, 'up'], captain: ['hisn', 1140, 600, 'up'] }, steps: [
     { say: [['inv', 'خلاص… لعبتوا كفاية.'], ['N', 'رفع المخترع إيده… وانقفلت أبواب القاعة، وبدأ نظام القلعة يشغّل الفخ الأخير.', 'alarm'], ['N', 'بس المخترع غلط غلطته الكبيرة… ظن إن العائلة بتبقى متفرقة.'], ['N', 'وقف ناصر جنب {captain}… وواجه حمد الحراس مع {bull}.'], ['N', 'وساعد {moalem} و{malali} و{chef} و{dajaj} و{teer} و{dragon}… في تعطيل أجهزة القلعة، وإطلاع العائلة من الممرات المحاصرة.'], ['inv', 'للحين ما تفهمون! أنا أعرف كل نقطة ضعف فيكم!'], ['abd', 'يمكن تعرف أسرارنا… بس ما تقدر تتحكم في قرارنا بعد اليوم.'], ['inv', 'إذن… شوفوا وش سويت لنفسي.'], ['N', 'ولبس المخترع درعه الأخير… درع تقني ما شافت المملكة مثله.', ['mask', 'tech']], ['P', 'يا {abd}… خلنا ننهيها مع بعض.']] },
-    { fight: 'mask', stage: 'dark', lvl: 3.2, hp: 1.15, dmg: 1.25, boss: 1, final: 2, name: 'المخترع — الدرع الأخير', win: [['inv', 'مستحيل… حسبتها… حسبت كل شي…']], lose: [['inv', 'كل شي… كان محسوب.']] },
+    { fight: 'mask', stage: 'dark', lvl: 3.2, hp: 1.72, dmg: 1.5, boss: 1, final: 2, name: 'المخترع — الدرع الأخير', win: [['inv', 'مستحيل… حسبتها… حسبت كل شي…']], lose: [['inv', 'كل شي… كان محسوب.']] },
     { say: [['N', 'وصل ناصر للوحة التحكم… وطفّى النظام برمز الإيقاف، اللي حطه المخترع بنفسه في المخطط.', 'machine'], ['nasser', 'كل مخطط له مفتاح… وأنت نسيت إني أقرأ المخططات.'], ['N', 'وفقد المخترع سيطرته على القلعة.']] },
   ] },
   { part: 7, s2: 1, n: 'سقوط الزعيم', coins: 100, place: { mask: ['hisn', 1000, 330, 'down'], abd: ['hisn', 1000, 600, 'up'] }, steps: [
@@ -7307,6 +7310,7 @@ function sgHero() { const W = G.world; return W && W.P && W.P.base != null ? W.P
 function sgLoad(ci) { return sgAll()[ci == null ? sgHero() : ci] || null; }
 var SAGA_DONE = (() => { try { const o = JSON.parse(localStorage.getItem('shilla_saga')); if (o && (o.done || o.ever)) return true; } catch (e) { } return Object.values(sgAll()).some(s => s && (s.done || s.ever)); })();
 function sagaUnlocked() { return SAGA_DONE; }
+function saga2Unlocked() { try { return Object.values(sgAll()).some(r => r && ((r.done && (r.ch | 0) >= S1_LEN) || (r.b2 && r.b2.done))); } catch (e) { return false; } }
 function sgSave(S) { if (S.done || S.ever) SAGA_DONE = true; const ci0 = S.base != null ? S.base : sgHero(), old = sgLoad(ci0) || {}, rec = { ch: S.ch, st: S.st, done: S.done ? 1 : 0, ever: S.ever || S.done || old.ever ? 1 : 0, wd: S.wait != null ? S.wait : undefined, b1: old.b1, b2: old.b2 }; sgPut(ci0, rec); try { localStorage.setItem('shilla_saga', JSON.stringify(Object.assign({}, rec, { ever: SAGA_DONE ? 1 : 0 }))); } catch (e) { } }
 function sgDue(W) { const S = W.saga, d = wDay(W); return S.wait == null || d > S.wait || (d === S.wait && wHour(W) >= 7); }
 function sgCast(base, eff) { const cast = Object.assign({}, SG_CI), mine = new Set([base, eff]), used = new Set(Object.values(cast));
@@ -7414,7 +7418,7 @@ function sgEscape(W, st) { const S = W.saga, [map, sp, tp] = st.escape; S.esc = 
 // ---- per-frame: overlays first (they freeze the world), then the walking checks
 function sagaUpd(W, p, q, ok, back, tap) { const S = W.saga; if (!S) return false; S.k++;
   if (S.card) { S.card.k++; if ((S.card.k > 40 && (ok || tap || back)) || S.card.k > 260) { S.card = null; SFX.move(); sgStep(W); } return true; }
-  if (S.credits) { S.credits.k++; if (S.credits.k > 90 && (ok || tap || back)) { S.credits = null; W.msg = sgIs2(S.ch) ? { t: '🩸 ختمت مملكة الدم! 🏆', k: 0, c: '#ff6a5a' } : { t: '🌑 فتحت ملالي! و«مملكة الدم» تنتظرك', k: 0, c: '#e0b0ff' }; SFX.ok(); } return true; }
+  if (S.credits) { S.credits.k++; if (S.credits.k > 90 && (ok || tap || back)) { S.credits = null; W.msg = sgIs2(S.ch) ? { t: '🛡️ فتحت القائد المقنّع! تلقاه مظهر للدكتور', k: 0, c: '#ff6a5a' } : { t: '🌑 فتحت ملالي! و«مملكة الدم» تنتظرك', k: 0, c: '#e0b0ff' }; SFX.ok(); } return true; }
   if (S.say) { const D = S.say, L = D.L[D.i]; D.t++; D.k = Math.min(L.text.length, D.k + 1.3);
     if ((tap && tap[0] > VW - 220 && tap[1] < 74) || back) { sgSayEnd(W); return true; }
     if ((ok || tap) && D.t > 5) { if (D.k < L.text.length) D.k = L.text.length; else { D.i++; if (D.i >= D.L.length) sgSayEnd(W); else sgLineStart(W); } }
@@ -7639,7 +7643,7 @@ function sgDrawCredits(W) { const S = W.saga, k = S.credits.k, a = Math.min(1, k
   txt('النهاية', VW / 2, 110, { size: 90, weight: 900, color: '#ffd34d', glow: '#ff8a00', glowBlur: 40 }); txt(sgIs2(S.ch) ? 'وطاحت الأقنعة… وبقيت العائلة واقفة' : 'وانتهت حرب الخالين… وارتفعت راية العائلة', VW / 2, 180, { size: 26, weight: 800, color: '#fff' });
   const R = sgIs2(S.ch) ? ['nasser', 'hamad', 'abd', 'inv', 'malali', 'adel', 'salah', 'captain', 'bull', 'chef', 'dajaj', 'teer', 'dragon'] : ['adel', 'salah', 'malali', 'inv', 'dragon', 'chef', 'captain', 'moalem', 'bull', 'dajaj', 'teer', 'gamer', 'abd'];
   R.forEach((r, i) => { const row = i < 7 ? 0 : 1, n = row ? 6 : 7, j = row ? i - 7 : i, x = VW / 2 + ((n - 1) / 2 - j) * 150, y = 290 + row * 160, u = easeOut(clamp((k - 20 - i * 5) / 20, 0, 1)); ctx.globalAlpha = a * u; sgFace(W, r, x, y, 52); txt(sgName(W, r), x, y + 76, { size: 18, weight: 900, color: '#fff' }); });
-  ctx.globalAlpha = a; txt(sgIs2(S.ch) ? '🩸 ختمت «مملكة الدم» — القصتين خلصن!' : '🌑 فتحت: ملالي — مظهر جديد للزعيم', VW / 2, 600, { size: 26, weight: 900, color: '#e0b0ff' }); txt('شكراً إنك لعبت يا ' + CHARS[W.P.ci].name + ' 🎉', VW / 2, 645, { size: 22, weight: 800, color: '#ffd34d' });
+  ctx.globalAlpha = a; txt(sgIs2(S.ch) ? '🛡️ فتحت: القائد المقنّع — مظهر جديد للدكتور' : '🌑 فتحت: ملالي — مظهر جديد للزعيم', VW / 2, 600, { size: 26, weight: 900, color: '#e0b0ff' }); txt('شكراً إنك لعبت يا ' + CHARS[W.P.ci].name + ' 🎉', VW / 2, 645, { size: 22, weight: 800, color: '#ffd34d' });
   if (k > 90 && G.frame % 50 < 34) txt(TOUCH_ON ? 'المس للمتابعة' : 'Enter للمتابعة', VW / 2, VH - 26, { size: 17, weight: 800, color: 'rgba(255,255,255,0.6)' }); ctx.restore(); }
 window.__sagaAPI = { SAGA, sgCast, sagaRestart, cov(base, eff) { const cast = sgCast(base, eff), nm = r => r === 'P' ? CHARS[eff === MALALI ? base : eff].name : r === 'X' ? CHARS[cast.chef].name : SG_TITLE[r] || CHARS[cast[r]].name, miss = new Set();
     for (const x of window.__sagaAPI.texts()) { const t = x.split('|').slice(1).join('|').replace(/\{(\w+)\}/g, (m, r) => nm(r)); for (const sg of voiceSegs(t)) if (!VOX.txt[sg.t]) miss.add(sg.t); } return [...miss]; }, go(ch, st) { const W = G.world; W.saga.ch = ch; W.saga.st = st; W.saga.done = false; W.saga.wait = null; W.saga.say = null; W.saga.card = null; W.saga.choice = W.saga.retry = W.saga.esc = W.saga.credits = W.saga.items = null; sgReplay(W.saga); sgApplyPlace(W); sgStep(W, false); }, talk(r) { const W = G.world, n = W.npcs.find(n => n.sg === r); if (n) { W.map = n.map; sagaTalk(W, n); } return !!n; }, S: () => G.world.saga, tgt: () => sgTarget(G.world), goal: () => sgGoal(G.world), adv(n) { for (let i = 0; i < n; i++) { const W = G.world, D = W.saga.say; if (!D) break; D.i++; if (D.i >= D.L.length) sgSayEnd(W); else sgLineStart(W); } }, texts: () => { const T = new Set(); const add = L => (L || []).forEach(l => T.add(l[0] + '|' + l[1]));
