@@ -144,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.48';
+const GAME_VER = '1.49';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -7211,11 +7211,14 @@ function dlgSpeak(W, D) {
   if (n && !n.cit && n.ci != null && speakRec(text, n.ci, true)) VOX.dlgOn = true;
 }
 // the studio pack loads first; if there is none, the older recorded story voice loads instead
-function proVoices() { if (window.VOICE_PRO) { Object.assign(VOX.txt, window.VOICE_PRO); VOX.pro = true; return; } if (proVoices.s || proVoices.fail) return;
-  const fail = () => { if (proVoices.fail) return; proVoices.fail = true; storyVoices(); if (window.VOICE_STORY) { const L = VOX.waitL; VOX.waitL = null; sgSayAgain(L); } };
-  if (!window.PRO_VOICES) { fail(); return; }   // the build marks the page when a studio pack exists
-  try { const s = document.createElement('script'); s.src = 'pro-voices.js'; s.async = true; s.onerror = fail; document.head.appendChild(s); proVoices.s = s; } catch (e) { fail(); } }
-window.__proVoices = () => { if (window.VOICE_PRO) { Object.assign(VOX.txt, window.VOICE_PRO); VOX.pro = true; } const L = VOX.waitL; VOX.waitL = null; sgSayAgain(L); };
+// the pack comes in a few parts (pro-voices-1.js, -2.js …) so each file stays small; it is used once every part is in
+function proMerge() { const P = window.VOICE_PRO_PARTS || []; for (let i = proMerge.n || 0; i < P.length; i++) Object.assign(VOX.txt, P[i]); proMerge.n = P.length; if (window.VOICE_PRO) Object.assign(VOX.txt, window.VOICE_PRO);
+  if (window.VOICE_PRO || P.length >= (window.PRO_VOICES || 1)) VOX.pro = true; return VOX.pro; }
+function proVoices() { if (proMerge()) return; if (proVoices.s || proVoices.fail) return;
+  const fail = () => { if (proVoices.fail || VOX.pro) return; proVoices.fail = true; storyVoices(); if (window.VOICE_STORY) { const L = VOX.waitL; VOX.waitL = null; sgSayAgain(L); } };
+  if (!window.PRO_VOICES) { fail(); return; }   // the build marks the page with how many parts the studio pack has
+  try { proVoices.s = []; for (let i = 1; i <= window.PRO_VOICES; i++) { const s = document.createElement('script'); s.src = 'pro-voices-' + i + '.js'; s.async = true; s.onerror = fail; document.head.appendChild(s); proVoices.s.push(s); } } catch (e) { fail(); } }
+window.__proVoices = () => { if (!proMerge()) return; const L = VOX.waitL; VOX.waitL = null; sgSayAgain(L); };
 setTimeout(proVoices, 1500);
 // ---- the recording list: every line the game can say, for the voice that says it ----
 function voxEach(fn) {   // fn(tag, text, inPieces, source)

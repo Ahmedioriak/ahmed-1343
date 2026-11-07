@@ -15,11 +15,22 @@ def build(sub, out, title, cfg):
     for l in re.findall(r'<link[^>]*fonts\.(?:googleapis|gstatic)[^>]*>', s): s = s.replace(l, '')
     s = s.replace('</head>', '<style>' + rd('fonts.css') + '</style></head>', 1).replace('src="firebase-config.js"', 'src="' + cfg + '"')
     O = os.path.join(R, out); os.makedirs(O, exist_ok=True)
+    pv = os.path.join(D, *sub, 'voices_pro.js')
+    for f in os.listdir(O):
+        if f.startswith('pro-voices'): os.remove(os.path.join(O, f))
+    if os.path.exists(pv):   # studio voices, split in parts of ~8 MB so every file stays small
+        import json as _j
+        t = open(pv, encoding='utf-8').read(); d = _j.loads(t[t.index('=') + 1:t.index(';if(window.__proVoices)')])
+        parts, cur, sz = [], {}, 0
+        for k, v in d.items():
+            if sz > 8_000_000: parts.append(cur); cur, sz = {}, 0
+            cur[k] = v; sz += len(v)
+        parts.append(cur)
+        for n, part in enumerate(parts, 1): open(os.path.join(O, 'pro-voices-%d.js' % n), 'w', encoding='utf-8').write('(window.VOICE_PRO_PARTS=window.VOICE_PRO_PARTS||[]).push(' + _j.dumps(part, ensure_ascii=False) + ');if(window.__proVoices)window.__proVoices();')
+        s = s.replace('window.PRO_VOICES=1;', 'window.PRO_VOICES=%d;' % len(parts), 1)
     open(os.path.join(O, 'index.html'), 'w', encoding='utf-8').write(s)
     sv = os.path.join(D, *sub, 'voices_story.js')
     if os.path.exists(sv): open(os.path.join(O, 'story-voices.js'), 'w', encoding='utf-8').write(open(sv, encoding='utf-8').read())   # the story's voice, loaded in the background
-    pv = os.path.join(D, *sub, 'voices_pro.js')
-    if os.path.exists(pv): open(os.path.join(O, 'pro-voices.js'), 'w', encoding='utf-8').write(open(pv, encoding='utf-8').read())   # ElevenLabs studio voices (when recorded)
     i = s.index('<script>')
     m = (s[:i] + '<script>window.FORCE_TOUCH=true;</script>\n' + s[i:]).replace('<title>' + title + '</title>', '<title>' + title + ' — جوال</title>', 1).replace('href="manifest.webmanifest"', 'href="manifest-mobile.webmanifest"')
     open(os.path.join(O, 'mobile.html'), 'w', encoding='utf-8').write(m)

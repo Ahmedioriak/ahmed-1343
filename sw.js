@@ -1,6 +1,6 @@
 // معركة الشلة — تشغيل بدون إنترنت (النسخة الأساسية فقط؛ معركة الشلة 2 ما تتأثر)
-const V = 'shilla-v1-48';
-const CORE = ['./', './mobile', './firebase-config.js', './story-voices.js', './manifest.webmanifest', './manifest-mobile.webmanifest',
+const V = 'shilla-v1-49';
+const CORE = ['./', './mobile', './firebase-config.js', './pro-voices-1.js', './pro-voices-2.js', './pro-voices-3.js', './manifest.webmanifest', './manifest-mobile.webmanifest',
   './icons/icon-32.png', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-192.png', './icons/icon-maskable-512.png'];
 const SCOPE = new URL(self.registration.scope);
 const ALT = { './': ['./', './index.html'], './mobile': ['./mobile', './mobile.html'] };
