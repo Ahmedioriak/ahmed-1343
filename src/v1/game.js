@@ -3043,13 +3043,14 @@ function drawCaps(f) { // debug view of hit shapes
 const W3D_CHARS = new Set([1]);
 function w3dLoad() {
   if (w3dLoad.s || window.W3D) return; w3dLoad.s = 1;
-  window.__w3dLoaded = () => { try { W3D.init(window.__W3D_GLB, () => { window.__W3D_GLB = null; }); } catch (e) { w3dLoad.fail = 1; } };
+  window.__w3dLoaded = w3dInit;
   try { const sc = document.createElement('script'); sc.src = 'wahsh3d.js' + (window.M3D_H ? '?h=' + window.M3D_H : ''); sc.async = true; sc.onerror = () => { w3dLoad.fail = 1; }; document.head.appendChild(sc); } catch (e) { w3dLoad.fail = 1; }
 }
+function w3dInit() { if (w3dInit.d || !window.W3D || !window.__W3D_GLB) return; w3dInit.d = 1; try { W3D.init(window.__W3D_GLB, () => { window.__W3D_GLB = null; }); } catch (e) { w3dLoad.fail = 1; } }
 function w3dUse(f) {
   if (!W3D_CHARS.has(f.ci) || f.outfit || SET.m3d === false || w3dLoad.fail) return false;
   if (!window.W3D) { w3dLoad(); return false; }
-  return W3D.ready && !W3D.failed;
+  w3dInit(); return W3D.ready && !W3D.failed;
 }
 window.__w3d = () => ({ loaded: !!window.W3D, ready: !!(window.W3D && W3D.ready), failed: !!(window.W3D && W3D.failed) || !!w3dLoad.fail });
 function drawFighter(f, opts = {}) {
