@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>تسجيل أصوات معركة الشلة — ElevenLabs</title>
+<title>تسجيل أصوات معركة الشلة</title>
 <style>
   :root { --bg: #0d0f1a; --card: #171a2b; --line: #2a2f48; --gold: #ffd34d; --txt: #eef0f8; --mut: #9aa0bd; --ok: #7dffb0; --bad: #ff7a7a; }
   * { box-sizing: border-box; }
@@ -36,11 +36,15 @@
 <body>
 <main>
   <h1>🎙️ تسجيل أصوات معركة الشلة</h1>
-  <p class="sub">هالصفحة تسجّل كل كلام اللعبة بأصوات ElevenLabs من جهازك. المفتاح يظل في جهازك وما ينرسل لأي مكان غير ElevenLabs.</p>
+  <p class="sub">هالصفحة تسجّل كل كلام اللعبة بأصوات احترافية من جهازك (Fish Audio أو ElevenLabs). المفتاح يظل في جهازك وما ينرسل إلا للموقع نفسه.</p>
 
   <section>
-    <h2>١) مفتاح ElevenLabs</h2>
-    <label for="key">API Key (من ElevenLabs ← Developers ← API Keys)</label>
+    <h2>١) الموقع والمفتاح</h2>
+    <div class="row" style="margin-bottom:10px">
+      <div><label for="prov">الموقع</label>
+        <select id="prov"><option value="fish">Fish Audio — مجاني (موديل s2.1-pro-free)</option><option value="eleven">ElevenLabs — باقة Starter</option></select></div>
+    </div>
+    <label for="key" id="keyLabel">API Key</label>
     <div class="row">
       <input id="key" type="password" autocomplete="off" placeholder="sk_...">
       <button class="ghost" id="check" style="flex:0 0 auto">تحقق من الرصيد</button>
@@ -56,7 +60,7 @@
     <table id="cast"><thead><tr><th>الدور</th><th>الصوت</th><th>Voice ID</th><th>جمل</th><th></th></tr></thead><tbody></tbody></table>
     <div class="row" style="margin-top:10px">
       <div><label for="model">الموديل</label>
-        <select id="model"><option value="eleven_multilingual_v2">Multilingual v2 (ثابت وواضح — ننصح فيه)</option><option value="eleven_v3">Eleven v3 (معبّر أكثر)</option></select></div>
+        <select id="model"></select></div>
     </div>
   </section>
 
@@ -8775,22 +8779,23 @@
 }
 ];</script>
 <script>
-const CAST = {
-  nar: ['الراوي', 'Hasan', '6wsXez7Nsh9HQSbtqwIK', [0.55, 0.80, 0.20]],
-  old: ['الجد والكبار', 'RAED', 'IK7YYZcSpmlkjKrQxbSn', [0.50, 0.80, 0.30]],
-  dark: ['ملالي والظلام', 'Abdullah – Dramatic Bass', 'XdoLPWNt7ytn6BtU4FBf', [0.40, 0.85, 0.45]],
-  boss: ['الرئيس', 'Jeddawi', 'yXEnnEln9armDCyhkXcA', [0.45, 0.85, 0.35]],
-  kw: ['النوخذة', 'Abu Salem', 'G1QUjBCuRBbLbAmYlTgl', [0.45, 0.85, 0.35]],
-  y1: ['شباب ١', 'Sultan', 'rUaPbzcZIu8df8iNL9WZ', [0.42, 0.80, 0.30]],
-  y2: ['شباب ٢', 'Ghawi', 'DANw8bnAVbjDEHwZIoYa', [0.42, 0.80, 0.30]],
-  y3: ['شباب ٣', 'Adeeb', 's83SAGdFTflAwJcAV81K', [0.42, 0.80, 0.30]],
-  y4: ['شباب ٤', 'Faisal Ali', 'H48IdiQwyf50CXpP0dy0', [0.42, 0.80, 0.30]],
+const ROLES = { nar: 'الراوي', old: 'الجد والكبار', dark: 'ملالي والظلام', boss: 'الرئيس', kw: 'النوخذة', y1: 'شباب ١', y2: 'شباب ٢', y3: 'شباب ٣', y4: 'شباب ٤' };
+const PROV = {
+  fish: { models: [['s2.1-pro-free', 'S2.1 Pro Free — مجاني'], ['s2.1-pro', 'S2.1 Pro — مدفوع (حوالي دولار للعبة كلها)']], keyHelp: 'API Key (من fish.audio ← API Keys)', cast: {
+    nar: ['علي الغرير — هادي ودافي', '55dcb74336f74b24b921e79ea3bc035a', 1.0], old: ['خليجي متوسط العمر', '084224ecefeb4a9e81a5e4f3c5da0ce3', 0.92], dark: ['خليجي هادي (يتعمّق بعدين)', '4361ea6dc7e5484cb2f011f6ed853eae', 0.95],
+    boss: ['Saudi Souk — واثق', 'b506179f4ff4431784d062b6d8177682', 1.0], kw: ['خليجي معبّر للقصص', '6ce3b6139427459aa731a6bcadecc1d8', 1.0],
+    y1: ['فهد — شاب معبّر', '81182e97b6694c60b111dffd093edbdb', 1.0], y2: ['شاب حماسي', '71c0dcd8739946b0b6b3adb647657302', 1.0], y3: ['شاب ودود (قيمنق)', '1e8ba1d1a3764467bafbac95fa8b52a9', 1.0], y4: ['فهد — شاب سوالف', '4237d15241114f618bb35afcfbdabf04', 1.0] } },
+  eleven: { models: [['eleven_multilingual_v2', 'Multilingual v2 (ثابت وواضح)'], ['eleven_v3', 'Eleven v3 (معبّر أكثر)']], keyHelp: 'API Key (من ElevenLabs ← Developers ← API Keys)', cast: {
+    nar: ['Hasan', '6wsXez7Nsh9HQSbtqwIK', [0.55, 0.80, 0.20]], old: ['RAED', 'IK7YYZcSpmlkjKrQxbSn', [0.50, 0.80, 0.30]], dark: ['Abdullah – Dramatic Bass', 'XdoLPWNt7ytn6BtU4FBf', [0.40, 0.85, 0.45]],
+    boss: ['Jeddawi', 'yXEnnEln9armDCyhkXcA', [0.45, 0.85, 0.35]], kw: ['Abu Salem', 'G1QUjBCuRBbLbAmYlTgl', [0.45, 0.85, 0.35]],
+    y1: ['Sultan', 'rUaPbzcZIu8df8iNL9WZ', [0.42, 0.80, 0.30]], y2: ['Ghawi', 'DANw8bnAVbjDEHwZIoYa', [0.42, 0.80, 0.30]], y3: ['Adeeb', 's83SAGdFTflAwJcAV81K', [0.42, 0.80, 0.30]], y4: ['Faisal Ali', 'H48IdiQwyf50CXpP0dy0', [0.42, 0.80, 0.30]] } },
 };
-const SAMPLE = { nar: 'في مدينة اسمها مملكة الظلال… عاشت عائلة كبيرة، مشهورة بشجاعة رجالها.', old: 'يا هلا ومرحبا بولدي! نوّرت البيت.', dark: 'الظلام ما ينغلب… وأنت ما تدري وش ينتظرك.', boss: 'أنا اللي جمعتكم… وأنا اللي أخذت الكأس.', kw: 'هذا بحري يا ولد. والكأس أمانة عندي.' };
+const prov = () => document.getElementById('prov').value, CAST = new Proxy({}, { get: (o, tag) => PROV[prov()].cast[tag] });
+const SAMPLE0 = 'هلا والله… هذا صوتي في معركة الشلة. يلا نبدأ!', SAMPLE = { nar: 'في مدينة اسمها مملكة الظلال… عاشت عائلة كبيرة، مشهورة بشجاعة رجالها.', old: 'يا هلا ومرحبا بولدي! نوّرت البيت.', dark: 'الظلام ما ينغلب… وأنت ما تدري وش ينتظرك.', boss: 'أنا اللي جمعتكم… وأنا اللي أخذت الكأس.', kw: 'هذا بحري يا ولد. والكأس أمانة عندي.' };
 const $ = id => document.getElementById(id), API = 'https://api.elevenlabs.io/v1';
 let LINES = [], running = false, db = null;
 const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { } } };
-const vid = tag => (store.get('rec-voice-' + tag) || CAST[tag][2]).trim();
+const vid = tag => (store.get('rec-voice-' + prov() + '-' + tag) || CAST[tag][1]).trim();
 const log = (m, c) => { const d = document.createElement('div'); if (c) d.className = c; d.textContent = m; $('log').prepend(d); };
 
 // ---- a tiny database in the browser so a long recording survives a reload
@@ -8798,20 +8803,23 @@ function openDB() { return new Promise((ok, no) => { const r = indexedDB.open('s
 const MEM = new Map();
 const dbGet = k => db ? new Promise(ok => { const r = db.transaction('clips').objectStore('clips').get(k); r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); }) : Promise.resolve(MEM.get(k));
 const dbPut = (k, v) => db ? new Promise(ok => { const t = db.transaction('clips', 'readwrite'); t.objectStore('clips').put(v, k); t.oncomplete = ok; t.onerror = ok; }) : Promise.resolve(MEM.set(k, v));
-const clipKey = (ln, model) => ln.k + '|' + vid(ln.tag) + '|' + model;
+const clipKey = (ln, model) => prov() + '|' + ln.k + '|' + vid(ln.tag) + '|' + model;
 
 async function tts(text, tag, model) {
-  const s = CAST[tag][3], r = await fetch(API + '/text-to-speech/' + encodeURIComponent(vid(tag)) + '?output_format=mp3_44100_128', {
-    method: 'POST', headers: { 'xi-api-key': $('key').value.trim(), 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
-    body: JSON.stringify({ text, model_id: model, voice_settings: { stability: s[0], similarity_boost: s[1], style: s[2], use_speaker_boost: true } }) });
+  const key = $('key').value.trim(); let r;
+  if (prov() === 'fish') r = await fetch('https://api.fish.audio/v1/tts', { method: 'POST', headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'model': model },
+    body: JSON.stringify({ text, reference_id: vid(tag), format: 'mp3', mp3_bitrate: 128, latency: 'normal', prosody: { speed: CAST[tag][2] || 1, volume: 0 } }) });
+  else { const s = CAST[tag][2]; r = await fetch(API + '/text-to-speech/' + encodeURIComponent(vid(tag)) + '?output_format=mp3_44100_128', {
+    method: 'POST', headers: { 'xi-api-key': key, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
+    body: JSON.stringify({ text, model_id: model, voice_settings: { stability: s[0], similarity_boost: s[1], style: s[2], use_speaker_boost: true } }) }); }
   if (!r.ok) { let msg = ''; try { msg = await r.text(); } catch (e) { } const err = new Error(msg || ('HTTP ' + r.status)); err.status = r.status; err.body = msg; throw err; }
-  return await r.blob();
+  const b = await r.blob(); if (b.size < 400) { const err = new Error('empty audio'); err.status = 0; err.body = 'empty audio'; throw err; } return b;
 }
 function explain(e, tag) {
   const b = (e.body || e.message || '') + '';
   if (e.status === 401 && !/quota/.test(b)) return 'المفتاح غلط أو ما له صلاحية Text to Speech.';
-  if (/quota_exceeded/.test(b) || e.status === 402) return 'خلص الرصيد في حسابك.';
-  if (/voice_not_found|voice_does_not_exist/.test(b) || e.status === 404) return 'الصوت «' + CAST[tag][1] + '» مو موجود في حسابك — أضفه من Voice Library (Add to my voices) وكمّل.';
+  if (/quota_exceeded/.test(b) || e.status === 402) return prov() === 'fish' ? 'هالموديل يحتاج رصيد — اختر الموديل المجاني S2.1 Pro Free أو اشحن رصيد API.' : 'خلص الرصيد في حسابك.';
+  if (/voice_not_found|voice_does_not_exist|reference/i.test(b) || e.status === 404) return 'الصوت «' + CAST[tag][0] + '» ما اشتغل — غيّر الـ ID أو أضفه لحسابك وكمّل.';
   if (/free_users_not_allowed|library_voices|subscription/.test(b)) return 'هالصوت يحتاج باقة مدفوعة (Starter أو أعلى).';
   if (e instanceof TypeError) return 'المتصفح ما قدر يوصل لـ ElevenLabs (الإنترنت أو حماية المتصفح).';
   return b.slice(0, 200);
@@ -8819,11 +8827,11 @@ function explain(e, tag) {
 
 function drawCast() {
   const cnt = {}; for (const l of LINES) cnt[l.tag] = (cnt[l.tag] || 0) + 1;
-  $('cast').querySelector('tbody').innerHTML = Object.entries(CAST).map(([tag, c]) => `<tr><td>${c[0]}</td><td>${c[1]}</td><td><input data-tag="${tag}" value="${vid(tag)}"></td><td>${cnt[tag] || 0}</td><td><button class="ghost" data-play="${tag}">🔊 اسمع</button></td></tr>`).join('');
-  $('cast').querySelectorAll('input[data-tag]').forEach(i => i.onchange = () => { const t = i.dataset.tag, v = i.value.trim(); store.set('rec-voice-' + t, v && v !== CAST[t][2] ? v : null); refresh(); });
+  $('cast').querySelector('tbody').innerHTML = Object.keys(ROLES).map(tag => [tag, CAST[tag]]).map(([tag, c]) => `<tr><td>${ROLES[tag]}</td><td>${c[0]}</td><td><input data-tag="${tag}" value="${vid(tag)}"></td><td>${cnt[tag] || 0}</td><td><button class="ghost" data-play="${tag}">🔊 اسمع</button></td></tr>`).join('');
+  $('cast').querySelectorAll('input[data-tag]').forEach(i => i.onchange = () => { const t = i.dataset.tag, v = i.value.trim(); store.set('rec-voice-' + prov() + '-' + t, v && v !== CAST[t][1] ? v : null); refresh(); });
   $('cast').querySelectorAll('button[data-play]').forEach(b => b.onclick = async () => {
     const tag = b.dataset.play; if (!$('key').value.trim()) { alert('حط المفتاح أول'); return; } b.disabled = true;
-    try { const blob = await tts(SAMPLE[tag] || 'هلا والله… هذا صوتي في معركة الشلة. يلا نبدأ!', tag, $('model').value); new Audio(URL.createObjectURL(blob)).play(); }
+    try { const blob = await tts(SAMPLE[tag] || SAMPLE0, tag, $('model').value); new Audio(URL.createObjectURL(blob)).play(); }
     catch (e) { alert(explain(e, tag)); } b.disabled = false; });
 }
 async function refresh() {
@@ -8840,9 +8848,9 @@ async function run() {
   const model = $('model').value, todo = []; for (let i = 0; i < LINES.length; i++) if (!(await dbGet(clipKey(LINES[i], model)))) todo.push(i);
   let done = LINES.length - todo.length, stopErr = null, pos = 0;
   const worker = async () => { while (running && !stopErr && pos < todo.length) { const i = todo[pos++], ln = LINES[i];
-      for (let tr = 0; ; tr++) {
+      for (let tr = 0; ; tr++) {   // 429 = too many at once → wait and retry
         try { const blob = await tts(ln.t, ln.tag, model); await dbPut(clipKey(ln, model), blob); done++; break; }
-        catch (e) { const fatal = e.status === 401 || e.status === 402 || e.status === 404 || /quota_exceeded|voice_not_found|free_users_not_allowed/.test(e.body || '') || e instanceof TypeError;
+        catch (e) { const fatal = e.status === 401 || e.status === 402 || e.status === 404 || (e.status === 400 && /reference|model/i.test(e.body || '')) || /quota_exceeded|voice_not_found|free_users_not_allowed/.test(e.body || '') || e instanceof TypeError;
           if (fatal) { stopErr = explain(e, ln.tag); break; } if (tr >= 4) { log('تخطّى: ' + ln.k + ' — ' + explain(e, ln.tag), 'bad'); break; }
           await new Promise(r => setTimeout(r, 2500 * (tr + 1))); } }
       $('count').textContent = done + ' / ' + LINES.length + ' جملة'; $('prog').style.width = (done * 100 / LINES.length) + '%'; } };
@@ -8868,24 +8876,30 @@ async function makeZip(files) {   // files: [{name, data: Uint8Array}]
 async function download() {
   $('dl').disabled = true; $('status').textContent = 'يجهز الملف…';
   const model = $('model').value, files = [], used = [];
-  for (let i = 0; i < LINES.length; i++) { const b = await dbGet(clipKey(LINES[i], model)); if (b) files.push({ name: String(i + 1).padStart(4, '0') + '.mp3', data: new Uint8Array(await b.arrayBuffer()) }); used.push(Object.assign({}, LINES[i], { v: vid(LINES[i].tag), model })); }
+  for (let i = 0; i < LINES.length; i++) { const b = await dbGet(clipKey(LINES[i], model)); if (b) files.push({ name: String(i + 1).padStart(4, '0') + '.mp3', data: new Uint8Array(await b.arrayBuffer()) }); used.push(Object.assign({}, LINES[i], { v: vid(LINES[i].tag), model, prov: prov() })); }
   files.push({ name: 'lines.json', data: new TextEncoder().encode(JSON.stringify(used)) });
   const z = await makeZip(files), a = document.createElement('a'); a.href = URL.createObjectURL(z); a.download = 'pro-voices-recorded.zip'; document.body.appendChild(a); a.click(); a.remove();
   $('status').innerHTML = '<span class="ok">⬇️ نزل الملف (' + (z.size / 1048576).toFixed(1) + ' MB) — ارسله لـ Claude.</span>'; $('dl').disabled = false;
 }
 $('check').onclick = async () => {
   const k = $('key').value.trim(); if (!k) { alert('حط المفتاح أول'); return; }
+  if (prov() === 'fish') { try { const r = await fetch('https://api.fish.audio/wallet/self/api-credit', { headers: { 'Authorization': 'Bearer ' + k } }); const j = await r.json();
+      $('credit').innerHTML = r.ok ? '<span class="ok">المفتاح يشتغل ✅ — رصيد API: ' + (j.credit != null ? j.credit : '؟') + ' (الموديل المجاني ما يحتاج رصيد)</span>' : '<span class="bad">المفتاح ما اشتغل (' + r.status + ')</span>'; }
+    catch (e) { $('credit').innerHTML = '<span class="bad">ما قدر يوصل لـ Fish Audio من هالمتصفح — جرّب ملف الكمبيوتر.</span>'; } return; }
   try { const r = await fetch(API + '/user/subscription', { headers: { 'xi-api-key': k } }); const j = await r.json();
     if (!r.ok) { $('credit').innerHTML = '<span class="gold">المفتاح يشتغل، بس ما له صلاحية يشوف الرصيد — عادي.</span>'; return; }
     const left = (j.character_limit || 0) - (j.character_count || 0); $('credit').innerHTML = '<span class="ok">الباقة: ' + (j.tier || '؟') + ' — الباقي: ' + left.toLocaleString('en') + ' رصيد</span>'; }
   catch (e) { $('credit').innerHTML = '<span class="bad">ما قدر يوصل لـ ElevenLabs من هالمتصفح.</span>'; }
 };
-$('key').oninput = () => { if ($('remember').checked) store.set('rec-key', $('key').value.trim()); };
-$('remember').onchange = () => store.set('rec-key', $('remember').checked ? $('key').value.trim() : null);
+$('key').oninput = () => { if ($('remember').checked) store.set('rec-key-' + prov(), $('key').value.trim()); };
+$('remember').onchange = () => store.set('rec-key-' + prov(), $('remember').checked ? $('key').value.trim() : null);
 $('go').onclick = run; $('stop').onclick = () => { running = false; $('status').textContent = 'يوقف بعد الجمل اللي قاعد يسجلها…'; };
 $('dl').onclick = download; $('model').onchange = refresh;
+function setProv() { const P = PROV[prov()]; $('model').innerHTML = P.models.map(([v, t]) => `<option value="${v}">${t}</option>`).join(''); $('keyLabel').textContent = P.keyHelp;
+  $('key').value = store.get('rec-key-' + prov()) || ''; $('remember').checked = !!$('key').value; $('credit').textContent = ''; store.set('rec-prov', prov()); if (LINES.length) { drawCast(); refresh(); } }
+$('prov').onchange = setProv;
 (async () => {
-  const k = store.get('rec-key'); if (k) { $('key').value = k; $('remember').checked = true; }
+  if (store.get('rec-prov')) $('prov').value = store.get('rec-prov'); setProv();
   try { db = await openDB(); } catch (e) { log('IndexedDB غير متاح — التسجيل ما ينحفظ لو سكرت الصفحة', 'bad'); }
   try { LINES = window.VOICE_LINES || await (await fetch('voice-lines.json', { cache: 'no-store' })).json(); } catch (e) { $('status').innerHTML = '<span class="bad">ما قدر يحمّل قائمة الجمل (voice-lines.json).</span>'; return; }
   drawCast(); refresh();
