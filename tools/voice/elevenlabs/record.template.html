@@ -105,7 +105,7 @@ const PROV = {
 };
 const prov = () => document.getElementById('prov').value, CAST = new Proxy({}, { get: (o, tag) => PROV[prov()].cast(tag) });
 const SAMPLE0 = 'هلا والله… هذا صوتي في معركة الشلة. يلا نبدأ!', SAMPLE = { nar: 'في مدينة اسمها مملكة الظلال… عاشت عائلة كبيرة، مشهورة بشجاعة رجالها.', old: 'يا هلا ومرحبا بولدي! نوّرت البيت.', dark: 'الظلام ما ينغلب… وأنت ما تدري وش ينتظرك.', boss: 'أنا اللي جمعتكم… وأنا اللي أخذت الكأس.', kw: 'هذا بحري يا ولد. والكأس أمانة عندي.' };
-const $ = id => document.getElementById(id), API = 'https://api.elevenlabs.io/v1';
+const $ = id => document.getElementById(id), API = 'https://api.elevenlabs.io/v1', RELAY = /^https?:$/.test(location.protocol);
 let LINES = [], running = false, db = null;
 const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { } } };
 const vid = tag => (store.get('rec-voice-' + prov() + '-' + tag) || CAST[tag][1]).trim();
@@ -120,8 +120,10 @@ const clipKey = (ln, model) => prov() + '|' + ln.k + '|' + vid(ln.tag) + '|' + m
 
 async function tts(text, tag, model) {
   const key = $('key').value.trim(); let r;
-  if (prov() === 'fish') r = await fetch('https://api.fish.audio/v1/tts', { method: 'POST', headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'model': model },
-    body: JSON.stringify({ text, reference_id: vid(tag), format: 'mp3', mp3_bitrate: 128, latency: 'normal', prosody: { speed: CAST[tag][2] || 1, volume: 0 } }) });
+  if (prov() === 'fish') r = RELAY   // Fish Audio blocks browser pages, so on the game's site the line goes through its own relay (/api/tts)
+    ? await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, text, reference_id: vid(tag), model, speed: CAST[tag][2] || 1 }) })
+    : await fetch('https://api.fish.audio/v1/tts', { method: 'POST', headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'model': model },
+      body: JSON.stringify({ text, reference_id: vid(tag), format: 'mp3', mp3_bitrate: 128, latency: 'normal', prosody: { speed: CAST[tag][2] || 1, volume: 0 } }) });
   else { const s = CAST[tag][2]; r = await fetch(API + '/text-to-speech/' + encodeURIComponent(vid(tag)) + '?output_format=mp3_44100_128', {
     method: 'POST', headers: { 'xi-api-key': key, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
     body: JSON.stringify({ text, model_id: model, voice_settings: { stability: s[0], similarity_boost: s[1], style: s[2], use_speaker_boost: true } }) }); }
@@ -196,7 +198,7 @@ async function download() {
 }
 $('check').onclick = async () => {
   const k = $('key').value.trim(); if (!k) { alert('حط المفتاح أول'); return; }
-  if (prov() === 'fish') { try { const r = await fetch('https://api.fish.audio/wallet/self/api-credit', { headers: { 'Authorization': 'Bearer ' + k } }); const j = await r.json();
+  if (prov() === 'fish') { try { const r = RELAY ? await fetch('/api/fish-credit', { headers: { 'x-fish-key': k } }) : await fetch('https://api.fish.audio/wallet/self/api-credit', { headers: { 'Authorization': 'Bearer ' + k } }); const j = await r.json();
       $('credit').innerHTML = r.ok ? '<span class="ok">المفتاح يشتغل ✅ — رصيد API: ' + (j.credit != null ? j.credit : '؟') + ' (الموديل المجاني ما يحتاج رصيد)</span>' : '<span class="bad">المفتاح ما اشتغل (' + r.status + ')</span>'; }
     catch (e) { $('credit').innerHTML = '<span class="bad">ما قدر يوصل لـ Fish Audio من هالمتصفح — جرّب ملف الكمبيوتر.</span>'; } return; }
   try { const r = await fetch(API + '/user/subscription', { headers: { 'xi-api-key': k } }); const j = await r.json();
