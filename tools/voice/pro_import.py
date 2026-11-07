@@ -17,7 +17,8 @@ def one(a):
     if ln.get('prov') == 'fish':
         if tg in ('c23', 'dark'): pre = 'aresample=44100,asetrate=44100*0.84,aresample=44100,atempo=1.10,aecho=0.8:0.5:55:0.22,'   # Malali: deeper and darker
         elif tg == 'c17': pre = 'aresample=44100,asetrate=44100*0.88,aresample=44100,atempo=1.07,aecho=0.8:0.4:40:0.18,'        # the winged President
-        elif tg == 'myst': pre = 'aresample=44100,asetrate=44100*0.93,aresample=44100,atempo=1.04,aecho=0.8:0.6:90:0.25,'       # the unknown voice
+        elif tg == 'c27': pre = 'aresample=44100,asetrate=44100*0.88,aresample=44100,atempo=1.08,flanger=delay=3:depth=2:speed=0.6,aecho=0.8:0.45:35:0.2,'   # the mask: the inventor's voice through a machine
+        elif tg in ('myst', 'c26'): pre = 'aresample=44100,asetrate=44100*0.93,aresample=44100,atempo=1.04,aecho=0.8:0.6:90:0.25,'       # the unknown voice
         elif tg == 'old': pre = 'aresample=44100,asetrate=44100*0.95,aresample=44100,atempo=1.03,'                              # a little older for the grandpa
     cap = max(3.0, 0.22 * len(ln.get('t', '')) + 1.5)   # a voice model sometimes rambles (long laughs): cut it to a sane length
     subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-af', pre + AF + ',afade=t=out:st=%.2f:d=0.25' % (cap - 0.25), '-t', '%.2f' % cap, '-ac', '1', '-ar', '22050', '-b:a', KBPS, '-compression_level', '0', dst], check=True)

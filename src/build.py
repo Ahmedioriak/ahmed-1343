@@ -47,3 +47,5 @@ open(os.path.join(R, 'admin.html'), 'w', encoding='utf-8').write(a); print('buil
 tp = os.path.join(R, 'tools', 'voice', 'elevenlabs', 'record.template.html'); lp = os.path.join(R, 'voice-lines.json')
 if os.path.exists(tp) and os.path.exists(lp):
     open(os.path.join(R, 'record.html'), 'w', encoding='utf-8').write(open(tp, encoding='utf-8').read().replace('/*VOICE_LINES*/', 'window.VOICE_LINES=' + open(lp, encoding='utf-8').read().strip() + ';', 1)); print('built record.html')
+    ln2 = os.path.join(R, 'voice-lines-new.json')
+    if os.path.exists(ln2): open(os.path.join(R, 'record-new.html'), 'w', encoding='utf-8').write(open(tp, encoding='utf-8').read().replace('/*VOICE_LINES*/', 'window.VOICE_LINES=' + open(ln2, encoding='utf-8').read().strip() + ';', 1)); print('built record-new.html')
