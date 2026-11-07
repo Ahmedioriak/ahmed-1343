@@ -66,6 +66,7 @@
 
   <section>
     <h2>٣) التسجيل</h2>
+    <div class="row" style="margin-bottom:10px"><div><label for="scope">وش تسجّل؟</label><select id="scope"><option value="">كل الشخصيات</option></select></div></div>
     <p style="margin:0 0 10px"><span id="count" class="big">…</span> <small id="chars"></small></p>
     <div class="bar"><div id="prog"></div></div>
     <p id="status" style="margin:10px 0">اضغط «ابدأ التسجيل». تقدر توقف وتكمّل بعدين — اللي تسجّل ينحفظ في هذا الجهاز.</p>
@@ -88,10 +89,10 @@ const ROLES = { nar: 'الراوي والمقدمة', myst: 'صوت الغموض
   c8: 'أبو الدجاج', c9: 'أبو الأسود', c10: 'البوب', c11: 'الطالب', c12: 'العبد', c13: 'القيمر', c14: 'وحش التيرسل', c15: 'النوخذة — الخال عادل', c16: 'الرئيس — الخال صلاح', c17: 'الرئيس المجنّح', c19: 'المبرمج', c20: 'المروض', c21: 'الصياد', c22: 'القنّاص', c23: 'ملالي', town1: 'ناس المدينة ١', town2: 'ناس المدينة ٢' };
 const FISH = {
   nar: ['راوي سينمائي عميق', '7327cb6d9bb249fa9880c60682c6a5ec', 0.97], myst: ['راوي غموض ورعب', '767fb557282646859ce02a04aafa606e', 0.9], old: ['خليجي هادي ورزين', 'db8fb4e48d1d4fc39c38e7534ef37565', 0.92],
-  c0: ['قيادي بطولي', 'a65a8962f4af43b891ba0bd3e97b0126', 1], c1: ['قوي وحماسي', '924ef07fcdbe4463a18a06a9fa8c3416', 1], c2: ['نَفَس معلّق رياضي', 'd74a13c5d81744d9abe43e00cde40f78', 1], c3: ['هادي ومحترف', 'cf9633272b6540ceb25a6ed840d70016', 1],
+  c0: ['قيادي بطولي', 'a65a8962f4af43b891ba0bd3e97b0126', 1], c1: ['قوي وحماسي', '924ef07fcdbe4463a18a06a9fa8c3416', 1], c2: ['شاب خليجي حماسي ومعبّر', '81182e97b6694c60b111dffd093edbdb', 1], c3: ['هادي ومحترف', 'cf9633272b6540ceb25a6ed840d70016', 1],
   c4: ['حازم وجاد', 'e7895f7487b1465980c0ca5570d3bcc5', 1], c5: ['عميق وثقيل', '0b77c4b0ca794fc789b0d71334043cd5', 1], c6: ['رزين وفيلسوف', '2cf445bf73204eba9d61a8629cffef86', 1], c7: ['هيبة وقوة', 'aded909f5b3445849e66ba8968d93677', 1],
-  c8: ['شاب حماسي سريع', '977af2ed6ff54d0daead24697aa9368a', 1], c9: ['سعودي نشيط', 'dfb0acfd177f4fa4b32ea175183a7879', 1], c10: ['شاب خليجي حماسي', '71c0dcd8739946b0b6b3adb647657302', 1], c11: ['شاب سوالف', '4237d15241114f618bb35afcfbdabf04', 1],
-  c12: ['خليجي هادي وساخر', '8b99362419c74e008df55e4d4dea1d54', 1], c13: ['قيمر خليجي', '1e8ba1d1a3764467bafbac95fa8b52a9', 1], c14: ['طاقة عالية', '622fca40244c4d0da7b961b9d3928151', 1], c15: ['خليجي واثق', 'b506179f4ff4431784d062b6d8177682', 1],
+  c8: ['فهد — شاب خليجي', 'c84354fbd5fc4fd6ae5a126c199d476a', 1], c9: ['سعودي نشيط', 'dfb0acfd177f4fa4b32ea175183a7879', 1], c10: ['شاب خليجي حماسي', '71c0dcd8739946b0b6b3adb647657302', 1], c11: ['شاب سوالف', '4237d15241114f618bb35afcfbdabf04', 1],
+  c12: ['خليجي هادي وساخر', '8b99362419c74e008df55e4d4dea1d54', 1], c13: ['قيمر خليجي', '1e8ba1d1a3764467bafbac95fa8b52a9', 1], c14: ['عميق وقوي (باريتون)', '5b303dac69324529bdbaaf53ed801998', 1], c15: ['خليجي واثق', 'b506179f4ff4431784d062b6d8177682', 1],
   c16: ['عميق مبحوح وآمر', '4a5911e4733b436db82bcc82db8b74a9', 1], c17: ['نفس الرئيس (يتعمّق بعدين)', '4a5911e4733b436db82bcc82db8b74a9', 0.95], c19: ['هادي ومحترف', '4361ea6dc7e5484cb2f011f6ed853eae', 1], c20: ['مسرحي عميق', '6dcac2939cff451db8df6225716c3848', 1],
   c21: ['خليجي ودود', '084224ecefeb4a9e81a5e4f3c5da0ce3', 1], c22: ['واثق ودرامي', 'cf978250bcc0457f984e848563fea70e', 1], c23: ['شرير مهدِّد (يتعمّق بعدين)', 'c27c1c7bf4ab4668bc84bcf52b65d30f', 0.95],
   town1: ['خليجي سوالف', '6ce3b6139427459aa731a6bcadecc1d8', 1], town2: ['فهد — شاب معبّر', '81182e97b6694c60b111dffd093edbdb', 1] };
@@ -107,6 +108,7 @@ const prov = () => document.getElementById('prov').value, CAST = new Proxy({}, {
 const SAMPLE0 = 'هلا والله… هذا صوتي في معركة الشلة. يلا نبدأ!', SAMPLE = { nar: 'في مدينة اسمها مملكة الظلال… عاشت عائلة كبيرة، مشهورة بشجاعة رجالها.', old: 'يا هلا ومرحبا بولدي! نوّرت البيت.', dark: 'الظلام ما ينغلب… وأنت ما تدري وش ينتظرك.', boss: 'أنا اللي جمعتكم… وأنا اللي أخذت الكأس.', kw: 'هذا بحري يا ولد. والكأس أمانة عندي.' };
 const $ = id => document.getElementById(id), API = 'https://api.elevenlabs.io/v1', RELAY = /^https?:$/.test(location.protocol);
 let LINES = [], running = false, db = null;
+const ACT = () => { const sc = document.getElementById('scope').value; if (!sc) return LINES; const set = new Set(sc.split(',')); return LINES.filter(l => set.has(l.tag)); };
 const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { } } };
 const vid = tag => (store.get('rec-voice-' + prov() + '-' + tag) || CAST[tag][1]).trim();
 const log = (m, c) => { const d = document.createElement('div'); if (c) d.className = c; d.textContent = m; $('log').prepend(d); };
@@ -151,29 +153,29 @@ function drawCast() {
 }
 async function refresh() {
   const model = $('model').value; let have = 0, chars = 0, left = 0;
-  for (const ln of LINES) { if (await dbGet(clipKey(ln, model))) have++; else left += ln.t.length; chars += ln.t.length; }
-  $('count').textContent = have + ' / ' + LINES.length + ' جملة';
+  for (const ln of ACT()) { if (await dbGet(clipKey(ln, model))) have++; else left += ln.t.length; chars += ln.t.length; }
+  $('count').textContent = have + ' / ' + ACT().length + ' جملة';
   $('chars').textContent = 'الباقي تقريباً ' + left.toLocaleString('en') + ' حرف (من ' + chars.toLocaleString('en') + ')';
-  $('prog').style.width = (LINES.length ? have * 100 / LINES.length : 0) + '%';
+  $('prog').style.width = (ACT().length ? have * 100 / ACT().length : 0) + '%';
   $('dl').disabled = running || have === 0; return { have, left };
 }
 async function run() {
   if (!$('key').value.trim()) { alert('حط مفتاح ElevenLabs أول'); return; }
   running = true; $('go').disabled = true; $('stop').disabled = false; $('dl').disabled = true; $('status').textContent = 'يسجّل… خل الصفحة مفتوحة.';
-  const model = $('model').value, todo = []; for (let i = 0; i < LINES.length; i++) if (!(await dbGet(clipKey(LINES[i], model)))) todo.push(i);
-  let done = LINES.length - todo.length, stopErr = null, pos = 0;
-  const worker = async () => { while (running && !stopErr && pos < todo.length) { const i = todo[pos++], ln = LINES[i];
+  const model = $('model').value, AL = ACT(), todo = []; for (let i = 0; i < AL.length; i++) if (!(await dbGet(clipKey(AL[i], model)))) todo.push(i);
+  let done = AL.length - todo.length, stopErr = null, pos = 0;
+  const worker = async () => { while (running && !stopErr && pos < todo.length) { const i = todo[pos++], ln = AL[i];
       for (let tr = 0; ; tr++) {   // 429 = too many at once → wait and retry
         try { const blob = await tts(ln.t, ln.tag, model); await dbPut(clipKey(ln, model), blob); done++; break; }
         catch (e) { const fatal = e.status === 401 || e.status === 402 || e.status === 404 || (e.status === 400 && /reference|model/i.test(e.body || '')) || /quota_exceeded|voice_not_found|free_users_not_allowed/.test(e.body || '') || e instanceof TypeError;
           if (fatal) { stopErr = explain(e, ln.tag); break; } if (tr >= 4) { log('تخطّى: ' + ln.k + ' — ' + explain(e, ln.tag), 'bad'); break; }
           await new Promise(r => setTimeout(r, 2500 * (tr + 1))); } }
-      $('count').textContent = done + ' / ' + LINES.length + ' جملة'; $('prog').style.width = (done * 100 / LINES.length) + '%'; } };
+      $('count').textContent = done + ' / ' + AL.length + ' جملة'; $('prog').style.width = (done * 100 / AL.length) + '%'; } };
   await Promise.all([worker(), worker(), worker()]);
   running = false; $('go').disabled = false; $('stop').disabled = true;
   const r = await refresh();
   if (stopErr) { $('status').innerHTML = '<span class="bad">⛔ ' + stopErr + '</span>'; log(stopErr, 'bad'); }
-  else if (r.have === LINES.length) $('status').innerHTML = '<span class="ok">✅ خلص التسجيل! نزّل الملف وارسله لـ Claude.</span>';
+  else if (r.have === ACT().length) $('status').innerHTML = '<span class="ok">✅ خلص التسجيل! نزّل الملف وارسله لـ Claude.</span>';
   else $('status').textContent = 'وقّف. اضغط «ابدأ التسجيل» عشان يكمّل.';
 }
 // ---- a plain zip (no compression — mp3 is already small)
@@ -190,10 +192,10 @@ async function makeZip(files) {   // files: [{name, data: Uint8Array}]
 }
 async function download() {
   $('dl').disabled = true; $('status').textContent = 'يجهز الملف…';
-  const model = $('model').value, files = [], used = [];
-  for (let i = 0; i < LINES.length; i++) { const b = await dbGet(clipKey(LINES[i], model)); if (b) files.push({ name: String(i + 1).padStart(4, '0') + '.mp3', data: new Uint8Array(await b.arrayBuffer()) }); used.push(Object.assign({}, LINES[i], { v: vid(LINES[i].tag), model, prov: prov() })); }
+  const model = $('model').value, files = [], used = [], AL = ACT();
+  for (let i = 0; i < AL.length; i++) { const b = await dbGet(clipKey(AL[i], model)); if (b) files.push({ name: String(i + 1).padStart(4, '0') + '.mp3', data: new Uint8Array(await b.arrayBuffer()) }); used.push(Object.assign({}, AL[i], { v: vid(AL[i].tag), model, prov: prov() })); }
   files.push({ name: 'lines.json', data: new TextEncoder().encode(JSON.stringify(used)) });
-  const z = await makeZip(files), a = document.createElement('a'); a.href = URL.createObjectURL(z); a.download = 'pro-voices-recorded.zip'; document.body.appendChild(a); a.click(); a.remove();
+  const z = await makeZip(files), a = document.createElement('a'); a.href = URL.createObjectURL(z); a.download = $('scope').value ? 'voices-' + $('scope').value.replace(/,/g, '-') + '.zip' : 'pro-voices-recorded.zip'; document.body.appendChild(a); a.click(); a.remove();
   $('status').innerHTML = '<span class="ok">⬇️ نزل الملف (' + (z.size / 1048576).toFixed(1) + ' MB) — ارسله لـ Claude.</span>'; $('dl').disabled = false;
 }
 $('check').onclick = async () => {
@@ -217,6 +219,10 @@ $('prov').onchange = setProv;
   if (store.get('rec-prov')) $('prov').value = store.get('rec-prov'); setProv();
   try { db = await openDB(); } catch (e) { log('IndexedDB غير متاح — التسجيل ما ينحفظ لو سكرت الصفحة', 'bad'); }
   try { LINES = window.VOICE_LINES || await (await fetch('voice-lines.json', { cache: 'no-store' })).json(); } catch (e) { $('status').innerHTML = '<span class="bad">ما قدر يحمّل قائمة الجمل (voice-lines.json).</span>'; return; }
+  $('scope').innerHTML = '<option value="">كل الشخصيات</option>' + Object.keys(ROLES).map(t => `<option value="${t}">شخصية وحدة: ${ROLES[t]}</option>`).join('');
+  const h = location.hash.slice(1), hs = h.split(',').filter(t => ROLES[t]);
+  if (hs.length > 1) { const o = document.createElement('option'); o.value = hs.join(','); o.textContent = 'الأصوات اللي تغيّرت: ' + hs.map(t => ROLES[t]).join('، '); $('scope').prepend(o); }
+  if (hs.length) $('scope').value = hs.join(','); $('scope').onchange = refresh;
   drawCast(); refresh();
 })();
 </script>

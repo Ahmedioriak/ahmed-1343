@@ -27,5 +27,8 @@ with cf.ThreadPoolExecutor(8) as ex:
     for k, v in ex.map(one, enumerate(L, 1)):
         if v is None: miss.append(k)
         else: out[k] = v
-open(os.path.join(R, 'src', 'v1', 'voices_pro.js'), 'w', encoding='utf-8').write('window.VOICE_PRO=' + json.dumps(out, ensure_ascii=False) + ';if(window.__proVoices)window.__proVoices();')
+PV = os.path.join(R, 'src', 'v1', 'voices_pro.js')
+if os.environ.get('MERGE') and os.path.exists(PV):   # re-recorded voices replace just their own lines
+    t = open(PV, encoding='utf-8').read(); old = json.loads(t[t.index('=') + 1:t.index(';if(window.__proVoices)')]); old.update(out); print('merged', len(out), 'into', len(old)); out = old
+open(PV, 'w', encoding='utf-8').write('window.VOICE_PRO=' + json.dumps(out, ensure_ascii=False) + ';if(window.__proVoices)window.__proVoices();')
 print('clips', len(out), 'missing', len(miss), 'KB', sum(len(v) for v in out.values()) // 1024); [print(' -', m) for m in miss[:20]]
