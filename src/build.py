@@ -30,6 +30,10 @@ def build(sub, out, title, cfg):
         import hashlib as _h
         H = [_h.md5(_j.dumps(part, ensure_ascii=False).encode()).hexdigest()[:10] for part in parts]   # each part's own fingerprint: the phone keeps a part until it really changes
         s = s.replace('window.PRO_VOICES=1;', 'window.PRO_VOICES=%d;window.PRO_H=%s;' % (len(parts), _j.dumps(H)), 1)
+    m3 = os.path.join(D, *sub, 'wahsh3d.js')   # الوحش's 3D model + renderer, loaded only when he fights
+    if os.path.exists(m3):
+        import hashlib as _h3; t3 = open(m3, 'rb').read(); open(os.path.join(O, 'wahsh3d.js'), 'wb').write(t3)
+        s = s.replace('<script>', '<script>window.M3D_H=%r;</script>\n<script>' % _h3.md5(t3).hexdigest()[:10], 1)
     open(os.path.join(O, 'index.html'), 'w', encoding='utf-8').write(s)
     sv = os.path.join(D, *sub, 'voices_story.js')
     if os.path.exists(sv): open(os.path.join(O, 'story-voices.js'), 'w', encoding='utf-8').write(open(sv, encoding='utf-8').read())   # the story's voice, loaded in the background

@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.65';
+const GAME_VER = '1.66';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -3039,6 +3039,19 @@ function drawCaps(f) { // debug view of hit shapes
   const hb = f.state === 'attack' && f.hitbox(); if (hb && hb.ar !== undefined) { ctx.strokeStyle = '#ff3040'; ctx.lineWidth = hb.ar * 2; ctx.lineCap = 'round'; ctx.globalAlpha = 0.6; ctx.beginPath(); ctx.moveTo(hb.x2, hb.y2); ctx.lineTo(hb.x, hb.y); ctx.stroke(); }
   ctx.restore();
 }
+// ---- 3D fighters: الوحش's model + renderer arrive as wahsh3d.js (≈2.4 MB, cached once by the service worker) ----
+const W3D_CHARS = new Set([1]);
+function w3dLoad() {
+  if (w3dLoad.s || window.W3D) return; w3dLoad.s = 1;
+  window.__w3dLoaded = () => { try { W3D.init(window.__W3D_GLB, () => { window.__W3D_GLB = null; }); } catch (e) { w3dLoad.fail = 1; } };
+  try { const sc = document.createElement('script'); sc.src = 'wahsh3d.js' + (window.M3D_H ? '?h=' + window.M3D_H : ''); sc.async = true; sc.onerror = () => { w3dLoad.fail = 1; }; document.head.appendChild(sc); } catch (e) { w3dLoad.fail = 1; }
+}
+function w3dUse(f) {
+  if (!W3D_CHARS.has(f.ci) || f.outfit || SET.m3d === false || w3dLoad.fail) return false;
+  if (!window.W3D) { w3dLoad(); return false; }
+  return W3D.ready && !W3D.failed;
+}
+window.__w3d = () => ({ loaded: !!window.W3D, ready: !!(window.W3D && W3D.ready), failed: !!(window.W3D && W3D.failed) || !!w3dLoad.fail });
 function drawFighter(f, opts = {}) {
   const R = f.R, J = f.J, k = R.k, p = f.pose;
   const mv = f.mv;
@@ -3049,6 +3062,8 @@ function drawFighter(f, opts = {}) {
   if (f.C.props && !opts.ghost && !opts.refl) { ctx.save(); f.C.props(f, false); ctx.restore(); }
   if (opts.ghost) { ctx.globalAlpha *= 0.32 / opts.ghost; ctx.translate(-f.facing * opts.ghost * 34, 0); }
   let jx = 0; if (f.shakeT > 0) jx = (Math.random() - 0.5) * 8;
+  if (w3dUse(f) && W3D.draw(ctx, f, opts, { frame: G.frame, jx, flash: f.flash > 1, rage: f.rage && !opts.refl && (G.frame % 20 < 10), shadow: f.shadow, dark: f.C.awake })) {
+    ctx.restore(); if (!opts.ghost && !opts.refl) { if (f.C.props) { ctx.save(); f.C.props(f, true); ctx.restore(); } if (f.C.malali || f.bossAs === MALALI) drawMalaliEyes(f); if (f.mech) drawMechFront(f); } return; }
   ctx.translate(f.x + jx, f.hipY);
   ctx.scale(f.facing * k, k);
   ctx.translate(p.dx, p.dy);
@@ -4156,6 +4171,7 @@ window.__mm = { MYST, MASKED };
 // ================= FIGHT =================
 class Fight {
   constructor(c1, c2, mode) {
+    if (W3D_CHARS.has(c1) || W3D_CHARS.has(c2)) w3dLoad();
     this.mode = mode; this.cis = [c1, c2]; this.stage = G.stageId || 'arena';
     this.pads = [pads[0], mode === 'cpu' || mode === 'train' ? new CPUPad(1) : pads[1]]; this.train = mode === 'train'; // training: slot 1 is a still dummy (its CPUPad has no target, so it never presses anything)
     this.f = [new Fighter(0, c1, this.pads[0]), new Fighter(1, c2, this.pads[1])];
