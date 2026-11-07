@@ -300,7 +300,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.47';
+const GAME_VER = '1.48';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -7334,15 +7334,10 @@ window.__sagaAPI = { SAGA, sgCast, sagaRestart, cov(base, eff) { const cast = sg
 // ================= studio voices (ElevenLabs): one voice per role, recorded once and kept inside the game =================
 // The pack (pro-voices.js → window.VOICE_PRO) holds clips keyed «tag|sentence». A line first looks for its speaker's studio
 // voice — whole sentence first, then sentence pieces split around names — and only falls back to the old voice when missing.
-const VOX_CAST = {
-  nar: ['الراوي', '6wsXez7Nsh9HQSbtqwIK', 'Hasan'], old: ['الجد والكبار', 'IK7YYZcSpmlkjKrQxbSn', 'RAED'], dark: ['ملالي والظلام', 'XdoLPWNt7ytn6BtU4FBf', 'Abdullah – Dramatic Bass'],
-  boss: ['الرئيس', 'yXEnnEln9armDCyhkXcA', 'Jeddawi'], kw: ['النوخذة', 'G1QUjBCuRBbLbAmYlTgl', 'Abu Salem'],
-  y1: ['شباب ١', 'rUaPbzcZIu8df8iNL9WZ', 'Sultan'], y2: ['شباب ٢', 'DANw8bnAVbjDEHwZIoYa', 'Ghawi'], y3: ['شباب ٣', 's83SAGdFTflAwJcAV81K', 'Adeeb'], y4: ['شباب ٤', 'H48IdiQwyf50CXpP0dy0', 'Faisal Ali'],
-};
-const VOX_YOUNG = ['y1', 'y2', 'y3', 'y4'];
-function voxTag(who) {
-  if (typeof who === 'string') return who; if (who === 99) return 'nar'; if (who === 98 || who === 96 || who === MALALI) return 'dark'; if (who === 97) return 'old';
-  if (who === NOKH) return 'kw'; if (who === RAIS || who === RAIS2) return 'boss'; return VOX_YOUNG[((who | 0) % 4 + 4) % 4];
+const VOX_TOWN = ['town1', 'town2', 'old'];
+function voxTag(who) {   // one voice per hero; the narrator, the mystery voice, the grandpa and the townspeople have their own
+  if (typeof who === 'string') return who; if (who === 99) return 'nar'; if (who === 98 || who === 96) return 'myst'; if (who === 97) return 'old';
+  if (who === CHEF) return 'c1'; return 'c' + (who | 0);
 }
 // the studio pieces of a line for one voice, or null when any piece is missing
 function voxProKeys(text, tag) {
@@ -7367,7 +7362,7 @@ function voxPlay(segs, rate, stopPrev) {
 // world talk boxes speak too: the gang, the grandpa, townspeople and vendors
 function dlgSpeak(W, D) {
   if (!SET.voice || muted || !AC) return; const text = D.lines && D.lines[D.i]; if (!text) return; const n = D.n;
-  const tags = D.jadd ? ['old'] : n && n.cit ? (n.role === 'karakman' ? ['old'] : n.role === 'ice' ? ['y3'] : VOX_YOUNG.concat('old')) : n && n.ci != null ? [voxTag(n.ci)] : ['nar'];
+  const tags = D.jadd ? ['old'] : n && n.cit ? (n.role === 'karakman' ? ['old'] : n.role === 'ice' ? ['town2'] : VOX_TOWN) : n && n.ci != null ? [voxTag(n.ci)] : ['nar'];
   for (const tg of tags) { const k = voxProKeys(text, tg); if (k) { VOX.dlgOn = true; voxPlay(k, 1, true); return; } }
   if (n && !n.cit && n.ci != null && speakRec(text, n.ci, true)) VOX.dlgOn = true;
 }
@@ -7384,20 +7379,21 @@ function voxEach(fn) {   // fn(tag, text, inPieces, source)
   // «حرب الخالين»: whole sentences (lines that name the player go in pieces, so each name is recorded once per voice)
   for (const [base, eff] of COMBOS) { const cast = sgCast(base, eff), nm = r => r === 'P' ? CHARS[eff === MALALI ? base : eff].name : r === 'X' ? CHARS[cast.chef].name : SG_TITLE[r] || CHARS[cast[r]].name;
     for (const x of window.__sagaAPI.texts()) { const who = x.split('|')[0], raw = x.split('|').slice(1).join('|'), t = raw.replace(/\{(\w+)\}/g, (m, r) => nm(r));
-      fn(who === 'N' ? 'nar' : who === '?' ? 'dark' : who === 'jadd' ? 'old' : voxTag(who === 'P' ? eff : cast[who]), t, raw.includes('{P}'), 'saga'); } }
+      fn(who === 'N' ? 'nar' : who === '?' ? 'myst' : who === 'jadd' ? 'old' : voxTag(who === 'P' ? eff : cast[who]), t, raw.includes('{P}'), 'saga'); } }
   // the arcade story: names change with every pairing → pieces around the names
   const S0 = G.story; try { for (let pc = 0; pc < NCH; pc++) for (let o = 0; o < NCH; o++) { if (o === pc) continue; G.story = { pc, opps: [o, o, o, o], ch: 0, lines: [], li: 0 };
       for (let ch = 0; ch < NCHAP; ch++) for (const ph of ['pre', 'post']) { const L = storyScript(ch, ph) || [], oc = storyOpp(ch), shadow = CH_ROLE[ch] === 'shadow';
-        for (const [w, t] of L) fn(w === 'N' ? 'nar' : w === 'P' ? voxTag(pc) : shadow ? 'dark' : voxTag(oc), t, true, 'arcade'); } } } finally { G.story = S0; }
+        for (const [w, t] of L) fn(w === 'N' ? 'nar' : w === 'P' ? voxTag(pc) : shadow ? 'myst' : voxTag(oc), t, true, 'arcade'); } } } finally { G.story = S0; }
   // fights: intros, skills, wins, finishers, quotes
   CHARS.forEach((c, ci) => { const P = PERSONA[ci] || {}, tg = voxTag(ci); ['intro', 'skill', 'win'].forEach(k => (P[k] || []).forEach(x => fn(tg, x, false, 'fight'))); if (c.quote) fn(tg, c.quote, false, 'fight'); if (FIN[ci] && FIN[ci].line) fn(tg, FIN[ci].line, false, 'fight'); if (SKILL2_LINE[ci]) fn(tg, SKILL2_LINE[ci], false, 'fight'); });
-  const own = { sk_wave: 'kw', sk_ship: 'kw', sk_boat: 'kw' };
-  for (const id in BOSS_LINES) { if (['sk_wave', 'sk_ring', 'sk_redshot'].includes(id)) VOX_YOUNG.concat('kw', 'boss', 'dark').forEach(tg => fn(tg, BOSS_LINES[id], false, 'boss')); else fn(own[id] || (/^sk_(void|tendril|shstep|dwave|eclipse)/.test(id) ? 'dark' : 'boss'), BOSS_LINES[id], false, 'boss'); }
+  const own = id => /^sk_(wave|ship|boat)$/.test(id) ? NOKH : /^sk_(eyes|redshot|feathers|tornado|meteor|dive)$/.test(id) ? RAIS2 : /^sk_(void|tendril|shstep|dwave|eclipse)$/.test(id) ? MALALI : RAIS;
+  const heroes = [...new Set(CHARS.map((c, ci) => voxTag(ci)))];
+  for (const id in BOSS_LINES) { if (['sk_wave', 'sk_ring', 'sk_redshot'].includes(id)) heroes.forEach(tg => fn(tg, BOSS_LINES[id], false, 'boss')); else fn(voxTag(own(id)), BOSS_LINES[id], false, 'boss'); }
   // the open world: the gang's greetings, the grandpa, townspeople, vendors
   W_HOME.forEach(h => fn(voxTag(h[0]), h[5], false, 'world'));
   ['يا هلا ومرحبا بولدي! نوّرت البيت.', 'اقعد تغدّى معي… الأكل حار وجاهز', 'تغدّينا اليوم الحمد لله… تعال بكرة نتغدّى سوا.'].forEach(x => fn('old', x, false, 'world'));
-  CIT_LINES.forEach((x, i) => fn(VOX_YOUNG.concat('old')[i % 5], x, false, 'world'));
-  fn('old', 'كرك حار على الصبح… يعدّل المزاج!', false, 'world'); fn('y3', 'آيس كريم بارد! تبي فانيلا ولا شوكولاتة؟', false, 'world');
+  CIT_LINES.forEach((x, i) => fn(VOX_TOWN[i % 3], x, false, 'world'));
+  fn('old', 'كرك حار على الصبح… يعدّل المزاج!', false, 'world'); fn('town2', 'آيس كريم بارد! تبي فانيلا ولا شوكولاتة؟', false, 'world');
 }
 const voxClean = t => String(t).replace(/[\u{1F300}-\u{1FAFF}☀-➿️]/gu, ''), voxSay = r => r.trim().replace(/^[!؟?.,،:؛—"«»\s]+/, '');
 window.__voxManifest = () => { const M = new Map(), put = (tag, k, t, src) => { if (k && !M.has(tag + '|' + k)) M.set(tag + '|' + k, { tag, t: t || k, src }); };
@@ -7405,7 +7401,7 @@ window.__voxManifest = () => { const M = new Map(), put = (tag, k, t, src) => { 
     if (!pieces) { put(tag, voiceNorm(part), voxSay(part), src); return; }
     for (const sg of voiceSegs(part)) put(tag, sg.t, sg.t, src); }));
   // a piece keeps its own punctuation where it can, so questions still sound like questions
-  return [...M.entries()].map(([k, o]) => ({ k, tag: o.tag, v: VOX_CAST[o.tag][1], t: o.t, src: o.src })); };
+  return [...M.entries()].map(([k, o]) => ({ k, tag: o.tag, t: o.t, src: o.src })); };
 window.__voxCov = () => { let n = 0, miss = []; voxEach((tag, text) => { n++; if (!voxProKeys(text, tag)) miss.push(tag + ' | ' + text); }); return { n, miss: [...new Set(miss)] }; };
 
 // ================= الدوري — 8-fighter knockout cup: quarter-finals → semi-finals → final, random draw =================

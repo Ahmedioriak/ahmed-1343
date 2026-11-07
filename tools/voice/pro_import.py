@@ -11,9 +11,12 @@ for i, ln in enumerate(L, 1):
     src = os.path.join(T, '%04d.mp3' % i)
     if not os.path.exists(src) or os.path.getsize(src) < 800: miss.append(ln['k']); continue
     dst = os.path.join(T, 'o%04d.mp3' % i)
-    pre = ''
-    if ln.get('prov') == 'fish' and ln['tag'] == 'dark': pre = 'aresample=44100,asetrate=44100*0.84,aresample=44100,atempo=1.10,aecho=0.8:0.5:55:0.22,'   # deeper and darker for Malali
-    elif ln.get('prov') == 'fish' and ln['tag'] == 'old': pre = 'aresample=44100,asetrate=44100*0.95,aresample=44100,atempo=1.03,'                        # a little older for the grandpa
+    pre, tg = '', ln['tag']
+    if ln.get('prov') == 'fish':
+        if tg in ('c23', 'dark'): pre = 'aresample=44100,asetrate=44100*0.84,aresample=44100,atempo=1.10,aecho=0.8:0.5:55:0.22,'   # Malali: deeper and darker
+        elif tg == 'c17': pre = 'aresample=44100,asetrate=44100*0.88,aresample=44100,atempo=1.07,aecho=0.8:0.4:40:0.18,'        # the winged President
+        elif tg == 'myst': pre = 'aresample=44100,asetrate=44100*0.93,aresample=44100,atempo=1.04,aecho=0.8:0.6:90:0.25,'       # the unknown voice
+        elif tg == 'old': pre = 'aresample=44100,asetrate=44100*0.95,aresample=44100,atempo=1.03,'                              # a little older for the grandpa
     subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-af', pre + AF, '-ac', '1', '-ar', '22050', '-b:a', '40k', '-compression_level', '0', dst], check=True)
     out[ln['k']] = base64.b64encode(open(dst, 'rb').read()).decode()
 open(os.path.join(R, 'src', 'v1', 'voices_pro.js'), 'w', encoding='utf-8').write('window.VOICE_PRO=' + json.dumps(out, ensure_ascii=False) + ';if(window.__proVoices)window.__proVoices();')

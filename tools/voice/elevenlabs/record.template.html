@@ -56,7 +56,7 @@
   </section>
 
   <section>
-    <h2>٢) الأصوات <small>— اسمع كل صوت، وتقدر تغيّره بلصق ID صوت ثاني من Voice Library</small></h2>
+    <h2>٢) الأصوات — كل شخصية بصوت <small>— اسمع كل صوت، وتقدر تغيّره بلصق ID صوت ثاني من مكتبة الموقع</small></h2>
     <table id="cast"><thead><tr><th>الدور</th><th>الصوت</th><th>Voice ID</th><th>جمل</th><th></th></tr></thead><tbody></tbody></table>
     <div class="row" style="margin-top:10px">
       <div><label for="model">الموديل</label>
@@ -84,18 +84,26 @@
 </main>
 <script>/*VOICE_LINES*/</script>
 <script>
-const ROLES = { nar: 'الراوي', old: 'الجد والكبار', dark: 'ملالي والظلام', boss: 'الرئيس', kw: 'النوخذة', y1: 'شباب ١', y2: 'شباب ٢', y3: 'شباب ٣', y4: 'شباب ٤' };
+const ROLES = { nar: 'الراوي والمقدمة', myst: 'صوت الغموض والمجهول', old: 'الجد والكبار', c0: 'الزعيم', c1: 'الوحش (والطباخ)', c2: 'الكابتن', c3: 'الدكتور', c4: 'الحارس', c5: 'البلدوزر', c6: 'المعلّم', c7: 'التنين',
+  c8: 'أبو الدجاج', c9: 'أبو الأسود', c10: 'البوب', c11: 'الطالب', c12: 'العبد', c13: 'القيمر', c14: 'وحش التيرسل', c15: 'النوخذة — الخال عادل', c16: 'الرئيس — الخال صلاح', c17: 'الرئيس المجنّح', c19: 'المبرمج', c20: 'المروض', c21: 'الصياد', c22: 'القنّاص', c23: 'ملالي', town1: 'ناس المدينة ١', town2: 'ناس المدينة ٢' };
+const FISH = {
+  nar: ['راوي سينمائي عميق', '7327cb6d9bb249fa9880c60682c6a5ec', 0.97], myst: ['راوي غموض ورعب', '767fb557282646859ce02a04aafa606e', 0.9], old: ['خليجي هادي ورزين', 'db8fb4e48d1d4fc39c38e7534ef37565', 0.92],
+  c0: ['قيادي بطولي', 'a65a8962f4af43b891ba0bd3e97b0126', 1], c1: ['قوي وحماسي', '924ef07fcdbe4463a18a06a9fa8c3416', 1], c2: ['نَفَس معلّق رياضي', 'd74a13c5d81744d9abe43e00cde40f78', 1], c3: ['هادي ومحترف', 'cf9633272b6540ceb25a6ed840d70016', 1],
+  c4: ['حازم وجاد', 'e7895f7487b1465980c0ca5570d3bcc5', 1], c5: ['عميق وثقيل', '0b77c4b0ca794fc789b0d71334043cd5', 1], c6: ['رزين وفيلسوف', '2cf445bf73204eba9d61a8629cffef86', 1], c7: ['هيبة وقوة', 'aded909f5b3445849e66ba8968d93677', 1],
+  c8: ['شاب حماسي سريع', '977af2ed6ff54d0daead24697aa9368a', 1], c9: ['سعودي نشيط', 'dfb0acfd177f4fa4b32ea175183a7879', 1], c10: ['شاب خليجي حماسي', '71c0dcd8739946b0b6b3adb647657302', 1], c11: ['شاب سوالف', '4237d15241114f618bb35afcfbdabf04', 1],
+  c12: ['خليجي هادي وساخر', '8b99362419c74e008df55e4d4dea1d54', 1], c13: ['قيمر خليجي', '1e8ba1d1a3764467bafbac95fa8b52a9', 1], c14: ['طاقة عالية', '622fca40244c4d0da7b961b9d3928151', 1], c15: ['خليجي واثق', 'b506179f4ff4431784d062b6d8177682', 1],
+  c16: ['عميق مبحوح وآمر', '4a5911e4733b436db82bcc82db8b74a9', 1], c17: ['نفس الرئيس (يتعمّق بعدين)', '4a5911e4733b436db82bcc82db8b74a9', 0.95], c19: ['هادي ومحترف', '4361ea6dc7e5484cb2f011f6ed853eae', 1], c20: ['مسرحي عميق', '6dcac2939cff451db8df6225716c3848', 1],
+  c21: ['خليجي ودود', '084224ecefeb4a9e81a5e4f3c5da0ce3', 1], c22: ['واثق ودرامي', 'cf978250bcc0457f984e848563fea70e', 1], c23: ['شرير مهدِّد (يتعمّق بعدين)', 'c27c1c7bf4ab4668bc84bcf52b65d30f', 0.95],
+  town1: ['خليجي سوالف', '6ce3b6139427459aa731a6bcadecc1d8', 1], town2: ['فهد — شاب معبّر', '81182e97b6694c60b111dffd093edbdb', 1] };
+const EL = { nar: ['Hasan', '6wsXez7Nsh9HQSbtqwIK', [0.55, 0.80, 0.20]], old: ['RAED', 'IK7YYZcSpmlkjKrQxbSn', [0.50, 0.80, 0.30]], dark: ['Abdullah – Dramatic Bass', 'XdoLPWNt7ytn6BtU4FBf', [0.40, 0.85, 0.45]],
+  boss: ['Jeddawi', 'yXEnnEln9armDCyhkXcA', [0.45, 0.85, 0.35]], kw: ['Abu Salem', 'G1QUjBCuRBbLbAmYlTgl', [0.45, 0.85, 0.35]], y1: ['Sultan', 'rUaPbzcZIu8df8iNL9WZ', [0.42, 0.80, 0.30]],
+  y2: ['Ghawi', 'DANw8bnAVbjDEHwZIoYa', [0.42, 0.80, 0.30]], y3: ['Adeeb', 's83SAGdFTflAwJcAV81K', [0.42, 0.80, 0.30]], y4: ['Faisal Ali', 'H48IdiQwyf50CXpP0dy0', [0.42, 0.80, 0.30]] };
+const elFor = tag => EL[tag === 'myst' || tag === 'c23' ? 'dark' : tag === 'c16' || tag === 'c17' ? 'boss' : tag === 'c15' ? 'kw' : tag === 'town1' ? 'y1' : tag === 'town2' ? 'y2' : EL[tag] ? tag : 'y' + ((+tag.slice(1) || 0) % 4 + 1)];
 const PROV = {
-  fish: { models: [['s2.1-pro-free', 'S2.1 Pro Free — مجاني'], ['s2.1-pro', 'S2.1 Pro — مدفوع (حوالي دولار للعبة كلها)']], keyHelp: 'API Key (من fish.audio ← API Keys)', cast: {
-    nar: ['علي الغرير — هادي ودافي', '55dcb74336f74b24b921e79ea3bc035a', 1.0], old: ['خليجي متوسط العمر', '084224ecefeb4a9e81a5e4f3c5da0ce3', 0.92], dark: ['خليجي هادي (يتعمّق بعدين)', '4361ea6dc7e5484cb2f011f6ed853eae', 0.95],
-    boss: ['Saudi Souk — واثق', 'b506179f4ff4431784d062b6d8177682', 1.0], kw: ['خليجي معبّر للقصص', '6ce3b6139427459aa731a6bcadecc1d8', 1.0],
-    y1: ['فهد — شاب معبّر', '81182e97b6694c60b111dffd093edbdb', 1.0], y2: ['شاب حماسي', '71c0dcd8739946b0b6b3adb647657302', 1.0], y3: ['شاب ودود (قيمنق)', '1e8ba1d1a3764467bafbac95fa8b52a9', 1.0], y4: ['فهد — شاب سوالف', '4237d15241114f618bb35afcfbdabf04', 1.0] } },
-  eleven: { models: [['eleven_multilingual_v2', 'Multilingual v2 (ثابت وواضح)'], ['eleven_v3', 'Eleven v3 (معبّر أكثر)']], keyHelp: 'API Key (من ElevenLabs ← Developers ← API Keys)', cast: {
-    nar: ['Hasan', '6wsXez7Nsh9HQSbtqwIK', [0.55, 0.80, 0.20]], old: ['RAED', 'IK7YYZcSpmlkjKrQxbSn', [0.50, 0.80, 0.30]], dark: ['Abdullah – Dramatic Bass', 'XdoLPWNt7ytn6BtU4FBf', [0.40, 0.85, 0.45]],
-    boss: ['Jeddawi', 'yXEnnEln9armDCyhkXcA', [0.45, 0.85, 0.35]], kw: ['Abu Salem', 'G1QUjBCuRBbLbAmYlTgl', [0.45, 0.85, 0.35]],
-    y1: ['Sultan', 'rUaPbzcZIu8df8iNL9WZ', [0.42, 0.80, 0.30]], y2: ['Ghawi', 'DANw8bnAVbjDEHwZIoYa', [0.42, 0.80, 0.30]], y3: ['Adeeb', 's83SAGdFTflAwJcAV81K', [0.42, 0.80, 0.30]], y4: ['Faisal Ali', 'H48IdiQwyf50CXpP0dy0', [0.42, 0.80, 0.30]] } },
+  fish: { models: [['s2.1-pro-free', 'S2.1 Pro Free — مجاني'], ['s2.1-pro', 'S2.1 Pro — مدفوع (حوالي دولار للعبة كلها)']], keyHelp: 'API Key (من fish.audio ← API Keys)', cast: tag => FISH[tag] },
+  eleven: { models: [['eleven_multilingual_v2', 'Multilingual v2 (ثابت وواضح)'], ['eleven_v3', 'Eleven v3 (معبّر أكثر)']], keyHelp: 'API Key (من ElevenLabs ← Developers ← API Keys)', cast: elFor },
 };
-const prov = () => document.getElementById('prov').value, CAST = new Proxy({}, { get: (o, tag) => PROV[prov()].cast[tag] });
+const prov = () => document.getElementById('prov').value, CAST = new Proxy({}, { get: (o, tag) => PROV[prov()].cast(tag) });
 const SAMPLE0 = 'هلا والله… هذا صوتي في معركة الشلة. يلا نبدأ!', SAMPLE = { nar: 'في مدينة اسمها مملكة الظلال… عاشت عائلة كبيرة، مشهورة بشجاعة رجالها.', old: 'يا هلا ومرحبا بولدي! نوّرت البيت.', dark: 'الظلام ما ينغلب… وأنت ما تدري وش ينتظرك.', boss: 'أنا اللي جمعتكم… وأنا اللي أخذت الكأس.', kw: 'هذا بحري يا ولد. والكأس أمانة عندي.' };
 const $ = id => document.getElementById(id), API = 'https://api.elevenlabs.io/v1';
 let LINES = [], running = false, db = null;
