@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.56';
+const GAME_VER = '1.57';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -6547,6 +6547,8 @@ function updWorld() {
   W.solid = wSolids(W);
   const hud = wHud();
   // map overlay
+  if (W.exitAsk) { const X = W.exitAsk; X.k++; const yes = tap && Math.abs(tap[0] - (VW / 2 + 120)) < 110 && Math.abs(tap[1] - 430) < 36;
+    if ((ok && X.k > 4) || yes) { W.exitAsk = null; worldSave(); G.world = null; SFX.move(); G.toTitle(); return; } if ((back && X.k > 4) || tap) { W.exitAsk = null; SFX.move(); } return; }
   if (W.mapOpen) { const L = wMapList(); if (p.left || q.left || p.up || q.up) { W.mapSel = (W.mapSel + L.length - 1) % L.length; SFX.move(); } if (p.right || q.right || p.down || q.down) { W.mapSel = (W.mapSel + 1) % L.length; SFX.move(); }
     if (tap) { let hit = -1; L.forEach((id, i) => { const [x, y] = W_MAPPOS[id]; if (Math.abs(tap[0] - x) < 108 && Math.abs(tap[1] - y) < 54) hit = i; }); if (hit >= 0) { if (W.mapSel === hit) { W.mapOpen = false; if (L[hit] !== W.map) worldGo(L[hit], WMAPS[L[hit]].spawn); } else { W.mapSel = hit; SFX.move(); } } else W.mapOpen = false; return; }
     if (ok) { W.mapOpen = false; const id = L[W.mapSel]; if (id !== W.map) worldGo(id, WMAPS[id].spawn); } if (back || anyP('Tab') || p.b2) { W.mapOpen = false; SFX.move(); } return; }
@@ -6568,6 +6570,7 @@ function updWorld() {
   // HUD buttons
   if (tap && hud.hit(tap)) return;
   if (esc) { worldSave(); G.world = null; G.toTitle(); return; }
+  if ((p.back || q.back) && !anyP('KeyT', 'KeyO')) { W.exitAsk = { k: 0 }; SFX.move(); return; }
   if (anyP('Tab') || p.b2) { wOpenMap(W); return; }
   if (anyP('KeyC') || p.c13 || q.c13 || gpTP()) { calOpen(W); return; }
   // talk / use things
@@ -6598,7 +6601,7 @@ function updWorld() {
   const M = WMAPS[W.map], tx = clamp(P.x - VW / 2, 0, Math.max(0, M.W - VW)) - Math.max(0, (VW - M.W) / 2), ty = clamp(P.y - 70 - VH / 2, -200, Math.max(0, M.H - VH)) - Math.max(0, (VH - M.H) / 2);
   if (!W.cam) W.cam = { x: tx, y: ty }; W.cam.x = lerp(W.cam.x, tx, 0.14); W.cam.y = lerp(W.cam.y, ty, 0.14);
 }
-const W_MAPPOS = { diwan: [150, 200], shop: [395, 200], home: [640, 200], rest: [885, 200], jadd: [1130, 200], pitch: [150, 410], beach: [395, 410], fareej: [640, 410], halba: [885, 410], qasr: [1130, 410], base: [395, 615], qalaa: [885, 615] };
+const W_MAPPOS = { nasq: [150, 615], hisn: [1130, 615], diwan: [150, 200], shop: [395, 200], home: [640, 200], rest: [885, 200], jadd: [1130, 200], pitch: [150, 410], beach: [395, 410], fareej: [640, 410], halba: [885, 410], qasr: [1130, 410], base: [395, 615], qalaa: [885, 615] };
 function wHud() {
   const W = G.world, btns = [[70, 52, 'خروج', 'exit'], [190, 52, 'الخريطة 🗺️', 'map'], [310, 52, 'التقويم 📅', 'cal']];
   return { btns, hit(t) { for (const [x, y, , id] of btns) if (Math.abs(t[0] - x) < 62 && Math.abs(t[1] - y) < 34) { if (id === 'exit') { worldSave(); G.world = null; SFX.move(); G.toTitle(); } else if (id === 'cal') calOpen(W); else wOpenMap(W); return true; } return false; } };
@@ -6696,7 +6699,7 @@ function drawWorld0() {
       ctx.save(); ctx.globalAlpha = Math.min(1, (150 - W.msg.k) / 25); ctx.fillStyle = 'rgba(0,0,0,0.7)'; rrect(mx - mw / 2, my - 26, mw, 50, 25); ctx.fill(); txt(W.msg.t, mx, my, { size: 24, weight: 900, color: W.msg.c || '#fff' }); ctx.restore(); }
     if (W.toast && W.toast.k < 330) { ctx.font = `900 24px ${FA}`; const tw = Math.min(VW - 120, ctx.measureText(W.toast.t).width + 70); let ty = Math.max(224, mw ? my + 78 : 0), tx = slot(tw, ty - 28, VW - 16); if (tx == null) { tx = VW / 2; ty = Math.max(ty, gB + 42); }
       ctx.save(); ctx.globalAlpha = Math.min(1, (330 - W.toast.k) / 30, W.toast.k / 10); ctx.fillStyle = 'rgba(40,24,0,0.88)'; rrect(tx - tw / 2, ty - 28, tw, 54, 27); ctx.fill(); ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 3; ctx.stroke(); txt(W.toast.t, tx, ty, { size: 24, weight: 900, color: '#ffd34d' }); ctx.restore(); } }
-  if (!TOUCH_ON && W.t < 400) txt(gpOn() ? (B => 'العصا: تمشي · ' + B.x + ' تكلّم · ' + B.t + ' الخريطة · ' + B.l1 + ' أو ' + B.tp + ': التقويم 📅')(padLbl()) : 'WASD / الأسهم: تمشي · Enter: تكلّم · Tab: الخريطة · C: التقويم · Esc: خروج', VW / 2, VH - 22, { size: 17, weight: 800, color: 'rgba(255,255,255,0.8)', stroke: '#000', sw: 4 });
+  if (!TOUCH_ON && W.t < 400) txt(gpOn() ? (B => 'العصا: تمشي · ' + B.x + ' تكلّم · ' + B.t + ' الخريطة · ' + B.l1 + ' أو ' + B.tp + ': التقويم 📅 · ' + B.o + ' خروج')(padLbl()) : 'WASD / الأسهم: تمشي · Enter: تكلّم · Tab: الخريطة · C: التقويم · Esc: خروج', VW / 2, VH - 22, { size: 17, weight: 800, color: 'rgba(255,255,255,0.8)', stroke: '#000', sw: 4 });
   }
   if (W.dlg) drawWorldDlg(W);
   if (W.menu) { const Mn = W.menu, n = Mn.items.length, y0 = VH / 2 - n * 35 - 10, P1 = profCur(); ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, VW, VH);
@@ -6710,6 +6713,9 @@ function drawWorld0() {
   if (W.sleep) { const k = W.sleep.k, a = k < 30 ? k / 30 : k < 70 ? 1 : (100 - k) / 30; ctx.fillStyle = `rgba(2,4,14,${clamp(a, 0, 1)})`; ctx.fillRect(0, 0, VW, VH);
     if (k > 20 && k < 85) { ctx.save(); ctx.globalAlpha = clamp(a, 0, 1); for (let i = 0; i < 3; i++) txt('z', VW / 2 - 30 + i * 34, VH / 2 - i * 30 - (k % 30), { size: 40 + i * 12, weight: 900, color: '#9fd8ff', rtl: false }); txt(W.sleep.night ? '💤 تصبح على خير…' : '💤 قيلولة…', VW / 2, VH / 2 + 80, { size: 30, weight: 900, color: '#fff' }); ctx.restore(); } }
   if (W.mapOpen) drawWorldMap(W);
+  if (W.exitAsk) { ctx.fillStyle = 'rgba(3,4,10,0.75)'; ctx.fillRect(0, 0, VW, VH); ctx.fillStyle = 'rgba(14,16,30,0.97)'; rrect(VW / 2 - 300, 250, 600, 230, 22); ctx.fill(); ctx.strokeStyle = '#ff3b4a'; ctx.lineWidth = 3; ctx.stroke();
+    txt('تبي تطلع من العالم؟', VW / 2, 315, { size: 38, weight: 900, color: '#fff' }); txt('تقدّمك محفوظ 💾', VW / 2, 362, { size: 20, weight: 700, color: '#7dffb0' });
+    const B = gpOn() ? padLbl() : { x: 'Enter', o: 'Esc' }; [[VW / 2 + 120, '✅ إيه، اطلع (' + B.x + ')', 'rgba(230,20,40,0.95)'], [VW / 2 - 120, '↩️ لا، كمّل (' + B.o + ')', 'rgba(255,255,255,0.12)']].forEach(([x, l, c]) => { ctx.fillStyle = c; rrect(x - 110, 410, 220, 54, 16); ctx.fill(); txt(l, x, 438, { size: 20, weight: 900, color: '#fff' }); }); }
   if (W.cal) drawCal(W);
   const fd = W.go ? (W.go.k < 14 ? W.go.k / 14 : (28 - W.go.k) / 14) : W.fade / 30; if (fd > 0) { ctx.fillStyle = `rgba(0,0,0,${clamp(fd, 0, 1)})`; ctx.fillRect(0, 0, VW, VH); }
 }
@@ -6735,7 +6741,7 @@ function drawWorldMap(W) {
     if (goal) txt('📜 القصة هني', x, y + 34, { size: 15, weight: 900, color: '#ffd34d' });
     const who = W.npcs.filter(n => n.map === id && !n.cit); if (id === 'jadd') txt('👴 الجد', x, y + 10, { size: 17, weight: 800, color: '#ffd34d' }); who.slice(0, 5).forEach((n, j) => { const fx = x - 95 + j * 39, f = IMG['face' + (n.ci + 1)]; ctx.save(); ctx.beginPath(); ctx.arc(fx + 17, y + 6, 17, 0, 7); ctx.clip(); if (f) ctx.drawImage(f, fx, y - 11, 34, 34); ctx.restore(); });
     if (!who.length && id !== 'jadd' && !goal) txt('ما في أحد', x, y + 8, { size: 15, color: 'rgba(255,255,255,0.45)' }); });
-  txt(TOUCH_ON ? 'المس منطقة مرتين عشان تروح لها · المس برّا للرجوع' : 'الأسهم للاختيار · Enter تروح · Tab رجوع', VW / 2, VH - 26, { size: 17, weight: 800, color: 'rgba(255,255,255,0.7)' });
+  txt(TOUCH_ON ? 'المس منطقة مرتين عشان تروح لها · المس برّا للرجوع' : (gpOn() ? (B => '✚ للاختيار · ' + B.x + ' تروح · ' + B.o + ' أو ' + B.t + ' رجوع')(padLbl()) : 'الأسهم للاختيار · Enter تروح · Tab رجوع'), VW / 2, VH - 26, { size: 17, weight: 800, color: 'rgba(255,255,255,0.7)' });
 }
 // ================= the living town: calendar, citizens, vendors, eating & drinking =================
 // ---- calendar: day 0 of the world is Saturday 7 November 2026; one game minute = one real second
