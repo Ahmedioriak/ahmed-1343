@@ -19,7 +19,7 @@ for k, voc in todo_main.items():
 json.dump(main, open('clips.json', 'w'))
 for k, voc in D['story'].items():
     if k in main or k in story: continue
-    story[k] = rec(k, voc, '32k'); n += 1
+    story[k] = rec(k, voc, '40k'); n += 1
     if n % 50 == 0: json.dump(story, open('clips_story.json', 'w')); print(n, flush=True)
 json.dump(story, open('clips_story.json', 'w'))
 print('done', n, 'main', len(main), 'story', len(story), 'story KB', sum(len(x) for x in story.values()) // 1024)

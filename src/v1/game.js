@@ -144,7 +144,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.45';
+const GAME_VER = '1.46';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -200,7 +200,7 @@ tcCSS.textContent = `
 #tc .b.ra.ready{background:rgba(200,0,20,.6);border-color:#ff3b4a;color:#fff;filter:none;box-shadow:0 0 18px rgba(255,30,50,.9);animation:raP .6s ease-in-out infinite alternate}
 #tc .b.ra.used{opacity:.35}
 @keyframes raP{from{box-shadow:0 0 8px rgba(255,30,50,.6)}to{box-shadow:0 0 26px rgba(255,60,60,1)}}
-#tc .b.hide{display:none}
+#tc .b.hide,#tc .stk.hide,#tc .knob.hide{display:none}
 #tc .b svg{width:52%;height:52%;overflow:visible}
 #tc .b.pill svg{width:15px;height:15px}
 #tc .b b{font:700 15px Teko,Impact,sans-serif;letter-spacing:.5px}
@@ -314,7 +314,7 @@ tcRoot.addEventListener('pointerdown', e => {
   if (sys) { tPtr.set(e.pointerId, { kind: 'sys', x, y }); if (sys.id === 'pause') TOUCH.pause = true; else tryFS(true); return; }
   if (fsOK() && !window.__rec) tryFS(false);
   if (tcHit(x, y).length) { tPtr.set(e.pointerId, { kind: 'btn', x, y }); tcUpdate(); return; }
-  if (x < innerWidth * 0.45 && y > innerHeight * 0.22 && !uiTapZone((x * DPR - OX) / (SC * DPR), (y * DPR - OY) / (SC * DPR))) {
+  if (!TOUCH.ui && x < innerWidth * 0.45 && y > innerHeight * 0.22 && !uiTapZone((x * DPR - OX) / (SC * DPR), (y * DPR - OY) / (SC * DPR))) {
     if (STK.id !== null) tPtr.delete(STK.id); // a new thumb on the stick always takes over (old one may be a lost touch)
     STK.id = e.pointerId;
     if (Math.hypot(x - STK.cx, y - STK.cy) < STK.R * 1.6) { STK.ox = STK.cx; STK.oy = STK.cy; }
@@ -365,19 +365,25 @@ function enableTouch() {
   if (TOUCH_ON) return; TOUCH_ON = true; tcRoot.classList.add('on'); resize(); tcLayout();
 }
 let tcVisKey = '';
+function tcUiOnly() { try {
+    if (G.scene === 'shop' || G.scene === 'cup' || G.scene === 'story') return true;
+    const W = G.world; if (G.scene === 'world' && W) { if (W.phase === 'pick' || W.dlg || W.menu || W.mapOpen || W.sleep || W.cal) return true; const S = W.saga; if (S && (S.say || S.card || S.choice || S.retry || S.credits)) return true; }
+  } catch (e) { } return false; }
 function tcFrame() {
   if (!TOUCH_ON) return;
   rotEl.classList.toggle('on', innerHeight > innerWidth * 1.05);
   const fight = G.scene === 'fight' && G.fight && !G.fight.paused && !G.fight.showList && !NET.menu;
   const f0 = fight ? G.fight.f[G.mode === 'online' ? NET.slot : 0] : null; // online: the buttons follow my own fighter
-  const key = [fight, G.scene === 'fight', fsOK(), f0 && f0.sk >= SKMAX, f0 && f0.cbCD > 0, f0 && f0.dgCD > 0, f0 && f0.canFin, f0 && f0.rageUsed].join();
-  if (key === tcVisKey) return; tcVisKey = key; tcLayout();
+  const ui = !fight && tcUiOnly();
+  const key = [fight, ui, G.scene === 'fight', fsOK(), f0 && f0.sk >= SKMAX, f0 && f0.cbCD > 0, f0 && f0.dgCD > 0, f0 && f0.canFin, f0 && f0.rageUsed].join();
+  if (key === tcVisKey) return; tcVisKey = key; if (ui && !TOUCH.ui) tcReset(); TOUCH.ui = ui; tcLayout();
   for (const b of TBTN) {
-    let show = !b.fight || fight; if (b.id === 'fs' && !fsOK()) show = false; if (b.id === 'ra') { b.el.classList.toggle('ready', !!(f0 && f0.canFin)); b.el.classList.toggle('used', !!(f0 && f0.rageUsed)); }
+    let show = (!b.fight || fight) && !(ui && b.kind !== 'sys'); if (b.id === 'fs' && !fsOK()) show = false; if (b.id === 'ra') { b.el.classList.toggle('ready', !!(f0 && f0.canFin)); b.el.classList.toggle('used', !!(f0 && f0.rageUsed)); }
     b.el.classList.toggle('hide', !show);
     if (b.id === 'sp') b.el.classList.toggle('full', !!(f0 && f0.sk >= SKMAX));
     if (b.kind === 'cb') b.el.classList.toggle('cd', !!(f0 && (b.id === 'dg' ? f0.dgCD > 0 : f0.cbCD > 0)));
   }
+  STK.base.classList.toggle('hide', ui); STK.knob.classList.toggle('hide', ui);
   tcUpdate();
 }
 try { if (/[?&](m|mobile|touch)(=|&|$)/.test(location.search) || /\/mobile\/?$/.test(location.pathname)) window.FORCE_TOUCH = true; } catch (e) { }
@@ -385,7 +391,7 @@ try { if (window.FORCE_TOUCH || matchMedia('(hover: none) and (pointer: coarse)'
 cv.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') enableTouch(); });
 
 // ================= AUDIO =================
-let AC = null, master = null, sfxG = null, musG = null, NB = null, muted = false;
+let AC = null, master = null, sfxG = null, musG = null, NB = null, muted = false, duckG = null, voxG = null;
 function audioInit() {
   try {
     if (!AC) {
@@ -394,15 +400,38 @@ function audioInit() {
       master = AC.createGain(); master.gain.value = MASTER_VOL * SET.vol; master.connect(comp);
       const soft = AC.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = 5200; soft.Q.value = 0.5; soft.connect(master);
       sfxG = AC.createGain(); sfxG.gain.value = 0.7; sfxG.connect(soft);
-      musG = AC.createGain(); musG.gain.value = musicOn ? MUSIC_VOL : 0; musG.connect(soft);
+      musG = AC.createGain(); musG.gain.value = musicOn ? MUSIC_VOL : 0; duckG = AC.createGain(); duckG.connect(soft); musG.connect(duckG); voxBus();
       const len = AC.sampleRate * 1.5; NB = AC.createBuffer(1, len, AC.sampleRate);
       const d = NB.getChannelData(0); for (let i = 0; i < len; i++) d[i] = RR() * 2 - 1;
       Music.start();
     }
-    if (AC.state === 'suspended') AC.resume();
-    if (!window.__ttsU && window.speechSynthesis) { window.__ttsU = 1; const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); }
+    if (AC.state !== 'running') { try { const r = AC.resume(); if (r && r.catch) r.catch(() => { }); } catch (e) { } }
   } catch (e) { }
 }
+// the voice gets its own little studio chain: no rumble, a lift where Arabic consonants live (so it stays clear on
+// phone and tablet speakers), and the music steps back while someone talks
+function voxBus() { const mob = TOUCH_ON || IS_IOS; voxG = AC.createGain(); voxG.gain.value = mob ? 1.3 : 1;
+  const hp = AC.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 110; hp.Q.value = 0.7;
+  const pr = AC.createBiquadFilter(); pr.type = 'peaking'; pr.frequency.value = 2700; pr.Q.value = 0.9; pr.gain.value = mob ? 4.5 : 2.5;
+  const air = AC.createBiquadFilter(); air.type = 'highshelf'; air.frequency.value = 6500; air.gain.value = mob ? 2.5 : 1.5;
+  voxG.connect(hp); hp.connect(pr); pr.connect(air); air.connect(master); VOX.an = AC.createAnalyser(); VOX.an.fftSize = 2048; air.connect(VOX.an); }
+window.__aud = () => ({ AC, voxG, duckG, VOX, TOUCH, IS_IOS, SILENT_EL });
+function voxDuck(on) { if (!duckG || !AC) return; try { duckG.gain.cancelScheduledValues(AC.currentTime); duckG.gain.setTargetAtTime(on ? 0.28 : 1, AC.currentTime, on ? 0.06 : 0.45); } catch (e) { } }
+// iPhone/iPad only let a page make sound from a real tap (touchend/click, not the first touch), and a page's sound
+// follows the silent switch unless it asks to be "media" like a video. Unlock on every kind of tap, ask for media audio.
+const SILENT_MP3 = 'data:audio/mpeg;base64,' + "SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//NwwAAAAAAAAAAAAEluZm8AAAAPAAAAFgAACbEAHR0dHSgoKCgoMzMzMz09PT09SEhISFNTU1NTXl5eXmlpaWlpc3Nzc35+fn5+iYmJiZSUlJSUnp6enp6pqamptLS0tLS/v7+/ysrKysrU1NTU39/f39/q6urq9fX19fX/////AAAAAExhdmM2MC4zMQAAAAAAAAAAAAAAACQELwAAAAAAAAmxyOFTSgAAAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NCxKMAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NAxKQAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80LEowAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80DEpAAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsSjAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NCxKMAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NAxKQAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80LEowAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80DEpAAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsSjAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NCxKMAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NAxKQAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80LEowAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80DEpAAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsSjAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NCxKMAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
+let SILENT_EL = null;
+function audioUnlock() {
+  audioInit(); if (!AC) return;
+  try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) { }
+  if (AC.state !== 'running') { try { const r = AC.resume(); if (r && r.catch) r.catch(() => { }); } catch (e) { } }
+  if (!audioUnlock.k) { try { const b = AC.createBuffer(1, 1, 22050), s0 = AC.createBufferSource(); s0.buffer = b; s0.connect(AC.destination); s0.start(0); audioUnlock.k = 1; } catch (e) { } }
+  if (IS_IOS && !SILENT_EL && !navigator.audioSession) { try { const a = new Audio(SILENT_MP3); a.loop = true; a.setAttribute('playsinline', ''); a.setAttribute('webkit-playsinline', ''); SILENT_EL = a; const r = a.play(); if (r && r.catch) r.catch(() => { SILENT_EL = null; }); } catch (e) { SILENT_EL = null; } }
+  if (!window.__ttsU && window.speechSynthesis) { window.__ttsU = 1; try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) { } }
+  if (!window.VOICE_STORY && !storyVoices.s) storyVoices();
+}
+for (const ev of ['touchend', 'click', 'pointerup', 'keydown']) document.addEventListener(ev, audioUnlock, { capture: true, passive: true });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && AC && AC.state !== 'running') { try { const r = AC.resume(); if (r && r.catch) r.catch(() => { }); } catch (e) { } } if (document.hidden) voiceStop(); });
 const MASTER_VOL = 0.55, MUSIC_VOL = 0.16;
 const SET = { vol: 1, music: true, fx: true, ui: true, gong: true, voice: true, rumble: true };
 try { Object.assign(SET, JSON.parse(localStorage.getItem('shilla-settings') || '{}')); } catch (e) { }
@@ -2455,19 +2484,22 @@ function voiceSegs(text) {
   return out;
 }
 function voiceBuf(key) {
-  if (VOX.tbufs[key]) return VOX.tbufs[key];
+  const O = VOX.tord || (VOX.tord = []);
+  if (VOX.tbufs[key]) { const i = O.indexOf(key); if (i >= 0) { O.splice(i, 1); O.push(key); } return VOX.tbufs[key]; }
   const b64 = VOX.txt[key]; if (!b64 || !AC) return null;
+  O.push(key); while (O.length > 48) delete VOX.tbufs[O.shift()];
   return (VOX.tbufs[key] = new Promise(ok => { try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); AC.decodeAudioData(u.buffer, ok, () => ok(null)); } catch (e) { ok(null); } }));
 }
-function voiceStop() { for (const s of VOX.cur) { try { s.stop(); } catch (e) { } } VOX.cur = []; }
+function voiceStop() { for (const s of VOX.cur) { try { s.stop(); } catch (e) { } } VOX.cur = []; voxDuck(false); }
+function voicePrefetch(text) { if (!AC || !text) return; for (const sg of voiceSegs(text)) if (VOX.txt[sg.t]) voiceBuf(sg.t); }
 function speakRec(text, who, stopPrev) {
   if (!AC) return false; const segs = voiceSegs(text); if (!segs.length || segs.some(sg => !VOX.txt[sg.t])) return false;
   const tok = (VOX.tok = (VOX.tok || 0) + 1); if (stopPrev) voiceStop();
   Promise.all(segs.map(sg => voiceBuf(sg.t))).then(bufs => {
     if (stopPrev && tok !== VOX.tok) return; if (bufs.some(b => !b)) return;
-    const rate = VOICE_RATE[who] || 1; let t = AC.currentTime + 0.03;
-    bufs.forEach((b, i) => { const s = AC.createBufferSource(); s.buffer = b; s.playbackRate.value = rate; const g = AC.createGain(); g.gain.value = 1.25; s.connect(g); g.connect(master);
-      if (i) t += segs[i].gap; s.start(t); t += b.duration / rate; VOX.cur.push(s); s.onended = () => { VOX.cur = VOX.cur.filter(x => x !== s); }; });
+    const rate = VOICE_RATE[who] || 1; let t = AC.currentTime + 0.03; voxDuck(true);
+    bufs.forEach((b, i) => { const s = AC.createBufferSource(); s.buffer = b; s.playbackRate.value = rate; const g = AC.createGain(); g.gain.value = 1.25; s.connect(g); g.connect(voxG || master);
+      if (i) t += segs[i].gap; s.start(t); t += b.duration / rate; VOX.cur.push(s); s.onended = () => { VOX.cur = VOX.cur.filter(x => x !== s); if (!VOX.cur.length) voxDuck(false); }; });
   });
   return true;
 }
@@ -2493,7 +2525,7 @@ function clipBuf(key) {
 }
 function playClip(key) {
   const buf = clipBuf(key); if (buf === 0) { VOX.pending = key; return true; } if (!buf) return false;
-  const s = AC.createBufferSource(); s.buffer = buf; const g = AC.createGain(); g.gain.value = 1.15; s.connect(g); g.connect(master); s.start(); return true;
+  const s = AC.createBufferSource(); s.buffer = buf; const g = AC.createGain(); g.gain.value = 1.15; s.connect(g); g.connect(voxG || master); s.start(); return true;
 }
 function speakAr(text, pitch = 1, rate = 1, vi = 0) {
   const vs = arVoices(); if (!vs.length) return false;
@@ -6833,8 +6865,9 @@ function sgReplay(S) { S.un = new Set(); for (let c = 0; c <= S.ch && c < SAGA.l
 function wMapList() { const S = G.world && G.world.saga; return Object.keys(WMAPS).filter(id => !WMAPS[id].lock || (S && S.un.has(id))); }
 function wOpenMap(W) { if (W.saga && W.saga.esc) { W.msg = { t: 'ما في وقت! اهرب 🏃', k: 0, c: '#ff8080' }; SFX.move(); return; } const L = wMapList(); W.mapOpen = true; W.mapSel = Math.max(0, L.indexOf(W.map)); SFX.ok(); }
 // the story's recorded voice lives in its own file (story-voices.js) and loads in the background
-function storyVoices() { if (window.VOICE_STORY) { Object.assign(VOX.txt, window.VOICE_STORY); return; } if (storyVoices.s) return; try { const s = document.createElement('script'); s.src = 'story-voices.js'; s.async = true; document.head.appendChild(s); storyVoices.s = s; } catch (e) { } }
-window.__storyVoices = () => { if (window.VOICE_STORY) Object.assign(VOX.txt, window.VOICE_STORY); };
+function storyVoices() { if (window.VOICE_STORY) { Object.assign(VOX.txt, window.VOICE_STORY); return; } if (storyVoices.s) return; try { const s = document.createElement('script'); s.src = 'story-voices.js'; s.async = true; s.onerror = () => { storyVoices.fail = true; const L = VOX.waitL; VOX.waitL = null; sgSayAgain(L); }; document.head.appendChild(s); storyVoices.s = s; } catch (e) { storyVoices.fail = true; } }
+function sgSayAgain(L) { try { const D = G.world && G.world.saga && G.world.saga.say; if (L && D && D.L[D.i] === L) { sgSpeak(L); const nx = D.L[D.i + 1]; if (nx && nx.text) voicePrefetch(nx.text); } } catch (e) { } }
+window.__storyVoices = () => { if (window.VOICE_STORY) Object.assign(VOX.txt, window.VOICE_STORY); const L = VOX.waitL; VOX.waitL = null; sgSayAgain(L); };
 setTimeout(storyVoices, 5000);
 function sagaBegin(W) {
   storyVoices();
@@ -6879,9 +6912,10 @@ function sgLineStart(W) { const S = W.saga, D = S.say, L = D.L[D.i]; D.k = 0; D.
   const fx = Array.isArray(L.fx) ? L.fx[0] : L.fx;
   if (fx === 'boom') { SFX.thud(); SFX.rock(); W.shake = 22; } else if (fx === 'quake') { SFX.rock(); W.shake = 30; } else if (fx === 'dark') SFX.whoosh(0); else if (fx === 'dash') { SFX.whoosh(1); W.shake = 8; } else if (fx === 'hit') { SFX.thud(); W.shake = 14; }
   else if (fx === 'alarm' || fx === 'tracker' || fx === 'phone') SFX.zap(); else if (fx === 'vs') SFX.ok(); else if (fx === 'banner' || fx === 'card') SFX.ready(); else if (fx === 'fog' || fx === 'eyes' || fx === 'mask') SFX.rage();
-  sgSpeak(L); }
-function sgSpeak(L) { if (!SET.voice || muted) return; try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } voiceStop();
-  if (speakRec(L.text, L.vo, true)) return; const T = L.vo === 99 ? [0.95, 0.95] : ((window.VOICE_TTS && window.VOICE_TTS[L.vo]) || [1, 1]); try { speakAr(L.text, T[0], T[1]); } catch (e) { } }
+  sgSpeak(L); const nx = D.L[D.i + 1]; if (nx && nx.text) voicePrefetch(nx.text); }
+function sgSpeak(L) { if (!SET.voice || muted) return; try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } voiceStop(); VOX.waitL = null;
+  if (speakRec(L.text, L.vo, true)) return;
+  if (!window.VOICE_STORY && !storyVoices.fail) { storyVoices(); VOX.waitL = L; return; } const T = L.vo === 99 ? [0.95, 0.95] : ((window.VOICE_TTS && window.VOICE_TTS[L.vo]) || [1, 1]); try { speakAr(L.text, T[0], T[1]); } catch (e) { } }
 function sgSayEnd(W) { const S = W.saga, D = S.say; voiceStop(); try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { } S.say = null; if (D && D.done) D.done(); }
 // ---- story fights
 function sgFight(W, st) { const S = W.saga; worldSave(); W.dlg = null; S.fightLater = false; voiceStop();
@@ -7015,7 +7049,8 @@ function sgDrawPortrait(W, key, cx, flip, on, t) { const im = sgPortraitImg(W, k
   if (key === 'jadd') { if (!on) ctx.globalAlpha = 0.5; drawJadd(ctx, cx, VH + 40, 3.2, G.frame); ctx.restore(); return; }
   if (!im) { ctx.restore(); return; } const pic = on ? im : (im._dk || (im._dk = tinted(im, '#05060c', 0.62))), h = on ? 530 : 500, w = im.width * h / im.height;
   if (flip) { ctx.translate(cx * 2, 0); ctx.scale(-1, 1); } ctx.drawImage(pic, cx - w / 2, VH - h + 10 - rise, w, h); ctx.restore(); }
-function sgDrawSay(W) { const S = W.saga, D = S.say, L = D.L[D.i]; if (!L) return; const t = D.t, fxA = Array.isArray(L.fx) ? L.fx : [L.fx], fx = fxA[0];
+function sgDrawSay(W) { sgDrawSay0(W); if (VOX.waitL) { const a = 0.6 + 0.4 * Math.sin(G.frame * 0.15); ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = 'rgba(8,10,20,0.75)'; rrect(VW / 2 - 150, 62, 300, 38, 19); ctx.fill(); txt('🔊 يحمّل صوت القصة…', VW / 2, 82, { size: 18, weight: 800, color: '#9fe8ff' }); ctx.restore(); } }
+function sgDrawSay0(W) { const S = W.saga, D = S.say, L = D.L[D.i]; if (!L) return; const t = D.t, fxA = Array.isArray(L.fx) ? L.fx : [L.fx], fx = fxA[0];
   ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, VW, VH); { const v = ctx.createRadialGradient(VW / 2, VH / 2, 200, VW / 2, VH / 2, 760); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.6)'); ctx.fillStyle = v; ctx.fillRect(0, 0, VW, VH); }
   if (fx) sgFxBack(W, fx, t);
   const sl = D.slots; for (let i = 0; i < 2; i++) if (sl[i] && sl[i] !== L.who) sgDrawPortrait(W, sl[i], i === 0 ? 260 : VW - 260, i === 1, false, t);
