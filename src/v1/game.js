@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.61';
+const GAME_VER = '1.62';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -7763,6 +7763,7 @@ function sqVoxAll() { const P = new Set(sqVocab()), S = 'زين إني شفتك�
   lines.push('ترى عندي طلب ثاني إذا فاضي… أبي شاي كرك من الفريج', 'هاه؟… لا تنساني');
   for (const L of lines) sqVoxPieces(L).forEach(x => P.add(x)); return [...P]; }
 window.__sqVox = { all: sqVoxAll, pieces: sqVoxPieces };
+window.__sqVoxKeys = t => !!(sqVoxKeys(t, 'town1') && sqVoxKeys(t, 'town2'));
 
 // ================= الدوري — 8-fighter knockout cup: quarter-finals → semi-finals → final, random draw =================
 // up to 8 people pick a fighter each (hot-seat), the empty places are filled by the computer; human vs computer is a normal
