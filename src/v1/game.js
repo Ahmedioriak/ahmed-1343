@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.54';
+const GAME_VER = '1.55';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1379,6 +1379,7 @@ function bossPick(ci, d) {
   if (ci === NOKH) return d > 420 ? (r < 0.6 ? 'sk_wave' : 'sk_ship') : d > 200 ? (r < 0.35 ? 'sk_ship' : r < 0.7 ? 'sk_boat' : 'sk_wave') : (r < 0.5 ? 'sk_boat' : null);
   const pick = L => { let w = 0; for (const [, x] of L) w += x; let q = r * w; for (const [id, x] of L) { q -= x; if (q <= 0) return id; } return L[L.length - 1][0]; };
   if (ci === RAIS) return d < 260 ? pick([['sk_ring', 3], ['sk_stomp', 2], ['sk_cash', 2], ['sk_gold', 1]]) : d < 520 ? pick([['sk_chain', 3], ['sk_ring', 2], ['sk_gold', 2], ['sk_limo', 2], ['sk_cash', 1.5], ['sk_stomp', 1]]) : pick([['sk_limo', 3], ['sk_gold', 2.5], ['sk_cash', 2], ['sk_stomp', 1]]);
+  if (ci === NASSER || ci === HAMAD) return bossPickNH(ci, d, r);
   if (ci === MALALI) return d > 380 ? pick([['sk_void', 3], ['sk_tendril', 3], ['sk_dwave', 2.5], ['sk_shstep', 2], ['sk_eclipse', 1.2]]) : pick([['sk_shstep', 2.5], ['sk_tendril', 2.5], ['sk_dwave', 1.5], ['sk_void', 1.5], ['sk_eclipse', 1]]);
   if (ci === RAIS2) return d > 320 ? pick([['sk_eyes', 2.5], ['sk_redshot', 2], ['sk_feathers', 2.5], ['sk_tornado', 2], ['sk_meteor', 2], ['sk_dive', 1.5]]) : pick([['sk_ring', 2], ['sk_dive', 2], ['sk_meteor', 2], ['sk_eyes', 1.5], ['sk_tornado', 1.5], ['sk_feathers', 1]]);
   return null;
@@ -1390,7 +1391,7 @@ function bossTick(f, opp) {
   if (f.bossCD > 0 || !NEUTRAL.has(f.state) || opp.state === 'down' || opp.state === 'rageVic') return;
   const bci = f.bossAs !== undefined ? f.bossAs : f.ci, id = bossPick(bci, Math.abs(opp.x - f.x));
   if (!id) { f.bossCD = 30; return; }
-  f.startMove(id); f.vx = 0; f.buf = null; f.bossCD = (f.ci === RAIS2 ? 115 : f.ci === NOKH ? 170 : bci === MALALI ? 105 : 160) + ((Math.random() * 70) | 0);
+  f.startMove(id); f.vx = 0; f.buf = null; f.bossCD = (f.ci === RAIS2 ? 115 : f.ci === NOKH ? 170 : bci === NASSER ? 92 : bci === HAMAD ? 100 : bci === MALALI ? 105 : 160) + ((Math.random() * 70) | 0);
   f.talk('skill', BOSS_LINES[id]); F.skBanner = { slot: f.slot, text: BOSS_NAMES[id], t: 0 };
 }
 // ---- drawings
@@ -1872,6 +1873,157 @@ function malaliAssets() { const K = MALALI + 1; for (const k in IMG) { const m =
   if (RIG['1'] && !RIG[String(K)]) RIG[String(K)] = RIG['1'];
   for (const kind of ['face', 'front', 'vs']) { const im = IMG[kind + '1']; if (!im) continue; const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const g = c.getContext('2d'); g.drawImage(im, 0, 0);
     g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(36,4,60,0.6)'; g.fillRect(0, 0, c.width, c.height); const gr = g.createLinearGradient(0, c.height, 0, 0); gr.addColorStop(0, 'rgba(176,48,255,0.35)'); gr.addColorStop(0.6, 'rgba(176,48,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height); IMG[kind + K] = c; } }
+// ================= القصة الثانية: ناصر (زعيم الشر الكبير) وحمد (مساعده) — story-only fighters, never on the select screen =================
+// ناصر: مضرب خشب بيده، ومفتاح كفرات بيده الثانية. حمد: قوة المال والعطور — شنطة الملايين وقارورة العطر.
+const NASSER = CHARS.length;
+CHARS.push({ name: 'ناصر', en: 'NASSER', h: 0.95, tag: 'زعيم الشر الكبير', hp: 1.5, dmg: 1.3, spd: 0.98, color: '#e0102a', stats: [5, 4, 5], quote: 'الشارع… كله لي.', story: 1, nasser: 1, props: nasserProps });
+const HAMAD = CHARS.length;
+CHARS.push({ name: 'حمد', en: 'HAMAD', h: 0.93, tag: 'قوة المال والعطور', hp: 1.32, dmg: 1.2, spd: 0.95, color: '#e8b923', stats: [5, 3, 5], quote: 'كل شي له سعر… وأنت رخيص.', story: 1, hamad: 1, props: hamadProps });
+const NSC = ['#e0102a', '#ff5040', '#2a0a0e', '#ffd0c0'], GOLDC = ['#ffd34d', '#e8b923', '#fff3b0', '#3fa34d'], PERFC = ['#ffe9a8', '#f7c8ff', '#ffd34d', '#ffffff'];
+// ---- held weapons, drawn in world space: the grip sits in the fist and the shaft carries on along the forearm, tipped back a little
+function armLine(f, back, L, tilt) { const J = f.J, e = f.toWorld(back ? J.bE : J.fE), h = f.toWorld(back ? J.bH : J.fH); let dx = h[0] - e[0], dy = h[1] - e[1]; const n = Math.hypot(dx, dy) || 1; dx /= n; dy /= n;
+  const a = -f.facing * tilt, c = Math.cos(a), s = Math.sin(a), rx = dx * c - dy * s, ry = dx * s + dy * c, k = f.R.k;
+  return { g: [h[0] - rx * 18 * k, h[1] - ry * 18 * k], tip: [h[0] + rx * L * k, h[1] + ry * L * k], ang: Math.atan2(ry, rx) }; }
+const batLine = f => armLine(f, false, 235, 0.42);
+function drawBat(g, tip, ang, k) { const L = Math.hypot(tip[0] - g[0], tip[1] - g[1]);
+  ctx.save(); ctx.translate(g[0], g[1]); ctx.rotate(ang);
+  const gr = ctx.createLinearGradient(0, -14 * k, 0, 14 * k); gr.addColorStop(0, '#d9a066'); gr.addColorStop(0.5, '#a8682e'); gr.addColorStop(1, '#5e3714'); ctx.fillStyle = gr;
+  ctx.beginPath(); ctx.moveTo(0, -5 * k); ctx.lineTo(L * 0.45, -6 * k); ctx.quadraticCurveTo(L * 0.8, -13 * k, L, -12 * k); ctx.arc(L, 0, 12 * k, -Math.PI / 2, Math.PI / 2); ctx.quadraticCurveTo(L * 0.8, 13 * k, L * 0.45, 6 * k); ctx.lineTo(0, 5 * k); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(40,20,6,0.7)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#16161a'; ctx.fillRect(-4 * k, -6 * k, L * 0.3, 12 * k); ctx.fillStyle = '#3a3a40'; ctx.fillRect(-7 * k, -7 * k, 6 * k, 14 * k); // tape + knob
+  ctx.strokeStyle = 'rgba(255,230,190,0.45)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(L * 0.4, -3 * k); ctx.lineTo(L * 0.95, -7 * k); ctx.stroke();
+  ctx.restore(); }
+function drawWrench(x, y, ang, k, spin) { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); const L = 120 * k;
+  ctx.strokeStyle = '#2a2c32'; ctx.lineCap = 'round'; ctx.lineWidth = 11 * k; ctx.beginPath(); ctx.moveTo(-L * 0.15, 0); ctx.lineTo(L, 0); ctx.lineTo(L + 2 * k, 30 * k); ctx.stroke();
+  ctx.strokeStyle = '#6d727c'; ctx.lineWidth = 3 * k; ctx.beginPath(); ctx.moveTo(0, -3 * k); ctx.lineTo(L - 4 * k, -3 * k); ctx.stroke();
+  ctx.fillStyle = '#1b1c20'; ctx.beginPath(); ctx.arc(L + 2 * k, 34 * k, 10 * k, 0, 7); ctx.fill(); ctx.fillStyle = '#4a4e57'; ctx.beginPath(); ctx.arc(L + 2 * k, 34 * k, 5 * k, 0, 7); ctx.fill();
+  if (spin) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,80,60,0.35)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(L * 0.45, 8 * k, L * 0.75, 0, 7); ctx.stroke(); }
+  ctx.restore(); }
+function nasserProps(f, front) { if (!f.J || !f.R) return; const k = f.R.k;
+  if (!front) { if (!(G.fight && G.fight.proj.some(q => q.owner === f && q.kind === 'wrench'))) { const w = armLine(f, true, 120, 0.3); drawWrench(w.g[0], w.g[1], w.ang, k); } return; }
+  if (f.state === 'rageVic' || f.batGone) return; const b = batLine(f); drawBat(b.g, b.tip, b.ang, k);
+  if (f.state === 'attack' && f.mv && f.mv.bat && f.mt >= f.mv.st - 2 && f.mt <= f.mv.st + f.mv.ac + 2) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,90,60,0.5)'; ctx.lineWidth = 22 * k; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(b.g[0], b.g[1]); ctx.lineTo(b.tip[0], b.tip[1]); ctx.stroke(); ctx.restore(); } }
+const batHB = f => { if (!f.active()) return null; const b = batLine(f), k = f.R.k; return { x: b.tip[0], y: b.tip[1], x2: b.g[0] + (b.tip[0] - b.g[0]) * 0.3, y2: b.g[1] + (b.tip[1] - b.g[1]) * 0.3, ar: 30 * k + 8, r: 30 * k + 8 }; };
+function drawBriefcase(x, y, rot, k, open) { ctx.save(); ctx.translate(x, y); ctx.rotate(rot); const W = 120 * k, H = 92 * k;
+  ctx.strokeStyle = '#c9a23a'; ctx.lineWidth = 6 * k; ctx.beginPath(); ctx.moveTo(-18 * k, 0); ctx.lineTo(-18 * k, 10 * k); ctx.lineTo(18 * k, 10 * k); ctx.lineTo(18 * k, 0); ctx.stroke(); // handle
+  const g = ctx.createLinearGradient(-W / 2, 0, W / 2, 0); g.addColorStop(0, '#0d0d10'); g.addColorStop(0.5, '#24242a'); g.addColorStop(1, '#0d0d10'); ctx.fillStyle = g; rrect(-W / 2, 10 * k, W, H, 7 * k); ctx.fill();
+  ctx.strokeStyle = '#d8b04a'; ctx.lineWidth = 3 * k; rrect(-W / 2, 10 * k, W, H, 7 * k); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-W / 2, 24 * k); ctx.lineTo(W / 2, 24 * k); ctx.stroke();
+  ctx.fillStyle = '#e8c45a'; ctx.font = `900 ${Math.round(34 * k)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('♛', 0, 62 * k);
+  if (open) { ctx.fillStyle = '#3c9a4a'; for (let i = 0; i < 5; i++) ctx.fillRect(-W / 2 + 10 * k + i * 21 * k, 2 * k - (i % 2) * 6 * k, 18 * k, 12 * k); }
+  ctx.restore(); }
+function drawPerfume(x, y, rot, k, sc = 1) { ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(sc * k, sc * k);
+  const g = ctx.createLinearGradient(-16, 0, 16, 0); g.addColorStop(0, 'rgba(255,214,120,0.9)'); g.addColorStop(0.5, 'rgba(255,245,200,0.95)'); g.addColorStop(1, 'rgba(200,140,40,0.9)'); ctx.fillStyle = g; rrect(-16, -22, 32, 38, 5); ctx.fill();
+  ctx.fillStyle = '#d8a530'; ctx.fillRect(-9, -36, 18, 14); ctx.fillStyle = '#111'; ctx.fillRect(-11, -12, 22, 14); ctx.fillStyle = '#e8c45a'; ctx.font = '900 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('♛', 0, -5);
+  ctx.restore(); }
+function hamadProps(f, front) { if (!f.J || !f.R) return; const k = f.R.k;
+  if (!front) { if (f.caseOpen || f.state === 'rageSeq' || (f.mv && f.mv.brief && f.state === 'attack')) { const h = f.toWorld(f.J.bH); drawBriefcase(h[0], h[1] - 4 * k, Math.sin(G.frame * 0.05) * 0.06, k * 0.9, f.caseOpen); } return; }
+  if (f.state === 'rageVic') return; const h = f.toWorld(f.J.fH), e = f.toWorld(f.J.fE); drawPerfume(h[0] + (h[0] - e[0]) * 0.12, h[1] + (h[1] - e[1]) * 0.12 - 6 * k, Math.atan2(h[1] - e[1], h[0] - e[0]) + Math.PI / 2 - f.facing * 0.2, k, 0.9);
+  if (f.kingT > 0 && G.frame % 3 === 0) FX.push({ t: 'p', x: f.x + rnd(-60, 60), y: -rnd(20, 380), vx: rnd(-0.6, 0.6), vy: -rnd(1.5, 3.5), life: 28, max: 28, c: GOLDC[G.frame % 3], sz: rnd(2, 5) }); }
+// ================= ناصر — moves =================
+const BATUP = { ua: 150, fa: 120, bua: 30, bfa: 120, lean: -10, th: 26, sh: 20, bth: -20, bsh: 10 };   // bat cocked over the shoulder
+const BATHIT = { ua: 86, fa: 0, lean: 26, dx: 18, th: 40, bth: -32, bua: 20, bfa: 140 };
+const batMove = o => M(Object.assign({ limb: null, bat: 1, hitboxFn: batHB, onStep: f => { if (f.mt === f.mv.st - 2) SFX.whoosh(1); } }, o));
+// ضربة الهوم رن — the big swing that sends you flying
+MV.sk_ns_homer = batMove({ name: 'homer', skill: 1, lvl: 'mid', st: 18, ac: 6, rc: 24, dmg: 22, hs: 24, bs: 18, push: 90, stop: 14, p: 1.8, launch: 1,
+  onStep: f => { if (f.mt === 4) SFX.rage(); if (f.mt === 16) SFX.whoosh(1); if (f.mt === 18 && G.fight) G.fight.shake(10); },
+  onHit: (a, d, blk) => { if (blk) return; SFX.thud(); popText('هوم رن! ⚾', d.x, -460, '#ff5040', 46); finRing(d.x, d.hipY - 160, '#ff5040', 220, 16); d.vx = a.facing * 9; },
+  kf: [[0, {}], [10, { ...BATUP, ua: 205, fa: 70, lean: -18, th: 30, bth: -26 }], [18, { ...BATHIT, ua: 70 }], [24, { ...BATHIT, ua: 40, fa: 10, lean: 30 }], [34, {}], [48, null]] });
+// المفتاح الطاير — the lug wrench spins out and comes back like a boomerang
+function wrenchTick(p) { const o = p.owner; if (!o) return; if (p.t === 26) { p.vx = -p.vx * 0.2; p.back = 1; p.spent = false; p.noHit = false; }
+  if (p.back) { const dx = o.x - p.x, dy = (o.hipY - 220) - p.y; p.vx = lerp(p.vx, Math.sign(dx) * 17, 0.18); p.vy = lerp(p.vy, dy * 0.08, 0.2); if (Math.abs(dx) < 50) p.life = 0; }
+  if (p.t % 6 === 0) SFX.whoosh(0); }
+function spawnWrench(f) { SFX.throw(); const w = f.toWorld(f.J.bH);
+  spawnProj({ kind: 'wrench', owner: f, x: w[0], y: w[1] - 30, vx: f.facing * 17, vy: 0, g: 0, r: 34, life: 90, vr: 0.5 * f.facing, tick: wrenchTick, draw: p => drawWrench(p.x, p.y, p.rot, 1.15, 1),
+    m: { dmg: 9, lvl: 'mid', hs: 18, bs: 10, push: 14, stop: 6, p: 1.1 } }); }
+MV.sk2_ns_wrench = { name: 'nwrench', skill: 1, sk2: 1, limb: null, lvl: 'mid', st: 14, ac: 1, rc: 18, p: 1.1, spawnAt: 14, spawn: spawnWrench, projLimit: 1,
+  kf: [[0, {}], [8, { bua: 200, bfa: 60, lean: -12, ua: 40, fa: 120, th: 26, bth: -22 }], [14, { bua: 80, bfa: 4, lean: 22, dx: 10, ua: 40, fa: 120, th: 36, bth: -28 }], [22, {}], [33, null]] };
+// زلزال المضرب — he jumps and smashes the bat into the floor: the ground splits both ways
+MV.sk_ns_slam = batMove({ name: 'nslam', skill: 1, lvl: 'mid', st: 30, ac: 5, rc: 26, dmg: 14, hs: 20, bs: 14, push: 30, stop: 10, p: 1.4, kd: 1,
+  onStep: f => { if (f.mt === 8) { f.vy = -15; f.y = -2; f.jumping = true; SFX.jump(); } if (f.mt === 30) { SFX.thud(); SFX.rock(); if (G.fight) G.fight.shake(20); dust(f.x + f.facing * 120, 18); finRing(f.x + f.facing * 120, -6, '#ff5040', 240, 16); wave(f, { dmg: 12, sp: 13 }); wave(f, { dir: -f.facing, dmg: 12, sp: 13 }); } },
+  kf: [[0, {}], [8, { ...CROUCH }], [14, { ...BATUP, ua: 200, fa: 40, th: 70, sh: 110, bth: 30, bsh: 100 }], [28, { ...BATUP, ua: 210, fa: 30, th: 60, sh: 90 }], [30, { ...PZ.pound, ua: 80, fa: 0 }], [44, { ...PZ.pound, ua: 76, fa: 4 }], [52, {}], [61, null]] });
+// هجمة الشوارع — he charges and lands four bat blows
+MV.sk_ns_rush = M({ name: 'nrush', skill: 1, bat: 1, lvl: 'mid', st: 10, ac: 34, rc: 20, dmg: 5.5, hs: 16, bs: 8, push: 4, stop: 3, p: 1.2, multi: 4, mvx: [[10, 40, 9]], hitboxFn: batHB,
+  onStep: f => { if (f.mt >= 10 && f.mt < 44 && (f.mt - 10) % 8 === 0) SFX.whoosh(1); },
+  poseFn: f => { const t = f.mt - 10; if (t < 0) return G2(BATUP); if (t >= 34) return G2({ ...BATHIT, ua: 60 }); const ph = ((t / 8) | 0) % 2, u = (t % 8) / 8; return G2(ph ? { ...BATHIT, ua: lerp(170, 60, u), fa: lerp(80, 0, u), lean: 24 } : { ...BATHIT, ua: lerp(40, 150, u), fa: lerp(0, 60, u), lean: 18 }); },
+  kf: [[0, {}], [8, BATUP], [44, BATHIT], [52, {}], [64, null]] });
+// الإعصار — the bat whirls around him and hits both sides
+MV.sk_ns_spin = M({ name: 'nspin', skill: 1, bat: 1, lvl: 'mid', st: 12, ac: 36, rc: 22, dmg: 6, hs: 16, bs: 8, push: 10, stop: 3, p: 1.2, multi: 4, mvx: [[12, 48, 3]],
+  hitboxFn: f => f.active() ? { x: f.x, y: f.hipY - 120, r: 190 } : null,
+  onStep: f => { if (f.mt >= 12 && f.mt < 48) { if (f.mt % 6 === 0) { f.facing = -f.facing; SFX.whoosh(1); } if (f.mt % 2 === 0) FX.push({ t: 'ring', x: f.x, y: f.hipY - 120, life: 8, max: 8, c: 'rgba(255,80,60,0.6)', r0: 60, r1: 190 }); } },
+  kf: [[0, {}], [10, BATUP], [12, BATHIT], [48, BATHIT], [56, {}], [70, null]] });
+SKILL_IDS[NASSER] = 'sk_ns_homer'; SKILL_NAMES[NASSER] = 'ضربة الهوم رن';
+SKILL2[NASSER] = 'sk2_ns_wrench'; SKILL2_LINE[NASSER] = 'خذ المفتاح!'; SKILL2_NAMES[NASSER] = 'المفتاح الطاير';
+COMBOS[NASSER] = {
+  '12': ['ضربة المضرب', batMove({ st: 12, ac: 5, rc: 20, dmg: 15, push: 40, p: 1.5, kf: [[0, {}], [8, { ...BATUP, ua: 200, fa: 40 }], [12, { ...BATHIT, ua: 110, fa: 10, lean: 30 }], [17, { ...BATHIT, ua: 60 }], [26, {}], [37, null]] })],
+  '23': ['رمية المفتاح', projMove(12, 18, { bua: 200, bfa: 60, lean: -12, ua: 40, fa: 120 }, { bua: 80, bfa: 4, lean: 22, dx: 10, ua: 40, fa: 120 }, f => { SFX.throw(); const w = f.toWorld(f.J.bH); spawnProj({ kind: 'wrench', owner: f, x: w[0], y: w[1] - 20, vx: f.facing * 19, vy: 0, g: 0, r: 30, life: 60, vr: 0.5 * f.facing, draw: p => drawWrench(p.x, p.y, p.rot, 1.1, 1), m: { dmg: 11, lvl: 'mid', hs: 16, bs: 10, push: 16, stop: 6, p: 1.1 } }); })],
+  '24': ['كسر الركبة', batMove({ lvl: 'low', st: 12, ac: 5, rc: 22, dmg: 13, kd: 1, push: 30, p: 1.4, kf: [[0, {}], [8, { ...CROUCH, ua: 150, fa: 90, lean: 10 }], [12, { ...CROUCH, ua: 40, fa: 0, lean: 40, dx: 10 }], [17, { ...CROUCH, ua: 20, fa: 0, lean: 44 }], [28, {}], [39, null]] })],
+  '13': ['المضرب الطاير', jumpMove({ st: 6, ac: 40, vy: -16, vx: 5, bat: 1, hitboxFn: batHB, airPose: { ...JUMPAIR, ua: 100, fa: 10, lean: 24, th: 60, sh: 100 }, dmg: 14, kd: 1, step: f => { if (f.mt === 12) SFX.whoosh(1); } })],
+  '14': ['وابل المضرب', flurryMove({ st: 6, ac: 28, rc: 16, multi: 5, dmg: 3.4, hs: 14, bs: 7, push: 3, stop: 2, r: 40, bat: 1, hitboxFn: batHB, mvx: [[6, 34, 2]] })],
+  '34': ['ركلة البسطار', M({ st: 12, ac: 4, rc: 20, limb: 'fT', r: 44, dmg: 14, push: 70, kick: 1, p: 1.5, kd: 1, kf: [[0, {}], [8, PZ.stompUp], [12, { th: 90, sh: 0, ft: -40, ffl: 0, lean: -14, dx: 10 }], [16, {}], [36, null]] })],
+};
+// ================= حمد — moves =================
+// شنطة الملايين — the briefcase opens and a storm of notes shoots out
+function cashNote(f, o = {}) { const h = f.toWorld(f.J.bH); spawnProj({ kind: 'cash', owner: f, x: h[0] + f.facing * 40, y: h[1] + 30 + rnd(-30, 30), vx: f.facing * (o.sp || 16) + rnd(-1, 1), vy: rnd(-2.5, 1.5), g: 0.04, r: 26, life: o.life || 46, vr: rnd(-0.3, 0.3), draw: drawCash,
+  m: { dmg: o.dmg || 2.6, lvl: 'mid', hs: 12, bs: 6, push: 4, stop: 2, p: 0.7 } }); }
+MV.sk_hm_case = { name: 'hcase', skill: 1, brief: 1, limb: null, lvl: 'mid', st: 14, ac: 36, rc: 20, p: 1.2, projLimit: 0,
+  onStep: f => { if (f.mt === 2) SFX.click(); if (f.mt === 12) { f.caseOpen = true; SFX.zap(); } const t = f.mt - 14; if (t >= 0 && t < 36 && t % 3 === 0) { cashNote(f, t === 33 ? { dmg: 9, sp: 20 } : {}); if (t % 6 === 0) SFX.throw(); } if (f.mt === 52) f.caseOpen = false; },
+  kf: [[0, {}], [10, { bua: 60, bfa: 60, lean: 6, ua: 40, fa: 120, th: 26, bth: -22 }], [14, { bua: 86, bfa: 10, lean: 12, dx: 8, ua: 40, fa: 120, th: 30, bth: -26 }], [50, { bua: 86, bfa: 10, lean: 12, dx: 8 }], [56, {}], [70, null]] };
+// بخة العطر — a gold cloud that makes you dizzy
+function perfumeHit(a, d, blk) { if (blk) return; popText('دايخ… 💫', d.x, -440, '#f7c8ff', 38); finBurst(d.x, d.hurt.y0 + 30, 14, PERFC, 5, 6); }
+function drawPerfCloud(p) { const k = Math.min(1, p.t / 8) * Math.min(1, (p.life) / 12); ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 6; i++) { const a = p.t * 0.05 + i * 1.05, rr = p.r * (0.55 + 0.25 * Math.sin(p.t * 0.1 + i)), x = p.x + Math.cos(a) * p.r * 0.45, y = p.y + Math.sin(a) * p.r * 0.3;
+    const g = ctx.createRadialGradient(x, y, 2, x, y, rr); g.addColorStop(0, `rgba(255,236,170,${0.45 * k})`); g.addColorStop(0.6, `rgba(247,200,255,${0.22 * k})`); g.addColorStop(1, 'rgba(247,200,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rr, 0, 7); ctx.fill(); }
+  ctx.restore(); }
+function spawnPerfume(f, o = {}) { const h = f.toWorld(f.J.fH); SFX.whoosh(0);
+  for (let i = 0; i < 10; i++) FX.push({ t: 'p', x: h[0], y: h[1] - 10, vx: f.facing * rnd(3, 8), vy: rnd(-2, 1), life: 18, max: 18, c: PERFC[i % 4], sz: rnd(3, 6) });
+  spawnProj({ kind: 'perfume', owner: f, x: h[0] + f.facing * 60, y: h[1] - 20, vx: f.facing * (o.sp || 4.5), vy: 0, g: 0, r: o.r || 70, life: o.life || 70, wide: true, draw: drawPerfCloud,
+    m: { dmg: o.dmg || 6, lvl: 'mid', hs: o.hs || 46, bs: 10, push: 2, stop: 4, p: 0.9, onHit: perfumeHit } }); }
+MV.sk2_hm_spray = { name: 'hspray', skill: 1, sk2: 1, limb: null, lvl: 'mid', st: 12, ac: 1, rc: 20, p: 1.0, spawnAt: 12, spawn: f => spawnPerfume(f), projLimit: 1,
+  kf: [[0, {}], [8, { ua: 70, fa: 90, lean: 4, th: 24, bth: -20 }], [12, { ua: 92, fa: 10, lean: 14, dx: 8, th: 30, bth: -24 }], [24, { ua: 92, fa: 10, lean: 14 }], [30, {}], [33, null]] };
+// الرشوة — he throws money at your feet; you stop to pick it up
+MV.sk_hm_bribe = { name: 'hbribe', skill: 1, limb: null, lvl: 'low', st: 14, ac: 1, rc: 22, p: 1.1, spawnAt: 14, projLimit: 0,
+  spawn: f => { const o = bossOpp(f); if (!o) return; SFX.throw(); spawnProj({ kind: 'cash', owner: f, x: f.toWorld(f.J.fH)[0], y: f.toWorld(f.J.fH)[1], vx: (o.x - f.x) / 34, vy: -12, g: 0.7, r: 40, life: 60, vr: 0.3, ground: false, draw: drawCash,
+    m: { dmg: 4, lvl: 'low', hs: 64, bs: 10, push: 0, stop: 6, p: 0.8, onHit: (a, d, blk) => { if (blk) return; popText('يلمّ الفلوس! 💵', d.x, -440, '#3fa34d', 40); finBurst(d.x, -40, 16, GOLDC, 6, 6); } } }); },
+  kf: [[0, {}], [8, { ua: 160, fa: 60, lean: -8 }], [14, { ua: 60, fa: 20, lean: 14, dx: 8 }], [24, {}], [37, null]] };
+// عطر الملوك — he sprays himself: gold aura, he hits harder for a while
+function kingTick(p) { const o = p.owner; if (!o) return; p.x = o.x; p.y = o.hipY - 200; if (o.kingT > 0) o.kingT--; if (p.life <= 1 || o.kingT <= 0 || o.hp <= 0) { o.dmgMul = o.dmgMul0 || 1; o.kingT = 0; p.life = 0; } }
+MV.sk_hm_king = { name: 'hking', skill: 1, limb: null, lvl: 'mid', st: 18, ac: 1, rc: 18, p: 1, spawnAt: 18, projLimit: 0,
+  spawn: f => { SFX.skill(); SFX.zap(); finRing(f.x, f.hipY - 200, '#ffd34d', 220, 18); finBurst(f.x, f.hipY - 260, 30, GOLDC, 8, 6); popText('عطر الملوك 👑', f.x, -500, '#ffd34d', 42);
+    if (!(f.kingT > 0)) { f.dmgMul0 = f.dmgMul || 1; f.dmgMul = f.dmgMul0 * 1.3; } f.kingT = 360;
+    spawnProj({ kind: 'king', owner: f, noHit: true, x: f.x, y: f.hipY - 200, vx: 0, vy: 0, g: 0, r: 10, life: 362, keep: 1, tick: kingTick, draw: p => { const o = p.owner, k = 0.5 + 0.2 * Math.sin(p.t * 0.2); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(o.x, o.hipY - 180, 20, o.x, o.hipY - 180, 240); g.addColorStop(0, `rgba(255,211,77,${0.18 * k})`); g.addColorStop(1, 'rgba(255,211,77,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(o.x, o.hipY - 180, 240, 0, 7); ctx.fill(); ctx.restore(); } }); },
+  kf: [[0, {}], [10, { ua: 170, fa: 150, lean: -10, th: 18, bth: -14 }], [18, { ua: 176, fa: 160, lean: -14 }], [30, {}], [37, null]] };
+// مطر الذهب — gold bars fall on you
+function drawGoldBar(p) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); const g = ctx.createLinearGradient(0, -16, 0, 16); g.addColorStop(0, '#fff3b0'); g.addColorStop(0.5, '#e8b923'); g.addColorStop(1, '#8a6420'); ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(-34, 14); ctx.lineTo(-24, -14); ctx.lineTo(24, -14); ctx.lineTo(34, 14); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#7a5410'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }
+MV.sk_hm_gold = { name: 'hgold', skill: 1, limb: null, lvl: 'high', st: 16, ac: 40, rc: 18, p: 1.2, projLimit: 0,
+  onStep: f => { const o = bossOpp(f); if (!o) return; if (f.mt === 16) { SFX.zap(); popText('ذهب!', f.x, -480, '#ffd34d', 40); } const k = f.mt - 16; if (k < 4 || k > 38 || k % 6 !== 0) return; SFX.whoosh(0);
+    spawnProj({ kind: 'gold', owner: f, x: o.x + rnd(-150, 150) + o.vx * 10, y: -760, vx: 0, vy: 8, g: 0.5, r: 30, life: 120, vr: rnd(-0.2, 0.2), big: 1, draw: drawGoldBar, m: { dmg: 6, lvl: 'high', hs: 16, bs: 10, push: 8, stop: 6, p: 1.1 } }); },
+  kf: [[0, {}], [10, { ua: 40, fa: 120, lean: 6 }], [16, { ua: 200, fa: 20, bua: 196, bfa: 24, lean: -14 }], [40, { ua: 186, fa: 30, bua: 182, bfa: 34 }], [56, {}], [74, null]] };
+// ضربة الشنطة — he charges and swings the briefcase
+MV.sk_hm_swing = M({ name: 'hswing', skill: 1, brief: 1, limb: null, lvl: 'mid', st: 14, ac: 6, rc: 22, dmg: 16, hs: 22, bs: 14, push: 80, stop: 10, p: 1.6, kd: 1, r: 70, mvx: [[6, 20, 12]],
+  hitboxFn: f => { if (!f.active()) return null; const h = f.toWorld(f.J.bH); return { x: h[0] + f.facing * 30, y: h[1] + 50, r: 70 }; },
+  onStep: f => { if (f.mt === 12) SFX.whoosh(1); }, onHit: (a, d, blk) => { if (!blk) { SFX.thud(); popText('صفعة الملايين!', d.x, -450, '#ffd34d', 40); } },
+  kf: [[0, {}], [8, { bua: -40, bfa: 20, lean: -12, ua: 40, fa: 120, th: 30, bth: -24 }], [14, { bua: 100, bfa: 10, lean: 24, dx: 16, th: 40, bth: -30 }], [20, { bua: 140, bfa: 10, lean: 20 }], [30, {}], [42, null]] });
+SKILL_IDS[HAMAD] = 'sk_hm_case'; SKILL_NAMES[HAMAD] = 'شنطة الملايين';
+SKILL2[HAMAD] = 'sk2_hm_spray'; SKILL2_LINE[HAMAD] = 'شم… وطيح.'; SKILL2_NAMES[HAMAD] = 'بخة العطر';
+COMBOS[HAMAD] = {
+  '12': ['رزمة فلوس', projMove(10, 18, PZ.windup, PZ.release, f => { SFX.throw(); shoot(f, { sp: 18, r: 30, dmg: 10, vr: 0.3, life: 70, draw: drawCash }); })],
+  '23': ['بخة سريعة', projMove(10, 18, { ua: 70, fa: 90, lean: 4 }, { ua: 92, fa: 10, lean: 14, dx: 8 }, f => spawnPerfume(f, { sp: 7, r: 50, life: 34, dmg: 5, hs: 30 }))],
+  '24': ['شنطة على الرجول', M({ brief: 1, lvl: 'low', st: 12, ac: 5, rc: 22, dmg: 13, kd: 1, push: 30, p: 1.4, limb: null, r: 60, hitboxFn: f => { if (!f.active()) return null; const h = f.toWorld(f.J.bH); return { x: h[0] + f.facing * 30, y: -40, r: 60 }; },
+    kf: [[0, {}], [8, { ...CROUCH, bua: -30, bfa: 20 }], [12, { ...CROUCH, bua: 70, bfa: 0, lean: 40, dx: 10 }], [17, { ...CROUCH, bua: 60, bfa: 0, lean: 44 }], [28, {}], [39, null]] })],
+  '13': ['خاتم الذهب', dashMove({ st: 6, ac: 10, rc: 18, sp: 18, trail: 1, limb: 'fH', r: 46, dmg: 14, pose: PZ.punch, onStep: f => { if (f.mt === 8) { const w = f.toWorld(f.J.fH); finBurst(w[0], w[1], 10, GOLDC, 7, 5); SFX.zap(); } } })],
+  '14': ['عدّ الفلوس', flurryMove({ st: 6, ac: 28, rc: 16, multi: 5, dmg: 3.2, hs: 14, bs: 7, push: 3, stop: 2, r: 40, mvx: [[6, 34, 2]], onStep: f => { barrageStep(f); if (f.mt % 5 === 0 && f.active()) { const w = f.toWorld(f.J.fH); FX.push({ t: 'p', x: w[0], y: w[1], vx: f.facing * rnd(2, 6), vy: -rnd(2, 6), life: 16, max: 16, c: '#3fa34d', sz: 6 }); } } })],
+  '34': ['دفشة الكرش', M({ st: 12, ac: 6, rc: 20, dmg: 13, push: 90, p: 1.5, kd: 1, hitboxFn: bodyHB(70, -170, 70), mvx: [[8, 18, 10]], kf: [[0, {}], [8, { lean: -16, ua: 20, fa: 130, bua: 20, bfa: 130 }], [12, { lean: -24, dx: 24, th: 30, bth: -26, ua: -20, fa: 60, bua: -20, bfa: 60 }], [18, { lean: -20, dx: 20 }], [26, {}], [38, null]] })],
+};
+Object.assign(BOSS_NAMES, { sk_ns_homer: 'ضربة الهوم رن', sk2_ns_wrench: 'المفتاح الطاير', sk_ns_slam: 'زلزال المضرب', sk_ns_rush: 'هجمة الشوارع', sk_ns_spin: 'الإعصار',
+  sk_hm_case: 'شنطة الملايين', sk2_hm_spray: 'بخة العطر', sk_hm_bribe: 'الرشوة', sk_hm_king: 'عطر الملوك', sk_hm_gold: 'مطر الذهب', sk_hm_swing: 'ضربة الشنطة' });
+Object.assign(BOSS_LINES, { sk_ns_homer: 'طير!', sk2_ns_wrench: 'خذ المفتاح!', sk_ns_slam: 'الأرض نفسها تخاف مني!', sk_ns_rush: 'الشارع ما يرحم!', sk_ns_spin: 'محد يقرب مني!',
+  sk_hm_case: 'كم تبي؟ خذ!', sk2_hm_spray: 'شم… وطيح.', sk_hm_bribe: 'لمّها… يا فقير.', sk_hm_king: 'ريحة الملوك!', sk_hm_gold: 'الذهب يطيح من السما!', sk_hm_swing: 'صفعة الملايين!' });
+function bossPickNH(ci, d, r) { const pick = L => { let w = 0; for (const [, x] of L) w += x; let q = r * w; for (const [id, x] of L) { q -= x; if (q <= 0) return id; } return L[L.length - 1][0]; };
+  if (ci === NASSER) return d > 360 ? pick([['sk2_ns_wrench', 3], ['sk_ns_slam', 2.5], ['sk_ns_rush', 3], ['sk_ns_homer', 1]]) : pick([['sk_ns_homer', 3], ['sk_ns_spin', 2.5], ['sk_ns_rush', 1.5], ['sk_ns_slam', 1.5]]);
+  if (ci === HAMAD) return d > 380 ? pick([['sk_hm_case', 3], ['sk_hm_gold', 2.5], ['sk_hm_bribe', 2], ['sk2_hm_spray', 1.5], ['sk_hm_king', 1]]) : pick([['sk_hm_swing', 3], ['sk2_hm_spray', 2.5], ['sk_hm_bribe', 1.5], ['sk_hm_king', 1.2], ['sk_hm_case', 1]]);
+  return null; }
+
 const COMBO_NAME = {};
 COMBOS.forEach((set, ci) => { for (const k of COMBO_KEYS) { const [name, mv] = set[k]; const id = `cb${ci}_${k}`; MV[id] = mv; mv.cname = name; COMBO_NAME[id] = name; set[k] = id; } });
 COMBOS[NOKH] = COMBOS[9]; COMBOS[RAIS] = COMBOS[1]; COMBOS[RAIS2] = COMBOS[1]; COMBOS[MALALI] = COMBOS[0];
@@ -2801,6 +2953,7 @@ function drawFighter(f, opts = {}) {
   if ((f.state === 'attack' && mv && mv.ball && f.mt >= mv.st && f.mt < mv.st + mv.ac) || (f.state === 'rageSeq' && f.finBall)) { if (!opts.refl) drawRollBall(f); return; }
   if ((f.state === 'attack' && mv && mv.car && f.mt >= mv.st - 3 && f.mt <= mv.st + mv.ac + 2) || (f.state === 'rageSeq' && f.finCar)) { if (!opts.refl && !opts.ghost) drawCar(f.x, f.facing, G.frame, Object.assign({ driver: f, sp: f.state === 'attack' && f.mt >= mv.st && f.mt < mv.st + mv.ac ? 1 : 0 }, f.state === 'rageSeq' ? f.finCar : {})); if (f.state === 'attack' && mv.limo) drawLimoFlags(f.x, f.facing, G.frame); return; }
   ctx.save();
+  if (f.C.props && !opts.ghost && !opts.refl) { ctx.save(); f.C.props(f, false); ctx.restore(); }
   if (opts.ghost) { ctx.globalAlpha *= 0.32 / opts.ghost; ctx.translate(-f.facing * opts.ghost * 34, 0); }
   let jx = 0; if (f.shakeT > 0) jx = (Math.random() - 0.5) * 8;
   ctx.translate(f.x + jx, f.hipY);
@@ -2818,7 +2971,7 @@ function drawFighter(f, opts = {}) {
   seg(J.torso, front);
   for (const s of J.farm) seg(s, front);
   ctx.restore();
-  if (!opts.ghost && !opts.refl) { if (f.C.malali || f.bossAs === MALALI) drawMalaliEyes(f); if (f.mech) drawMechFront(f); }
+  if (!opts.ghost && !opts.refl) { if (f.C.props) { ctx.save(); f.C.props(f, true); ctx.restore(); } if (f.C.malali || f.bossAs === MALALI) drawMalaliEyes(f); if (f.mech) drawMechFront(f); }
 }
 function drawAura(f) {
   if (f.state === 'attack' && f.mv && f.mv.vanish && f.mt >= f.mv.vanish[0] && f.mt < f.mv.vanish[1]) return;
@@ -3829,6 +3982,53 @@ FIN[MALALI] = { name: 'ابتلاع الظلام', line: 'الظلام… جا �
   front(F, a, d, t) { if (t < 70 || t >= 119) return; const w = a.J ? a.toWorld(a.J.fH) : [a.x, a.hipY - 200], r = 30 + 60 * finSeg(t, 70, 100), x = t >= 96 ? a.x : w[0], y = t >= 96 ? a.hipY - 140 : w[1] - 60;
     drawVoid({ x, y, r: r / 1.5, t: 30 + t, vx: 0 }); }
 };
+
+// ---- ناصر وحمد: الصوت، الشخصية، والقاضيات
+PERSONA[NASSER] = { vo: 'roar', intro: ['الشارع… كله لي.', 'جيت أخلّص اللي ما خلّصه ملالي.'], skill: ['طير!', 'هوم رن!'], win: ['قلت لك… الشارع لي.'], st: { lean: -6, th: 10, bth: -10 }, br: 0.03 };
+PERSONA[HAMAD] = { vo: 'laugh', intro: ['كل شي له سعر… وأنت رخيص.', 'الفلوس تتكلم… وأنا أسمع.'], skill: ['كم تبي؟', 'شم… وطيح.'], win: ['اشتريتك… وبعتك.'], st: { lean: -8, th: 8, bth: -8 }, br: 0.05 };
+VOICE_RATE[NASSER] = 0.82; VOICE_RATE[HAMAD] = 0.86; if (window.VOICE_TTS) { window.VOICE_TTS[NASSER] = [0.55, 0.88]; window.VOICE_TTS[HAMAD] = [0.62, 0.9]; }
+function finCrack(x, y, k) { ctx.save(); ctx.globalAlpha *= k; ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (let i = 0; i < 11; i++) { let a = i / 11 * Math.PI * 2 + 0.3, r = 0, px = x, py = y; ctx.beginPath(); ctx.moveTo(px, py); for (let j = 0; j < 5; j++) { r += 50 + ((i * 37 + j * 13) % 40); a += (((i * 7 + j * 3) % 5) - 2) * 0.09; px = x + Math.cos(a) * r; py = y + Math.sin(a) * r; ctx.lineTo(px, py); } ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; for (const rr of [60, 130]) { ctx.beginPath(); for (let i = 0; i <= 11; i++) { const a = i / 11 * Math.PI * 2 + 0.3, q = rr + ((i * 23) % 30); i ? ctx.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q) : ctx.moveTo(x + Math.cos(a) * q, y + Math.sin(a) * q); } ctx.stroke(); }
+  ctx.restore(); }
+// الهوم رن الأخير — four bat blows, the wrench, then the swing of his life
+FIN[NASSER] = { name: 'الهوم رن الأخير', line: 'هذي… آخر ضربة بحياتك.', col: '#e0102a',
+  run(F, a, d, t) {
+    const f = a.facing; if (!a.finS || a.finS.fin !== F.fin) a.finS = { fin: F.fin, x0: clamp(a.x + f * 215, -STAGE + 80, STAGE - 80) }; const S = a.finS;
+    if (t < 20) { finHold(d, S.x0); a.rageP = G2(BATUP); d.finP = FPZ.hurt({ lean: -8 }); if (t === 2) { SFX.rage(); F.shake(8); } finCam(F, (a.x + d.x) / 2, -250, 1.05); return; }
+    if (t < 78) { finHold(d, S.x0); const k = t - 20, ph = (k / 14) | 0, u = (k % 14) / 14; a.rageP = G2(ph % 2 ? { ...BATHIT, ua: lerp(40, 160, u), fa: lerp(0, 70, u), lean: 16 } : { ...BATHIT, ua: lerp(170, 60, u), fa: lerp(80, 0, u), lean: 26 });
+      d.finP = FPZ.hurt({ lean: ph % 2 ? 22 : -22, r: ph % 2 ? 4 : -4 }); if (k % 14 === 7) { const b = batLine(a); finHit(F, a, d, 5, b.tip, 4); SFX.thud(); F.shake(12); finBurst(b.tip[0], b.tip[1], 14, NSC, 8, 6); }
+      finCam(F, (a.x + d.x) / 2, -260, 1.18); return; }
+    if (t < 100) { finHold(d, S.x0); a.rageP = G2({ bua: t < 88 ? 200 : 86, bfa: t < 88 ? 60 : 4, lean: t < 88 ? -12 : 24, dx: t < 88 ? 0 : 12, ...(t < 88 ? {} : { ua: 40, fa: 120 }) }); d.finP = FPZ.hurt({ lean: 26 });
+      if (t === 90) { finHit(F, a, d, 6, finHead(d), 6); SFX.thud(); popText('المفتاح! 🔧', d.x, -470, '#ff5040', 40); F.shake(14); } finCam(F, (a.x + d.x) / 2, -270, 1.12); return; }
+    if (t < 126) { finHold(d, S.x0); a.rageP = G2({ ...BATUP, ua: 210, fa: 60, lean: -20, th: 34, bth: -30, dx: -10 }); d.finP = FPZ.hurt({ lean: -10 });
+      if (t === 102) { SFX.rage(); popText('آخر ضربة…', a.x, -500, '#ffd0c0', 40); } finCam(F, lerp(a.x, d.x, 0.4), -280, lerp(1.12, 1.32, finSeg(t, 100, 126))); return; }
+    if (t === 126) { a.rageP = G2({ ...BATHIT, ua: 60, fa: 0, lean: 32 }); const c = finChest(d); finHit(F, a, d, 26, c, 18, true); finLaunch(d, f * 17, -26); S.cr = { x: c[0], y: c[1], t };
+      SFX.thud(); SFX.rock(); F.shake(44); for (let i = 0; i < 3; i++) finRing(c[0], c[1], i % 2 ? '#ffffff' : '#e0102a', 240 + i * 140, 18 + i * 6); finBurst(c[0], c[1], 60, NSC, 16, 8); popText('هوم رن!! ⚾', c[0], c[1] - 90, '#ff3a2a', 66); return; }
+    if (t < 172) { a.rageP = G2({ ...BATHIT, ua: lerp(60, 20, finSeg(t, 126, 140)), fa: 0, lean: 30, bua: 30, bfa: 120 }); finCam(F, lerp(a.x, d.x, 0.5), -280, 1.0); return; }
+    return true;
+  },
+  front(F, a, d, t) { const S = a.finS; if (!S || !S.cr) return; const k = Math.max(0, 1 - (t - S.cr.t) / 46); if (k > 0) finCrack(S.cr.x, S.cr.y, k); } };
+// صفقة العمر — the briefcase opens, money lifts you, the perfume knocks you dizzy, the briefcase finishes it
+function drawMoneyStorm(x, y, t, k) { for (let i = 0; i < 16; i++) { const a = t * 0.18 + i * 0.39, r = 70 + (i % 4) * 26, h = ((t * 4 + i * 37) % 300); drawCash({ x: x + Math.cos(a) * r, y: y - h + 120, rot: a * 2, t: t + i }); }
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 10, x, y, 200); g.addColorStop(0, `rgba(255,211,77,${0.25 * k})`); g.addColorStop(1, 'rgba(255,211,77,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 200, 0, 7); ctx.fill(); ctx.restore(); }
+FIN[HAMAD] = { name: 'صفقة العمر', line: 'وقّع هني… بدمك.', col: '#e8b923',
+  run(F, a, d, t) {
+    const f = a.facing; if (!a.finS || a.finS.fin !== F.fin) a.finS = { fin: F.fin, x0: clamp(a.x + f * 240, -STAGE + 80, STAGE - 80) }; const S = a.finS;
+    if (t < 22) { finHold(d, S.x0); a.caseOpen = t > 10; a.rageP = G2({ bua: 80, bfa: 10, lean: 10, dx: 6 }); d.finP = FPZ.hurt({ lean: -8 }); if (t === 10) { SFX.click(); SFX.zap(); popText('كم تبي؟', a.x, -500, '#ffd34d', 40); } finCam(F, (a.x + d.x) / 2, -260, 1.0); return; }
+    if (t < 74) { const u = finSeg(t, 22, 60); finHold(d, S.x0, -220 * easeOut(u)); a.rageP = G2({ bua: 120, bfa: 10, ua: 150, fa: 40, lean: -8 }); d.finP = FPZ.hurt({ lean: 16 * Math.sin(t * 0.4), r: -8 });
+      if (t % 10 === 0) { finHit(F, a, d, 3, finChest(d), 3); SFX.throw(); } finCam(F, (a.x + S.x0) / 2, -330, 1.0); return; }
+    if (t < 100) { finHold(d, S.x0, -220); a.caseOpen = false; a.rageP = G2({ ua: 92, fa: 8, lean: 14, dx: 10 });
+      if (t === 76) { SFX.whoosh(1); popText('شم… 💫', d.x, -560, '#f7c8ff', 44); } if (t % 3 === 0) { const h = a.toWorld(a.J.fH); FX.push({ t: 'p', x: h[0], y: h[1], vx: (d.x - h[0]) / 18 + rnd(-1, 1), vy: (d.hipY - 260 - h[1]) / 18 + rnd(-1, 1), life: 20, max: 20, c: PERFC[t % 4], sz: rnd(4, 8) }); }
+      if (t === 90) finHit(F, a, d, 5, finHead(d), 6); d.finP = FPZ.hurt({ lean: 24 * Math.sin(t * 0.3), r: 10 * Math.sin(t * 0.2) }); finCam(F, (a.x + S.x0) / 2, -340, 1.05); return; }
+    if (t < 116) { const u = finSeg(t, 100, 116); finHold(d, S.x0, lerp(-220, 0, u * u)); a.x = lerp(a.x, S.x0 - f * 150, 0.2); a.rageP = G2({ bua: -40, bfa: 20, lean: -14, th: 30, bth: -24 }); d.finP = FPZ.hurt({ lean: 30 }); finCam(F, S.x0, -280, 1.1); return; }
+    if (t === 116) { a.rageP = G2({ bua: 120, bfa: 10, lean: 26, dx: 16, th: 40, bth: -30 }); const c = finChest(d); finHit(F, a, d, 26, c, 18, true); finLaunch(d, f * 15, -22); SFX.thud(); SFX.rock(); F.shake(40);
+      for (let i = 0; i < 3; i++) finRing(c[0], c[1], i % 2 ? '#fff3b0' : '#e8b923', 240 + i * 130, 18 + i * 6); finBurst(c[0], c[1], 50, GOLDC, 14, 8); popText('صفقة العمر! 💰', c[0], c[1] - 90, '#ffd34d', 60); return; }
+    if (t < 160) { a.rageP = G2({ bua: 140, bfa: 10, lean: 20, ua: 160, fa: 140 }); finCam(F, lerp(a.x, d.x, 0.5), -260, 1.02); return; }
+    return true;
+  },
+  back(F, a, d, t) { const S = a.finS; if (!S || t < 22 || t >= 104) return; drawMoneyStorm(S.x0, -120, t, Math.min(1, (t - 22) / 10) * (t > 94 ? (104 - t) / 10 : 1)); } };
+window.__nh = { NASSER, HAMAD, MV, SKILL_IDS, SKILL2, COMBOS, CHARS };
 
 // ================= FIGHT =================
 class Fight {
