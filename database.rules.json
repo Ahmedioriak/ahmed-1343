@@ -9,6 +9,20 @@
         ".validate": "$code.matches(/^[0-9]{4}$/)"
       }
     },
+    "rooms167": {
+      "$code": {
+        ".read": true,
+        ".write": true,
+        ".validate": "$code.matches(/^[0-9]{4}$/)"
+      }
+    },
+    "rooms170": {
+      "$code": {
+        ".read": true,
+        ".write": true,
+        ".validate": "$code.matches(/^[0-9]{4}$/)"
+      }
+    },
     "admins": {
       ".read": "auth != null",
       "$uid": {

@@ -1,7 +1,8 @@
 // معركة الشلة — تشغيل بدون إنترنت (النسخة الأساسية فقط؛ معركة الشلة 2 ما تتأثر)
-const V = 'shilla-v1-66';
+const V = 'shilla-v1-78';
+const VOXC = 'shilla-vox';
 const CORE = ['./', './mobile', './firebase-config.js', './manifest.webmanifest', './manifest-mobile.webmanifest',
-  './icons/icon-32.png', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-192.png', './icons/icon-maskable-512.png'];
+  './icons/icon-32.png', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-192.png', './icons/icon-maskable-512.png', './story-voices.js'];
 const SCOPE = new URL(self.registration.scope);
 const ALT = { './': ['./', './index.html'], './mobile': ['./mobile', './mobile.html'] };
 
@@ -30,13 +31,17 @@ self.addEventListener('install', e => e.waitUntil((async () => {
 })()));
 self.addEventListener('activate', e => e.waitUntil((async () => {
   for (const n of await caches.keys()) if (n.startsWith('shilla-v1') && n !== V) await caches.delete(n);
+  if (await caches.has(VOXC)) {
+    const c = await caches.open(VOXC);
+    const oldModel = new URL('wahsh3d.js', SCOPE).href;
+    for (const req of await c.keys()) if (req.url.split('?')[0] === oldModel) await c.delete(req);
+  }
   await self.clients.claim();
 })()));
 async function notify() { for (const c of await self.clients.matchAll({ type: 'window' })) c.postMessage({ t: 'upd' }); }
 const WAIT = 2500; // كل ما تفتح اللعبة: يتأكد من آخر تحديث (أقصى شي ثانيتين ونص)، وبعدها يفتح
 const sig = r => r && (r.headers.get('etag') || r.headers.get('last-modified') || r.headers.get('content-length'));
 // the voice pack (pro-voices-N.js?h=…): kept in its own cache that survives game updates — a part is downloaded once, and again only when its fingerprint changes
-const VOXC = 'shilla-vox';
 async function voxPart(req, u) {
   const c = await caches.open(VOXC), hit = await c.match(req); if (hit) return hit;
   const res = await fetch(req); if (res && res.ok) { for (const k of await c.keys()) { const ku = new URL(k.url); if (ku.pathname === u.pathname && ku.search !== u.search) await c.delete(k); } await c.put(req, res.clone()); }
@@ -44,7 +49,7 @@ async function voxPart(req, u) {
 }
 self.addEventListener('fetch', e => {
   const r = e.request; if (r.method !== 'GET') return;
-  { const u = new URL(r.url); if (u.origin === SCOPE.origin && /\/(pro-voices-\d+|wahsh3d)\.js$/.test(u.pathname) && u.search) { e.respondWith(voxPart(r, u)); return; } }
+  { const u = new URL(r.url); if (u.origin === SCOPE.origin && /\/pro-voices-\d+\.js$/.test(u.pathname) && u.search) { e.respondWith(voxPart(r, u)); return; } }
   const k = keyOf(new URL(r.url)); if (!k) return;
   const page = k === './' || k === './mobile';
   e.respondWith((async () => {
