@@ -52,6 +52,10 @@ def build(sub, out, title, cfg):
         s = s.replace('window.PRO_VOICES=1;', 'window.PRO_VOICES=%d;window.PRO_H=%s;' % (len(parts), _j.dumps(H)), 1)
     for filename in old_parts:
         os.remove(os.path.join(O, filename))
+    m3 = os.path.join(D, *sub, 'wahsh3d2.js')   # الوحش's 3D model + renderer, loaded only when he fights
+    if os.path.exists(m3):
+        import hashlib as _h3; t3 = open(m3, 'rb').read(); open(os.path.join(O, 'wahsh3d2.js'), 'wb').write(t3)
+        s = s.replace('<script>', '<script>window.M3D_H=%r;</script>\n<script>' % _h3.md5(t3).hexdigest()[:10], 1)
     open(os.path.join(O, 'index.html'), 'w', encoding='utf-8', newline='\n').write(s)
     sv = os.path.join(D, *sub, 'voices_story.js')
     if os.path.exists(sv): shutil.copyfile(sv, os.path.join(O, 'story-voices.js'))   # the story's voice, loaded in the background

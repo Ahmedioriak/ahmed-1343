@@ -32,8 +32,8 @@ function init(b64, done) {
       if (o.isMesh) { o.frustumCulled = false; const m = o.material; m.envMapIntensity = 0; mats.push(m); }
     });
     root.updateMatrixWorld(true);
-    B.root.getWorldPosition(hip0);
-    const a = wp('upperleg01.R'), b = wp('foot.R'); legLen = a.distanceTo(b);
+    B.pelvis.getWorldPosition(hip0);
+    const a = wp('thigh.R'), b = wp('foot.R'); legLen = a.distanceTo(b);
     // camera: on his right side, swung a little to his front; looks at the hip
     cam.position.set(hip0.x - Math.cos(CAM_YAW) * 10, hip0.y, hip0.z + Math.sin(CAM_YAW) * 10); cam.lookAt(hip0); cam.updateMatrixWorld();
     ready = true; done && done();
@@ -61,20 +61,20 @@ function pose(p) {
   // arm extension → shoulders turn into the punch
   const ext = (ua, fa) => clamp((ua - 30) / 60, 0, 1) * clamp(1 - fa / 100, 0, 1);
   const twist = STANCE + 30 * D2R * ext(p.ua, p.fa) - 18 * D2R * ext(p.bua, p.bfa);
-  rotWorld(B.root, new THREE.Quaternion().setFromAxisAngle(X, r).multiply(new THREE.Quaternion().setFromAxisAngle(Y, STANCE * 0.6)));
-  for (const s of ['spine05', 'spine04', 'spine03', 'spine02']) if (bn(s)) rotWorld(bn(s), new THREE.Quaternion().setFromAxisAngle(X, lean / 4).multiply(new THREE.Quaternion().setFromAxisAngle(Y, (twist - STANCE * 0.6) / 4)));
+  rotWorld(B.pelvis, new THREE.Quaternion().setFromAxisAngle(X, r).multiply(new THREE.Quaternion().setFromAxisAngle(Y, STANCE * 0.6)));
+  for (const s of ['spine_01', 'spine_02', 'chest']) if (bn(s)) rotWorld(bn(s), new THREE.Quaternion().setFromAxisAngle(X, lean / 3).multiply(new THREE.Quaternion().setFromAxisAngle(Y, (twist - STANCE * 0.6) / 3)));
   // arms: front (near the camera) = right, back = left
   const arm = (sd, ua, fa) => {
     const pu = tr + (90 - ua) * D2R, pf = pu - fa * D2R, side = sd === 'R' ? -1 : 1;
     const su = Math.sin(pu), sf = Math.sin(pf), cf = Math.cos(pf);
-    aim('upperarm01.' + sd, 'lowerarm01.' + sd, dir2(pu, side * (0.22 + 0.3 * Math.max(0, su))));
-    aim('lowerarm01.' + sd, 'wrist.' + sd, dir2(pf, side * (0.18 * Math.max(0, sf) - 0.28 * Math.max(0, -sf) - 0.12 * Math.max(0, cf))));
+    aim('upperarm.' + sd, 'forearm.' + sd, dir2(pu, side * (0.22 + 0.3 * Math.max(0, su))));
+    aim('forearm.' + sd, 'hand.' + sd, dir2(pf, side * (0.18 * Math.max(0, sf) - 0.28 * Math.max(0, -sf) - 0.12 * Math.max(0, cf))));
   };
   arm('R', p.ua, p.fa); arm('L', p.bua, p.bfa);
   const leg = (sd, th, sh, ft, fl) => {
     const pt = r + (90 - th) * D2R, ps = pt + sh * D2R, side = sd === 'R' ? -1 : 1;
-    aim('upperleg01.' + sd, 'lowerleg01.' + sd, dir2(pt, side * 0.1));
-    aim('lowerleg01.' + sd, 'foot.' + sd, dir2(ps, side * 0.04));
+    aim('thigh.' + sd, 'shin.' + sd, dir2(pt, side * 0.1));
+    aim('shin.' + sd, 'foot.' + sd, dir2(ps, side * 0.04));
     const rF = (ps - (Math.PI / 2)) + (ft || 0) * D2R; const fa = rF * (1 - (fl || 0));
     const fb = bn('foot.' + sd), toe = fb && fb.children.find(c => c.isBone);
     if (toe) aim('foot.' + sd, toe.name, dir2(fa + 12 * D2R, side * 0.05));
@@ -84,7 +84,7 @@ function pose(p) {
   if (B.head && Math.abs(tr) < 50 * D2R) { const w = B.head.getWorldQuaternion(new THREE.Quaternion()); const want = new THREE.Quaternion().setFromAxisAngle(Y, STANCE * 0.5).multiply(REST_W.head); rotWorld(B.head, new THREE.Quaternion().slerp(want.multiply(w.invert()), 0.75)); }
 }
 let REST_W = {};
-const LOW = [['foot.L', 0.1], ['foot.R', 0.1], ['toe3-1.L', 0.035], ['toe3-1.R', 0.035], ['lowerleg02.L', 0.12], ['lowerleg02.R', 0.12], ['wrist.L', 0.06], ['wrist.R', 0.06], ['head', 0.14], ['spine03', 0.16], ['lowerleg01.L', 0.08], ['lowerleg01.R', 0.08]];
+const LOW = [['foot.L', 0.13], ['foot.R', 0.13], ['toe.L', 0.04], ['toe.R', 0.04], ['shin.L', 0.1], ['shin.R', 0.1], ['hand.L', 0.08], ['hand.R', 0.08], ['head', 0.2], ['chest', 0.17], ['pelvis', 0.17]];
 function smooth(f, k) {
   const S = f.__q3 || (f.__q3 = {});
   for (const o of ORDER) { const q = S[o.name]; if (q && k < 1) { q.slerp(o.quaternion, k); o.quaternion.copy(q); } else S[o.name] = o.quaternion.clone(); }
