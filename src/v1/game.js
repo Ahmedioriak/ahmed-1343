@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.84';
+const GAME_VER = '1.85';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2123,6 +2123,7 @@ function bossPickMM(ci, d, r) { const pick = L => { let w = 0; for (const [, x] 
 /*BABA_MOVES*/
 /*FARM_MOVES*/
 /*FORTRESS_COMBAT*/
+/*SAGA4_COMBAT*/
 
 const PLAYABLE = [...CHARS.keys()].slice(0, BASE_ROSTER).concat(BABA, FARMER);
 const NCH = PLAYABLE.length, PICK_COLS = Math.ceil(NCH / 2);
@@ -2623,6 +2624,56 @@ function dashDust(f) { if (f.t % 4 === 0 && f.t < 12) dust(f.x - f.facing * 10, 
 
 // ================= CPU =================
 class CPUPad {
+  // «محترف» (story 4): reads the player's habits, blocks at the right height, slips projectiles, punishes recovery, attacks from range
+  proRead(fK, bK, press, dist) {
+    const me = this.me, op = this.op, h = this.h, F = G.fight; this.t = (this.t || 0) + 1;
+    const mem = this.mem || (this.mem = new Map()); if (this.t % 300 === 0) for (const [k, v] of mem) mem.set(k, v * 0.5);
+    const atk = op.state === 'attack' && op.mv;
+    if (atk && op.mv !== this.seenMv) { this.seenMv = op.mv; this.knew = false; mem.set(op.mv, (mem.get(op.mv) || 0) + 1); }
+    if (!atk) this.seenMv = null;
+    if (this.blockT > 0) return false;
+    // the same move again? he already knows it
+    if (atk && op.mt < op.mv.st && (mem.get(op.mv) || 0) >= 2.5 && NEUTRAL.has(me.state) && (dist < 330 || op.mv.spawn)) {
+      if (!this.knew) { this.knew = true; popText('قرأ حركتك!', me.x, -360, '#ff8a3a', 34); }
+      if (me.dgCD <= 0 && Math.random() < 0.6) { me.dodge(); this.punish = 26; return true; }
+      if (Math.random() < 0.5) { me.sidestep(Math.random() < 0.5 ? 1 : -1); this.punish = 22; return true; }
+      this.blockT = op.mv.st - op.mt + (op.mv.ac || 4) + 6; this.blockLow = op.mv.lvl === 'low'; this.punish = 20; return true;
+    }
+    // reaction defence: decide once per attack, at the right height (duck the highs, crouch-block the lows)
+    if (atk && op.mt < op.mv.st && dist < 320 && NEUTRAL.has(me.state) && this.dec !== op.mv) {
+      this.dec = op.mv;
+      if (Math.random() < Math.min(0.85, 0.45 + this.lvl * 0.1)) {
+        this.blockT = op.mv.st - op.mt + (op.mv.ac || 4) + 6; this.blockLow = op.mv.lvl === 'low' || (op.mv.lvl === 'high' && Math.random() < 0.6); this.punish = 18; return true;
+      }
+    }
+    if (!atk) this.dec = null;
+    // projectiles: jump the low ones, duck the high ones, slip or block the rest
+    for (const q of F.proj) if (q.owner === op && !q.noHit && Math.sign(q.vx || 0) === Math.sign(me.x - q.x) && Math.abs(q.x - me.x) < 300 && NEUTRAL.has(me.state)) {
+      if (this.pdec === q) break; this.pdec = q;
+      const lv = q.m && q.m.lvl; if (Math.random() < 0.82) {
+        if (lv === 'low' && Math.random() < 0.7) { h.up = true; this.hold = ['up', 'F']; this.holdT = 8; return true; }
+        if (lv === 'high') { this.blockT = 22; this.blockLow = true; return true; }
+        if (me.dgCD <= 0 && Math.random() < 0.4) { me.dodge(); return true; }
+        this.blockT = 24; this.blockLow = lv === 'low'; return true;
+      }
+    }
+    // punish: hit him while he recovers
+    if (this.punish > 0) this.punish--;
+    if (op.state === 'attack' && op.mv && op.mt > op.mv.st + (op.mv.ac || 4) && dist < 230 && NEUTRAL.has(me.state) && (this.punish > 0 || Math.random() < 0.35)) {
+      this.punish = 0; const r = Math.random();
+      if (r < 0.3 && me.cbCD <= 0) { me.tryCombo(pick(['24', '13', '34'])); return true; }
+      press(r < 0.65 ? 'b2' : 'b1'); return true;
+    }
+    if (!NEUTRAL.has(me.state)) return false;
+    // he crouches to throw uppercuts from below: punish the crouch with a low kick / overhead
+    if (op.state === 'crouch' && dist < 200 && Math.random() < 0.08) { if (Math.random() < 0.5) { h.down = true; press('b3'); } else { h[fK] = true; press('b4'); } return true; }
+    // pressure: long-range specials and button-pair attacks
+    if (me.cbCD <= 0 && dist > 260 && dist < 820 && Math.random() < 0.03) { if (me.tryCombo(pick(['13', '13', '34', '14']))) return true; }
+    if (me.cbCD <= 0 && dist < 240 && Math.random() < 0.025) { if (me.tryCombo(pick(['24', '34', '23']))) return true; }
+    if (dist < 220 && Math.random() < 0.012 && me.dgCD <= 0) { me.sidestep(Math.random() < 0.5 ? 1 : -1); return true; }
+    if (this.cd > 6) this.cd = 6;
+    return false;
+  }
   constructor(level) { this.h = {}; this.p = {}; this.cpu = true; this.cd = 40; this.hold = null; this.holdT = 0; this.blockT = 0; this.blockLow = false; this.lvl = level || 1; this.me = null; this.op = null; this.react = 0; }
   read() {
     const h = this.h, p = this.p; for (const k of PADKEYS) { h[k] = false; p[k] = false; }
@@ -2630,6 +2681,7 @@ class CPUPad {
     const fK = me.facing > 0 ? 'right' : 'left', bK = me.facing > 0 ? 'left' : 'right';
     const press = (...ks) => { for (const k of ks) { p[k] = true; h[k] = true; } };
     const dist = Math.abs(op.x - me.x);
+    if (this.pro && this.proRead(fK, bK, press, dist)) return;
     if (op.invis > 0 && op.invis < 230) { this.blockT = 0; if (Math.random() < 0.85) { if (NEUTRAL.has(me.state) && Math.random() < 0.03) press(pick(['b1', 'b3', 'b2'])); else if (Math.random() < 0.3) h[Math.random() < 0.5 ? fK : bK] = true; return; } }
     if (this.blockT > 0) { this.blockT--; h[bK] = true; if (this.blockLow) h.down = true; return; }
     if (op.state === 'attack' && op.mv && (op.mv.skill || op.mv.combo) && op.mt < op.mv.st + 4 && me.dgCD <= 0 && NEUTRAL.has(me.state) && Math.random() < 0.06) { me.dodge(); return; }
@@ -4197,7 +4249,7 @@ PERSONA[FARMER] = { vo: 'deep', intro: ['اليوم يوم الحصاد!'], skil
   win: ['زرعنا وحصدنا الفوز!'], st: { lean: 3, ua: 4, fa: 11 }, br: 0.055 };
 FIN[FARMER] = { name: 'الحصاد الكبير', line: 'شوف آخر حبة من المحصول!', col: '#9cdb57', run: farmFinisher };
 
-installFortressFinishers();
+installFortressFinishers(); installS4();
 
 // ================= FIGHT =================
 class Fight {
@@ -6528,8 +6580,8 @@ function worldStart(ci, o) {
   const O = outfitOf(ci, o);
   const fortressChapter = story === 3 ? clamp(book.ch, SG_BOOK_START[2], SAGA.length - 1) : null;
   const eff = fortressChapter !== null ? fortressFormAt(fortressChapter, book.st) : O?.as ?? ci;
-  const resume = savedMap && sv.ci === ci && (sv.story ? sv.story === story : story < 3)
-    && (story < 3 || (sv.fortressRevision === FORTRESS_REVISION && (fortressChapter !== SG_BOOK_START[2] || book.st > 0)));
+  const resume = savedMap && sv.ci === ci && (sv.story ? sv.story === story : story !== 3)
+    && (story !== 3 || (sv.fortressRevision === FORTRESS_REVISION && (fortressChapter !== SG_BOOK_START[2] || book.st > 0)));
   const startMap = SAGA[fortressChapter]?.entry || 'fareej';
   const map = resume ? sv.map : startMap, M = WMAPS[map];
   W.P = { fig: wMakeFig(eff, story === 3 ? null : wEqFor(ci, eff)), face: 1, base: ci, o, ci: eff, x: resume ? sv.x : M.spawn[0], y: resume ? sv.y : M.spawn[1], dir: 'down', ph: 0, moving: false };
@@ -6696,7 +6748,7 @@ const W_CHEF_SLOT = 1; // The Chef is Al-Wahsh's story outfit.
 function updWorldPick(W, p, q, ok, back, tap) {
   const hitBtn = (x, y, w, h) => tap && Math.abs(tap[0] - x) < w / 2 && Math.abs(tap[1] - y) < h / 2;
   { const sv = sgLoad(W.cur); for (const b of sgPickBtns(sv)) if (hitBtn(b.x, 332, b.w, 44)) { if (b.a === 'r') { W.restartAsk = W.restartAsk === W.cur ? (sgRestartCur(W.cur), null) : W.cur; } else { sgSwitch(W.cur, b.a); W.restartAsk = null; } W.sgA = null; SFX.ok(); return; }
-    const key = p.c13 || q.c13 || anyP('Digit1') ? 1 : p.c12 || q.c12 || anyP('Digit2') ? 2 : p.c34 || q.c34 || anyP('Digit3') ? 3 : 0;
+    const key = p.c13 || q.c13 || anyP('Digit1') ? 1 : p.c12 || q.c12 || anyP('Digit2') ? 2 : p.c34 || q.c34 || anyP('Digit3') ? 3 : anyP('Digit4') ? 4 : 0;
     if (key && sgSwitch(W.cur, key)) { W.restartAsk = null; W.sgA = null; SFX.ok(); return; } }
   const fixed = sgStoryNo(sgLoad(W.cur)?.ch || 0) === 3;
   let go = false;
@@ -6726,8 +6778,8 @@ function drawWorldPick(W) {
   txt(CHARS[ci].name, VW / 2 - 40, 200, { size: 44, weight: 900, color: '#fff', stroke: '#000', sw: 6 });
   const location = W.sv && WMAPS[W.sv.map];
   if (location && W.sv.ci === W.cur && (!fixed || (W.sv.story === 3 && (saved.ch !== SG_BOOK_START[2] || saved.st > 0)))) txt('📍 بتكمل من ' + location.name, VW / 2 - 40, 250, { size: 20, weight: 800, color: '#7dffb0' });
-  { const sv = sgLoad(W.cur), c0 = sv ? clamp(sv.ch | 0, 0, SAGA.length - 1) : 0; for (const b of sgPickBtns(sv)) { const ask = b.a === 'r' && W.restartAsk === W.cur; ctx.fillStyle = ask ? 'rgba(230,20,40,0.95)' : b.on === false ? 'rgba(255,255,255,0.08)' : b.col; rrect(b.x - b.w / 2, 312, b.w, 40, 20); ctx.fill(); if (b.on) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke(); } txt(ask ? '⚠️ متأكد؟ اضغط مرة ثانية' : b.t, b.x, 333, { size: ask ? 14 : 17, weight: 900, color: b.on === false ? 'rgba(255,255,255,0.55)' : '#fff' }); }
-    if (gpOn() || !TOUCH_ON) txt(gpOn() ? 'L1 / R1 / R2: تبديل القصة' : '1 / 2 / 3: تبديل القصة', VW / 2 - 40, 361, { size: 13, weight: 800, color: 'rgba(255,255,255,0.5)' });
+  { const sv = sgLoad(W.cur), c0 = sv ? clamp(sv.ch | 0, 0, SAGA.length - 1) : 0; for (const b of sgPickBtns(sv)) { const ask = b.a === 'r' && W.restartAsk === W.cur; ctx.fillStyle = ask ? 'rgba(230,20,40,0.95)' : b.on === false ? 'rgba(255,255,255,0.08)' : b.col; rrect(b.x - b.w / 2, 312, b.w, 40, 20); ctx.fill(); if (b.on) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke(); } txt(ask ? '⚠️ متأكد؟ اضغط مرة ثانية' : b.t, b.x, 333, { size: ask ? 13 : 14, weight: 900, color: b.on === false ? 'rgba(255,255,255,0.55)' : '#fff' }); }
+    if (gpOn() || !TOUCH_ON) txt(gpOn() ? 'L1 / R1 / R2: تبديل القصة' : '1 / 2 / 3 / 4: تبديل القصة', VW / 2 - 40, 361, { size: 13, weight: 800, color: 'rgba(255,255,255,0.5)' });
     if (sv && sv.done) { txt('🏆 تم إتمام ' + sgStoryName(c0), VW / 2 - 40, 290, { size: 20, weight: 900, color: '#ffd34d' }); }
     else { const c = sv ? clamp(sv.ch | 0, 0, SAGA.length - 1) : 0; txt(sgStoryName(c) + ' · ' + (sv && (sv.ch !== SG_BOOK_START[sgStoryNo(c) - 1] || sv.st) ? '⏳ جاري الإتمام — الفصل ' : sv && sv.ever ? '🔁 يعيدها من جديد — الفصل ' : '🆕 القصة من الصفر — الفصل ') + SG_ORD[c] + ': ' + SAGA[c].n, VW / 2 - 40, 292, { size: 20, weight: 900, color: '#ffd34d' }); } }
   if (!fixed && L.length > 1) { ctx.fillStyle = 'rgba(255,211,77,0.9)'; rrect(VW / 2 - 130, 370, 260, 44, 22); ctx.fill(); txt('👕 ' + O.name + (TOUCH_ON ? ' · المس للتغيير' : ' · E للتغيير'), VW / 2, 393, { size: 19, weight: 900, color: '#111' }); }
@@ -7187,8 +7239,8 @@ const SAGA = [
   ] },
   { part: 1, n: 'معركة القاعدة', coins: 40, place: { bull: ['base', 300, 620, 'right'], captain: ['base', 300, 760, 'right'], dajaj: ['base', 1180, 1040, 'left'], chef: ['base', 1080, 1040, 'right'], dragon: ['base', 560, 900, 'left'], abd: ['base', 440, 900, 'right'], gamer: ['base', 1220, 330, 'up'], teer: ['base', 170, 640, 'right'], salah: ['base', 2150, 320, 'down'] }, steps: [
     { go: ['base', 300, 900], goal: 'روح القاعدة السرية 🏭' },
-    { say: [['N', 'نص الليل… اندفع {bull} نحو البوابة.', 'boom'], ['bull', 'وخّروا! أنا جاااي!'], ['N', 'وتسلّل {dajaj} للمطبخ… بس {chef} حسبه جاسوس!'], ['chef', 'جاسوس؟! خذ المقلاة!'], ['dajaj', 'أنا منكم يا رجّال! انتبه البيض… لا لا لا!'], ['N', 'وتطايرت القدور والصحون في كل مكان…'], ['N', 'وبرّا… وقف {dragon} قدام {abd}، وتبادلوا ضربات هزّت الأرض.', 'quake'], ['abd', '{P}! تعبت… كمّل عني!']] },
-    { fight: 'dragon', stage: 'roof', lvl: 1.9, hp: 1.15, dmg: 1.1, win: [['dragon', 'قوي… أقوى من آخر مرة.']], lose: [['dragon', 'تبي تنقذ صلاح؟ اغلبني أول.']] },
+    { say: [['N', 'نص الليل… اندفع {bull} نحو البوابة.', 'boom'], ['bull', 'وخّروا! أنا جاااي!'], ['N', 'وتسلّل {dajaj} للمطبخ… بس {chef} حسبه جاسوس!'], ['chef', 'جاسوس؟! خذ المقلاة!'], ['dajaj', 'أنا منكم يا رجّال! انتبه البيض… لا لا لا!'], ['N', 'وتطايرت القدور والصحون في كل مكان…'], ['N', 'وبرّا… وقف {dragon} قدام {abd}، وتبادلوا ضربات هزّت الأرض.', 'quake'], ['abd', 'يا {dragon}… الجولة الثانية لي!']] },
+    { as: 'abd', fight: 'dragon', stage: 'roof', lvl: 1.9, hp: 1.15, dmg: 1.1, win: [['dragon', 'قوي… أقوى من آخر مرة.']], lose: [['dragon', 'تبي تنقذ صلاح؟ اغلبني أول.']] },
     { go: ['base', 1330, 330], goal: 'روح غرفة التحكم 🖥️' },
     { say: [['gamer', 'الكاميرات طافية… لحظة! وش هذا؟'], ['gamer', 'جهاز تتبّع… مخبّى في عدّة المخترع!', 'tracker'], ['gamer', 'في واحد يراقبنا… من الداخل!'], ['captain', 'ما في وقت! الزنزانة… بسرعة!']] },
   ] },
@@ -7233,8 +7285,8 @@ const SAGA = [
     { fight: 'moalem', stage: 'roof', lvl: 2.4, hp: 1.25, dmg: 1.15, win: [['moalem', '…ما توقعتك تكبر بهالسرعة.']], lose: [['moalem', 'لسّاك تلميذ… وأنا المعلّم!']] },
   ] },
   { part: 2, n: 'ملك المقاتلين', coins: 150, place: { inv: ['base', 1330, 320, 'down'], salah: ['base', 1200, 420, 'up'], adel: ['base', 1100, 470, 'right'], moalem: null }, steps: [
-    { say: [['N', 'عادل طايح… وصلاح يصارخ.'], ['N', 'ولبس المخترع… بدلة آلية عملاقة!', 'mech'], ['inv', 'الحين تشوفون قوة العلم الحقيقية!'], ['salah', 'يا {P}… معي! نطيّح هالآلة سوا!']] },
-    { fight: 'inv', stage: 'palace2', lvl: 2.4, hp: 1.6, dmg: 1.15, mech: 1, name: 'المخترع — البدلة الآلية', win: [['inv', 'النظام… انهار… مستحيل!']], lose: [['inv', 'العلم… ما يخسر!']] },
+    { say: [['N', 'عادل طايح… وصلاح يصارخ.'], ['N', 'ولبس المخترع… بدلة آلية عملاقة!', 'mech'], ['inv', 'الحين تشوفون قوة العلم الحقيقية!'], ['salah', 'هالآلة بتطيح اليوم… بيدي!']] },
+    { as: 'salah', fight: 'inv', stage: 'palace2', lvl: 2.4, hp: 1.6, dmg: 1.15, mech: 1, name: 'المخترع — البدلة الآلية', win: [['inv', 'النظام… انهار… مستحيل!']], lose: [['inv', 'العلم… ما يخسر!']] },
     { say: [['N', 'قاتل صلاح بشجاعة… لين دمّر مصدر طاقة البدلة.', 'boom'], ['N', 'وحاول {moalem} يهرب… بس ملالي سكّر طريقه، وهزمه.', 'dash'], ['N', 'وانتهت الحرب… ورجع الهدوء.'], ['N', 'اعتزل عادل القتال… وصار صلاح حاكم المملكة.'], ['N', 'وفتح {chef} مطعم… و{dajaj} يحرسه، و{captain} يدرّب الجيش.'], ['adel', 'يا {P}… شكراً. لولاك، ما رجعت لأخوي.'], ['N', 'واختفى ملالي… من جديد.'], ['N', 'وبعد سنة… وصلت للقصر بطاقة سودا.', 'card'], ['N', 'مكتوب فيها: استمتعوا بالسلام… لأن الملك الحقيقي ما ظهر بعد.', 'card'], ['N', 'وتحتها توقيع… ملالي.', 'card']] },
   ] },
   // ======================= الجزء الرابع =======================
@@ -7283,14 +7335,14 @@ const SAGA = [
   ] },
   { part: 4, n: 'سقوط المعلم', coins: 40, place: { moalem: ['qalaa', 1600, 880, 'left'], dajaj: ['qalaa', 1440, 900, 'right'], bull: ['qalaa', 1000, 1300, 'up'], gamer: ['qalaa', 1260, 1100, 'up'], captain: ['qalaa', 760, 1100, 'up'] }, steps: [
     { go: ['qalaa', 1450, 1060], goal: 'روح القلعة 🏯 — آخر هجوم (القاعة اليمين)' },
-    { say: [['N', 'حطّم {bull} البوابة… واندفع الكل للداخل.', 'boom'], ['N', 'وفي إحدى القاعات… تقابل {dajaj} و{moalem}.', ['vs', 'dajaj', 'moalem']], ['moalem', 'حركاتك سخيفة!'], ['dajaj', 'سخيفة؟ بس محيّرتك! كاك… كاك… هوب!'], ['N', 'ولخبطه {dajaj}… لين طيّحه على الأرض!'], ['N', 'بس رجع {moalem} وقف… وشغّل جهاز يحبس المقاتلين!', 'alarm'], ['moalem', 'محد بيطلع من هني!'], ['P', 'إلا أنا. هالمرة… النهاية لك يا {moalem}.']] },
-    { fight: 'moalem', stage: 'dark', lvl: 2.7, hp: 1.35, dmg: 1.2, win: [['moalem', 'مستحيل… التلميذ… غلب المعلّم!']], lose: [['moalem', 'لسّاك تلميذي!']] },
+    { say: [['N', 'حطّم {bull} البوابة… واندفع الكل للداخل.', 'boom'], ['N', 'وفي إحدى القاعات… تقابل {dajaj} و{moalem}.', ['vs', 'dajaj', 'moalem']], ['moalem', 'حركاتك سخيفة!'], ['dajaj', 'سخيفة؟ بس محيّرتك! كاك… كاك… هوب!'], ['N', 'ولخبطه {dajaj}… لين طيّحه على الأرض!'], ['N', 'بس رجع {moalem} وقف… وشغّل جهاز يحبس المقاتلين!', 'alarm'], ['moalem', 'محد بيطلع من هني!'], ['dajaj', 'إلا أنا. هالمرة… النهاية لك يا {moalem}.']] },
+    { as: 'dajaj', fight: 'moalem', stage: 'dark', lvl: 2.7, hp: 1.35, dmg: 1.2, win: [['moalem', 'مستحيل… التلميذ… غلب المعلّم!']], lose: [['moalem', 'لسّاك تلميذي!']] },
     { say: [['gamer', 'المفتاح! المخترع خلّاه احتياط… شغّلته!', 'tracker'], ['N', 'وقفت الآلة… وطاحت كل خطط {moalem}.'], ['captain', 'قيّدوه! بيواجه عواقب أفعاله.']] },
   ] },
   { part: 4, n: 'عادل وصلاح ضد ملالي', coins: 60, place: { malali: ['qalaa', 1000, 330, 'down'], adel: ['qalaa', 860, 600, 'up'], salah: ['qalaa', 1140, 600, 'up'], moalem: null, dajaj: null, bull: null, gamer: null, captain: null }, steps: [
     { go: ['qalaa', 1000, 760], goal: 'روح قاعة العرش 👑 — المعركة الأخيرة' },
-    { say: [['N', 'ووصل الخالين… لقاعة العرش.', 'fog'], ['malali', 'هذي آخر معركة… ومحد بيطلع منها منتصر.'], ['N', 'اندفع صلاح… بس ملالي تفادى ضربته، وطيّح عادل!', 'dash'], ['salah', 'ما بخسر أخوي… مرة ثانية!'], ['adel', '{P}! اضربه… وإحنا نشتّت انتباهه!']] },
-    { fight: 'malali', stage: 'dark', lvl: 3, hp: 1.6, dmg: 1.2, boss: 1, final: 1, name: 'ملالي — سيد الظلام', win: [['malali', '…خلاص. انتهى.']], lose: [['malali', 'الظلام… ما ينهزم!']] },
+    { say: [['N', 'ووصل الخالين… لقاعة العرش.', 'fog'], ['malali', 'هذي آخر معركة… ومحد بيطلع منها منتصر.'], ['N', 'اندفع صلاح… بس ملالي تفادى ضربته، وطيّح عادل!', 'dash'], ['salah', 'ما بخسر أخوي… مرة ثانية!'], ['adel', 'يا صلاح! اضربه… وأنا أشتّت انتباهه!']] },
+    { as: 'salah', fight: 'malali', stage: 'dark', lvl: 3, hp: 1.6, dmg: 1.2, boss: 1, final: 1, name: 'ملالي — سيد الظلام', win: [['malali', '…خلاص. انتهى.']], lose: [['malali', 'الظلام… ما ينهزم!']] },
     { say: [['N', 'تعاون الخالين… عادل شتّت انتباه ملالي، وصلاح وجّه الضربة الحاسمة.', 'boom'], ['N', 'وساد الصمت في القاعة… ومحد عاد يبي يكمّل القتال.']] },
   ] },
   { part: 4, n: 'الاعتراف والمصالحة', coins: 300, place: { malali: ['qalaa', 1000, 420, 'down'], adel: ['qalaa', 860, 600, 'up'], salah: ['qalaa', 1140, 600, 'up'] }, steps: [
@@ -7388,8 +7440,10 @@ const SAGA = [
   ] },
 ];
 /*STORY_THREE*/
+/*STORY_FOUR*/
 const SG_BOOK_START = [0, SAGA.findIndex(c => c.s2), SAGA.length];
 SAGA.push(...STORY_THREE);
+SG_BOOK_START.push(SAGA.length); SAGA.push(...STORY_FOUR);
 for (let book = 1; book < SG_BOOK_START.length; book++) {
   const start = SG_BOOK_START[book], end = SG_BOOK_START[book + 1] ?? SAGA.length;
   for (let i = start; i < end; i++) SG_ORD[i] = SG_ORD[i - start];
@@ -7398,8 +7452,9 @@ const SG_BOOKS = [
   { title: '⚔️ حرب الخالين', color: '#b030ff', finish: '🏆 خلصت حرب الخالين… «مملكة الدم» تنتظرك (من شاشة الاختيار)', ending: 'وانتهت حرب الخالين… وارتفعت راية العائلة', reward: '🌑 فتحت ملالي! و«مملكة الدم» تنتظرك' },
   { title: '🩸 مملكة الدم', color: '#e0102a', finish: '🏆 خلصت مملكة الدم… الأقنعة طاحت!', ending: 'وطاحت الأقنعة… وبقيت العائلة واقفة', reward: '🛡️ فتحت القائد المقنّع! تلقاه مظهر للدكتور' },
   { title: '🛡️ الدرع الأخير', color: '#087b70', finish: '🏆 خلصت أسطورة الدرع الأخير. سرّ الزعيم ما زال مفتوحًا.', ending: 'انتصر المفترس الأسطوري… وبقي سرّ الزعيم', reward: '🌴 الفريج والحلبة وقلعة ناصر مفتوحة للتجوّل' },
+  { title: '👑 ملحمة الأبطال', color: '#ff8a00', finish: '🏆 خلصت ملحمة الأبطال… لعبت بكل بطل في الحرب!', ending: 'ارتفعت راية العائلة… وانتهت حرب الخالين أخيراً', reward: '👑 كل أماكن المملكة مفتوحة للتجوّل' },
 ];
-const sgStoryNo = ch => ch >= SG_BOOK_START[2] ? 3 : ch >= SG_BOOK_START[1] ? 2 : 1;
+const sgStoryNo = ch => ch >= SG_BOOK_START[3] ? 4 : ch >= SG_BOOK_START[2] ? 3 : ch >= SG_BOOK_START[1] ? 2 : 1;
 const sgBookInfo = ch => SG_BOOKS[sgStoryNo(ch) - 1];
 const sgStoryName = ch => sgBookInfo(ch).title;
 const FORTRESS_REVISION = 1;
@@ -7434,15 +7489,16 @@ function sgPickBtns(sv) {
   const c = sv?.ch | 0, n = sgStoryNo(c), x0 = VW / 2 - 40;
   const began = sv && (sv.done || sv.st || c !== SG_BOOK_START[n - 1]);
   const L = SG_BOOKS.map((book, i) => ({
-    t: 'القصة ' + ['١', '٢', '٣'][i] + ' · ' + book.title, a: i + 1,
-    on: n === i + 1, x: x0 + 216 * (1 - i), w: 204, col: book.color,
+    t: ['١', '٢', '٣', '٤'][i] + ' · ' + book.title, a: i + 1,
+    on: n === i + 1, x: x0 + 170 * (1.5 - i), w: 164, col: book.color,
   }));
-  if (began) L.push({ t: '🔁 من جديد', a: 'r', x: x0 + 405, w: 142, col: 'rgba(255,255,255,0.16)' });
+  if (began) L.push({ t: '🔁 من جديد', a: 'r', x: x0 + 420, w: 128, col: 'rgba(255,255,255,0.16)' });
   return L;
 }
 // ---- engine
 const SG_CI = { nasser: NASSER, hamad: HAMAD, mask: MASKED, shade: MYST, adel: NOKH, salah: RAIS, malali: MALALI, inv: CODER, dragon: 7, chef: CHEF, captain: 2, moalem: 6, bull: 5, dajaj: 8, teer: 14, gamer: 13, abd: 12, guard: 4 };
-const SG_TITLE = { nasser: 'ناصر', hamad: 'حمد', mask: 'القائد المقنّع', shade: 'حارس الظل', adel: 'الخال عادل', salah: 'الخال صلاح', malali: 'ملالي', inv: 'المخترع' };
+Object.assign(SG_CI, { exp: S4_EXP, mech: S4_MECH, robot: S4_ROBOT });
+const SG_TITLE = { exp: 'التجربة صفر', mech: 'المخترع — البدلة الآلية', robot: 'الحارس الآلي', nasser: 'ناصر', hamad: 'حمد', mask: 'القائد المقنّع', shade: 'حارس الظل', adel: 'الخال عادل', salah: 'الخال صلاح', malali: 'ملالي', inv: 'المخترع' };
 const SG_SUB = { nasser: 'ابن العم · زعيم الشر', hamad: 'ابن العم · قوة المال', mask: '؟؟؟', shade: 'بلا وجه', adel: 'النوخذة', salah: 'الرئيس', inv: 'المبرمج', malali: 'سيد الظلام' };
 const SG_COL = { nasser: '#e0102a', hamad: '#e8b923', mask: '#ff1030', shade: '#ff3b4a', adel: '#3cb4ff', salah: '#d4a640', malali: '#b030ff', inv: '#ff2a3a', P: '#3ea0ff', N: '#9fd8ff', '?': '#ff3b4a', jadd: '#ffd34d' };
 const SG_STAND = [4, 9, 10, 11, 3, 1, 0];
@@ -7453,11 +7509,11 @@ function sgAll() { let A = null; try { A = JSON.parse(localStorage.getItem('shil
 function sgPut(ci, rec) { const A = sgAll(); A[ci] = { ...rec, fortressRevision: FORTRESS_REVISION }; try { localStorage.setItem('shilla_saga_by', JSON.stringify(A)); } catch (e) { } if (G.world) G.world.sgA = null; }
 function sgHero() { const W = G.world; return W && W.P && W.P.base != null ? W.P.base : W && W.cur != null ? W.cur : 0; }
 function sgLoad(ci) { return fortressSave(sgAll()[ci == null ? sgHero() : ci]) || null; }
-var SAGA_DONE = (() => { try { const o = JSON.parse(localStorage.getItem('shilla_saga')); if (o && (o.ever || (o.done && sgStoryNo(o.ch) < 3))) return true; } catch (e) { } return Object.values(sgAll()).some(s => s && (s.ever || (s.done && sgStoryNo(s.ch) < 3))); })();
+var SAGA_DONE = (() => { try { const o = JSON.parse(localStorage.getItem('shilla_saga')); if (o && (o.ever || (o.done && sgStoryNo(o.ch) !== 3))) return true; } catch (e) { } return Object.values(sgAll()).some(s => s && (s.ever || (s.done && sgStoryNo(s.ch) !== 3))); })();
 function sagaUnlocked() { return SAGA_DONE; }
 function saga2Unlocked() { try { return Object.values(sgAll()).some(r => r && ((r.done && sgStoryNo(r.ch | 0) === 2) || (r.b2 && r.b2.done))); } catch (e) { return false; } }
 function sgSave(S) {
-  const earned = S.ever || (S.done && sgStoryNo(S.ch) < 3);
+  const earned = S.ever || (S.done && sgStoryNo(S.ch) !== 3);
   if (earned) SAGA_DONE = true;
   const ci0 = S.base != null ? S.base : sgHero(), old = sgLoad(ci0) || {};
   const rec = { ...old, ch: S.ch, st: S.st, done: S.done ? 1 : 0, ever: earned || old.ever ? 1 : 0,
@@ -7469,6 +7525,8 @@ function sgDue(W) { const S = W.saga, d = wDay(W); return S.wait == null || d > 
 function sgCast(base, eff) { const cast = Object.assign({}, SG_CI), mine = new Set([base, eff]), used = new Set(Object.values(cast));
   for (const r in cast) if (mine.has(cast[r])) { if (r === 'malali' && !mine.has(0)) { cast[r] = 0; continue; } const s = SG_STAND.find(c => !mine.has(c) && !used.has(c)); if (s !== undefined) { cast[r] = s; used.add(s); } }
   return cast; }
+// story 4: المعلّم والعبد والبلدوزر بأشكالهم الجديدة
+function s4Cast(base, eff) { const c = sgCast(base, eff); for (const k of ['moalem', 'abd', 'bull']) c[k] = S4[k]; c.exp = S4_EXP; c.mech = S4_MECH; c.robot = S4_ROBOT; return c; }
 function sgName(W, r) { if (r === 'P') return CHARS[W.P.ci === MALALI ? W.P.base : W.P.ci].name; if (r === 'N') return 'الراوي'; if (r === '?') return '؟؟؟'; if (r === 'jadd') return 'الجد'; return SG_TITLE[r] || CHARS[W.saga.cast[r]].name; }
 function sgTok(W, s) { return s.replace(/\{(\w+)\}/g, (m, r) => sgName(W, r)); }
 function sgCiOf(W, r) { return r === 'P' ? W.P.ci : r === '?' ? MYST : W.saga.cast[r]; }
@@ -7482,7 +7540,7 @@ function sgApplyPlace(W) {
     W.npcs.push({ sg: r, ci, map, x, y, hx: x, hy: y, dir, d0: dir, ph: Math.random() * 6, wait: 1e9, tx: null, ty: null, fig, face: dir === 'left' ? -1 : 1, dname: sgName(W, r) }); }
   for (const n of W.npcs) if (!n.sg && !n.cit) { if (n.hmap === undefined) n.hmap = n.map; n.map = used.has(n.ci) ? '__' : n.hmap; }
 }
-function sgReplay(S) { S.un = new Set(); for (let c = sgStoryNo(S.ch) === 3 ? SG_BOOK_START[2] : 0; c <= S.ch && c < SAGA.length; c++) SAGA[c].steps.forEach((st, i) => { if (c < S.ch || i <= S.st) { if (st.unlock) S.un.add(st.unlock); } });
+function sgReplay(S) { S.un = new Set(); for (let c = sgStoryNo(S.ch) >= 3 ? SG_BOOK_START[sgStoryNo(S.ch) - 1] : 0; c <= S.ch && c < SAGA.length; c++) SAGA[c].steps.forEach((st, i) => { if (c < S.ch || i <= S.st) { if (st.unlock) S.un.add(st.unlock); } });
   if (S.done) { S.place = {}; if (sgStoryNo(S.ch) === 3) return; for (const id in WMAPS) if (WMAPS[id].lock && (sgStoryNo(S.ch) === 2 || (id !== 'nasq' && id !== 'hisn'))) S.un.add(id); return; }
   S.place = Object.assign({}, SAGA[S.ch].place); SAGA[S.ch].steps.forEach((st, i) => { if (i <= S.st && st.place) Object.assign(S.place, st.place); }); }
 function wMapList() {
@@ -7498,7 +7556,7 @@ setTimeout(() => { if (proVoices.fail) storyVoices(); }, 5000);
 function sagaBegin(W) {
   storyVoices();
   const sv = sgLoad(W.P.base) || { ch: 0, st: 0 };
-  const S = W.saga = { ch: clamp(sv.ch | 0, 0, SAGA.length - 1), st: sv.st | 0, done: !!sv.done, ever: !!(sv.ever || (sv.done && sgStoryNo(sv.ch) < 3)), base: W.P.base, cast: sgStoryNo(sv.ch) === 3 ? sgCast(W.P.ci, W.P.ci) : sgCast(W.P.base, W.P.ci), figs: {}, place: {}, un: new Set(), k: 0 };
+  const S = W.saga = { ch: clamp(sv.ch | 0, 0, SAGA.length - 1), st: sv.st | 0, done: !!sv.done, ever: !!(sv.ever || (sv.done && sgStoryNo(sv.ch) !== 3)), base: W.P.base, cast: sgStoryNo(sv.ch) === 3 ? sgCast(W.P.ci, W.P.ci) : sgStoryNo(sv.ch) === 4 ? s4Cast(W.P.base, W.P.ci) : sgCast(W.P.base, W.P.ci), figs: {}, place: {}, un: new Set(), k: 0 };
   if (S.st >= SAGA[S.ch].steps.length) S.st = 0; S.wait = sv.wd != null && !S.done && S.st === 0 ? sv.wd : null;
   sgReplay(S); if (S.wait != null && !sgDue(W)) S.place = {}; else S.wait = null; sgApplyPlace(W);
   if (S.wait != null) { W.toast = { t: '📅 الفصل ' + SG_ORD[S.ch] + ' يوم ' + wDateStr(S.wait) + ' — نام 🛏️ لين يجي الوقت', k: 0 }; return; }
@@ -7526,14 +7584,14 @@ function sgStep(W, resume) {
 function sgNext(W) { const S = W.saga; S.st++; sgSave(S); if (S.st >= SAGA[S.ch].steps.length) sgChapterEnd(W); else sgStep(W); }
 function sgChapterEnd(W) { const S = W.saga, C = SAGA[S.ch]; if (C.coins) profAward(PROF.cur, C.coins);
   if (S.ch >= SAGA.length - 1 || SG_BOOK_START.includes(S.ch + 1)) { sgFinish(W); return; }
-  if (sgStoryNo(S.ch) === 3) {
+  if (sgStoryNo(S.ch) >= 3) {
     S.ch++; S.st = 0; S.wait = null;
     S.place = Object.assign({}, SAGA[S.ch].place); sgApplyPlace(W); sgSave(S); sgCard(W);
     return;
   }
   const gap = SAGA[S.ch + 1].part !== C.part ? 2 : 1; S.ch++; S.st = 0; S.wait = wDay(W) + gap; sgSave(S); S.place = {}; sgApplyPlace(W); W.msg = { t: `✅ خلص الفصل +${C.coins} 🪙`, k: 0, c: '#ffd34d' };
   W.toast = { t: '📅 الفصل الجاي ' + (gap === 1 ? 'بكرة الصبح' : 'بعد يومين') + ' (' + wDateStr(S.wait) + ') — نام 🛏️ أو العب لين يجي الوقت', k: 0 }; }
-function sgFinish(W) { const S = W.saga; if (S.done) return; S.done = true; if (sgStoryNo(S.ch) < 3) S.ever = true; sgSave(S); profAward(PROF.cur, SAGA[S.ch].coins || 0);
+function sgFinish(W) { const S = W.saga; if (S.done) return; S.done = true; if (sgStoryNo(S.ch) !== 3) S.ever = true; sgSave(S); profAward(PROF.cur, SAGA[S.ch].coins || 0);
   S.place = {}; sgApplyPlace(W); S.credits = { k: 0 }; SFX.ready(); }
 function sgEnsure(W, r) { const S = W.saga; if (S.place[r]) return; const P = W.P; let at = [P.x + 150, P.y];
   for (const [dx, dy] of [[150, 0], [-150, 0], [0, 130], [0, -130], [210, 90]]) { if (wFree(W, P.x + dx, P.y + dy, WD.R, null)) { at = [P.x + dx, P.y + dy]; break; } }
@@ -7556,10 +7614,13 @@ function sgSayEnd(W) { const S = W.saga, D = S.say; voiceStop(); try { window.sp
 // ---- story fights
 function sgFight(W, st) { const S = W.saga; worldSave(); W.dlg = null; S.fightLater = false; voiceStop();
   const oc = S.cast[st.fight]; W.sagaF = st; G.mode = 'cpu';
-  const fortress = sgStoryNo(S.ch) === 3;
-  G.sel = { cur: [fortress ? W.P.ci : W.P.base, st.darkForm ? FORT_NASSER : oc],
-    done: [true, true], t: 0, readyT: 0, outfit: [fortress ? 0 : W.P.o, 0] };
-  G.stageId = st.stage || 'arena'; G.vsName = [null, st.name ? sgTok(W, st.name) : sgName(W, st.fight)]; SFX.ok(); G.toVS(); }
+  const fortress = sgStoryNo(S.ch) === 3, asCi = sgAsCi(W, st);
+  G.sel = { cur: [asCi != null ? asCi : fortress ? W.P.ci : W.P.base, st.darkForm ? FORT_NASSER : oc],
+    done: [true, true], t: 0, readyT: 0, outfit: [asCi != null || fortress ? 0 : W.P.o, 0] };
+  G.stageId = st.stage || 'arena'; G.vsName = [asCi != null ? sgName(W, st.as) : null, st.name ? sgTok(W, st.name) : sgName(W, st.fight)];
+  if (asCi != null) W.toast = { t: '🎭 في هالقتال أنت ' + sgName(W, st.as) + '!', k: 0 }; SFX.ok(); G.toVS(); }
+// the fighter you play in a story fight: your own hero, or the good side of the duel (st.as)
+function sgAsCi(W, st) { if (!st.as || st.as === 'P') return null; const S = W.saga, base = SG_CI[st.as]; if (base === W.P.base || base === W.P.ci) return W.P.base; return S.cast[st.as]; }
 function sagaSetupFight(F) { const W = G.world, st = W && W.sagaF; if (!st) return; const me = F.f[0], op = F.f[1];
   me.dmgMul = 1.3; me.defMul = 0.85; me.storyBuff = true; F.pads[1].lvl = st.lvl || 1;
   if (st.hp) { op.maxHp = Math.round(op.maxHp * st.hp); op.hp = op.trailHp = op.maxHp; } if (st.dmg) op.dmgMul = st.dmg;
@@ -7575,7 +7636,9 @@ function sagaSetupFight(F) { const W = G.world, st = W && W.sagaF; if (!st) retu
     if (st.learnBlack) op.bossCD = 45;
     if (st.breakArmor || st.learnBlack) F.sagaTick = fortressBattleTick;
   }
-  if (st.final) F.sagaTick = st.final === 2 ? sagaFinalTick2 : sagaFinalTick; }
+  if (sgStoryNo(W.saga.ch) === 4) { const c = F.pads[1]; c.pro = true; c.lvl = (st.lvl || 1) + 1.5; me.dmgMul = 1.05; me.defMul = 1.05; op.maxHp = Math.round(op.maxHp * 1.15); op.hp = op.trailHp = op.maxHp; op.dmgMul = (op.dmgMul || 1) * 1.15; if (op.bossAI) op.bossCD = 70; }
+  if (st.final) F.sagaTick = st.final === 2 ? sagaFinalTick2 : sagaFinalTick;
+  if (st.hazard) { const t0 = F.sagaTick; F.sagaTick = F2 => { if (t0) t0(F2); s4Hazard(F2, st.hazard); }; } }
 // the last fight of «مملكة الدم»: ناصر shuts the fortress down, then العبد jumps in
 function sagaFinalTick2(F) { if (F.phase !== 'fight' || F.fin) return; const me = F.f[0], op = F.f[1], r = op.hp / op.maxHp, d = Math.sign(op.x - me.x) || 1;
   if (!F.sgA1 && r < 0.6) { F.sgA1 = 1; SFX.zap(); SFX.thud(); F.shake(16); op.bossCD = Math.max(op.bossCD | 0, 420); op.defMul = 1.25; op.flash = 10; finBurst(op.x, op.hipY - 200, 40, ['#ff1030', '#ffffff'], 10, 6); F.banner = { text: '🔌 ناصر: رمز الإيقاف… النظام طفى!', ar: true, t: 0, dur: 80 }; }
@@ -7820,7 +7883,7 @@ function sgDrawRetry(W) { const R = W.saga.retry; ctx.fillStyle = 'rgba(3,4,10,0
   [['🔁 مرة ثانية', VW / 2 + 150], ['🚶 بعدين', VW / 2 - 150]].forEach(([l, x], i) => { const on = i === R.sel; ctx.fillStyle = on ? 'rgba(230,20,40,0.95)' : 'rgba(255,255,255,0.1)'; rrect(x - 130, 410, 260, 60, 16); ctx.fill(); if (on) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); } txt(l, x, 441, { size: 26, weight: 900, color: '#fff' }); }); }
 function sgDrawCredits(W) { const S = W.saga, k = S.credits.k, a = Math.min(1, k / 30); ctx.fillStyle = '#05050a'; ctx.fillRect(0, 0, VW, VH); ctx.save(); ctx.globalAlpha = a;
   txt('النهاية', VW / 2, 110, { size: 90, weight: 900, color: '#ffd34d', glow: '#ff8a00', glowBlur: 40 }); txt(sgBookInfo(S.ch).ending, VW / 2, 180, { size: 26, weight: 800, color: '#fff' });
-  const R = sgStoryNo(S.ch) === 3 ? ['P', 'captain', 'hamad', 'inv', 'bull', 'nasser'] : sgStoryNo(S.ch) === 2 ? ['nasser', 'hamad', 'abd', 'inv', 'malali', 'adel', 'salah', 'captain', 'bull', 'chef', 'dajaj', 'teer', 'dragon'] : ['adel', 'salah', 'malali', 'inv', 'dragon', 'chef', 'captain', 'moalem', 'bull', 'dajaj', 'teer', 'gamer', 'abd'];
+  const R = sgStoryNo(S.ch) === 4 ? ['adel', 'salah', 'malali', 'exp', 'inv', 'dragon', 'chef', 'captain', 'moalem', 'bull', 'dajaj', 'teer', 'gamer', 'abd'] : sgStoryNo(S.ch) === 3 ? ['P', 'captain', 'hamad', 'inv', 'bull', 'nasser'] : sgStoryNo(S.ch) === 2 ? ['nasser', 'hamad', 'abd', 'inv', 'malali', 'adel', 'salah', 'captain', 'bull', 'chef', 'dajaj', 'teer', 'dragon'] : ['adel', 'salah', 'malali', 'inv', 'dragon', 'chef', 'captain', 'moalem', 'bull', 'dajaj', 'teer', 'gamer', 'abd'];
   R.forEach((r, i) => { const row = i < 7 ? 0 : 1, n = row ? R.length - 7 : Math.min(7, R.length), j = row ? i - 7 : i, x = VW / 2 + ((n - 1) / 2 - j) * 150, y = 290 + row * 160, u = easeOut(clamp((k - 20 - i * 5) / 20, 0, 1)); ctx.globalAlpha = a * u; sgFace(W, r, x, y, 52); txt(sgName(W, r), x, y + 76, { size: 18, weight: 900, color: '#fff' }); });
   ctx.globalAlpha = a; txt(sgBookInfo(S.ch).reward, VW / 2, 600, { size: 26, weight: 900, color: '#e0b0ff' }); txt('شكراً إنك لعبت يا ' + CHARS[W.P.ci].name + ' 🎉', VW / 2, 645, { size: 22, weight: 800, color: '#ffd34d' });
   if (k > 90 && G.frame % 50 < 34) txt(TOUCH_ON ? 'المس للمتابعة' : 'Enter للمتابعة', VW / 2, VH - 26, { size: 17, weight: 800, color: 'rgba(255,255,255,0.6)' }); ctx.restore(); }
@@ -7838,6 +7901,7 @@ function voxTag(who) {   // one voice per hero; the narrator, the mystery voice,
   if (typeof who === 'string') return who; if (who === 99) return 'nar'; if (who === 98 || who === 96) return 'myst'; if (who === 97) return 'old';
   if (who >= FORT_ROOKIE && who <= FORT_PREDATOR) return 'c' + CHEF;
   if (who === FORT_NASSER) return 'c' + NASSER;
+  if (CHARS[who] && CHARS[who].s4) return S4_VOICE[CHARS[who].s4];
   return 'c' + (who | 0);
 }
 // the studio pieces of a line for one voice, or null when any piece is missing
@@ -8496,7 +8560,7 @@ async function boot() {
   requestAnimationFrame(loop);
   const fontP = (document.fonts && document.fonts.load) ? Promise.race([Promise.all([document.fonts.load(`900 40px Cairo`), document.fonts.load(`700 40px Teko`), document.fonts.load(`800 40px Cairo`)]), new Promise(r => setTimeout(r, 2500))]).catch(() => { }) : Promise.resolve();
   await Promise.all([loadImages(), fontP]);
-  malaliAssets(); babaAssets(); farmAssets(); wahshBattleAssets(); fortressAssets();
+  malaliAssets(); babaAssets(); farmAssets(); wahshBattleAssets(); fortressAssets(); saga4Assets();
   for (let i = 0; i < CHARS.length; i++) RIGS[i] = buildRig(i);
   BACKDROP = makeBackdrop();
   cv.focus();

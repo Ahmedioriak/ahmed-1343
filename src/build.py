@@ -22,6 +22,8 @@ def build(sub, out, title, cfg):
                 marker = '/*' + fighter.upper() + '_' + section.upper() + '*/'
                 game = game.replace(marker, rd(*sub, fighter + '-' + section + '.js'))
         game = game.replace('/*STORY_THREE*/', rd(*sub, 'story-three.js'))
+        game = game.replace('/*STORY_FOUR*/', rd(*sub, 'story-four.js')).replace('/*SAGA4_COMBAT*/', rd(*sub, 'saga4-combat.js'))
+        assets += '\n' + rd(*sub, 'saga4-art.js')
         for form in ('rookie', 'armor', 'predator', 'nasser'):
             with open(os.path.join(D, *sub, 'fort-' + form + '-reference.jpg'), 'rb') as photo:
                 encoded = base64.b64encode(photo.read()).decode('ascii')
