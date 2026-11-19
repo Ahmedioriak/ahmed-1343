@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.92';
+const GAME_VER = '1.93';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2625,7 +2625,9 @@ function dashDust(f) { if (f.t % 4 === 0 && f.t < 12) dust(f.x - f.facing * 10, 
 
 // ================= CPU =================
 // skill damage evened out: characters whose skill hit too soft (measured on a still dummy) get a multiplier
-const SKILL_BOOST = {"1": 1.08, "2": 1.76, "3": 1.8, "5": 1.12, "6": 1.59, "7": 1.42, "8": 1.42, "9": 1.23, "10": 1.42, "11": 1.12, "12": 2.25, "13": 1.93, "14": 1.5, "15": 1.17, "16": 1.08, "23": 1.5, "26": 1.69, "27": 1.29, "28": 1.29, "29": 1.29, "19": 1.17, "20": 1.5, "21": 1.12, "22": 1.5, "30": 2.3, "33": 1.08}, SKILL2_BOOST = {"0": 1.25, "14": 1.25, "23": 1.82, "24": 1.18, "25": 1.82, "26": 1.67, "28": 1.25, "29": 1.18, "18": 1.05, "19": 1.33, "20": 1.67, "21": 1.33, "31": 2.0, "32": 1.67, "33": 1.82, "34": 1.43};
+const SKILL_BOOST = {"1": 1.08, "2": 2.1, "3": 1.8, "5": 1.12, "6": 1.59, "7": 1.75, "8": 1.42, "9": 1.23, "10": 1.42, "11": 1.12, "12": 2.25, "13": 1.93, "14": 1.5, "15": 1.17, "16": 1.08, "23": 1.5, "26": 1.69, "27": 1.29, "28": 1.29, "29": 1.29, "19": 1.17, "20": 1.5, "21": 1.12, "22": 1.5, "30": 2.3, "33": 1.08}, SKILL2_BOOST = {"0": 1.25, "14": 1.25, "23": 1.82, "24": 1.18, "25": 1.82, "26": 1.67, "28": 1.25, "29": 1.18, "18": 1.05, "19": 1.33, "20": 1.67, "21": 1.33, "31": 2.0, "32": 1.67, "33": 1.82, "34": 1.43};
+// الكابتن والتنين were the weakest pair to play: sturdier and harder-hitting
+Object.assign(CHARS[2], { hp: 1.05, dmg: 1.08 }); Object.assign(CHARS[7], { hp: 1.04, dmg: 1.08 });
 class CPUPad {
   // «محترف» (story 4): reads the player's habits, blocks at the right height, slips projectiles, punishes recovery, attacks from range
   proRead(fK, bK, press, dist) {
