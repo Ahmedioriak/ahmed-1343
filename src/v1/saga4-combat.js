@@ -1,12 +1,12 @@
 // القصة ٤ — أشكال جديدة من رسومات المستخدم (شخصيات القصة فقط)
 // [key, base (moves/voice), name, h, hp, dmg, color]
 const S4_FORMS = [
-  ['moalem', 6, 'المعلّم', 0.97, 1.4, 1.3, '#d4a640'],
-  ['abd', 12, 'العبد', 0.98, 1.45, 1.32, '#ffb347'],
-  ['exp', 0, 'التجربة صفر', 1.04, 1.35, 1.28, '#b47aff'],
-  ['bull', 5, 'البلدوزر', 1.06, 1.6, 1.36, '#2fb39a'],
-  ['mech', CODER, 'البدلة الآلية', 1.0, 1.65, 1.4, '#ff2a3a'],
-  ['robot', 5, 'الحارس الآلي', 1.02, 1.7, 1.34, '#54e0d0'],
+  ['moalem', 6, 'الداهية', 0.97, 1.4, 1.3, '#d4a640'],
+  ['abd', 12, 'صخر', 0.98, 1.45, 1.32, '#ffb347'],
+  ['exp', 0, 'زيرو', 1.04, 1.35, 1.28, '#b47aff'],
+  ['bull', 5, 'جلمود', 1.06, 1.6, 1.36, '#2fb39a'],
+  ['mech', CODER, 'الدرع الأسود', 1.0, 1.65, 1.4, '#ff2a3a'],
+  ['robot', 5, 'تيتان', 1.02, 1.7, 1.34, '#54e0d0'],
 ];
 const S4 = {};
 for (const [key, base, name, h, hp, dmg, color] of S4_FORMS) {
@@ -63,7 +63,7 @@ MV.sk_s4_charge = dashMove({ st: 11, ac: 16, rc: 22, sp: 27, trail: 1, limb: 'fH
 MV.sk_s4_missiles = projMove(13, 24, PZ.windup, PZ.release, f => { s4Rain(f, '#ff8a40', 5, 12); s4Wave(f, '#ff2a3a', { kind: 'beam', dmg: 14, r: 40, speed: 30 }); }, { skill: 1 });
 MV.sk_s4_quake = projMove(16, 24, PZ.stompUp, PZ.pound, f => { s4Multi(f, 3, i => s4Wave(f, '#9fe8ff', { low: true, dmg: 14, r: 52, speed: 15 + i * 3 })); F_shake(20); }, { skill: 1 });
 Object.assign(BOSS_NAMES, { sk_s4_ringrain: 'مطر الخواتم الذهبية', sk_s4_meteor: 'نيازك الصخر', sk_s4_spit: 'عاصفة البصق', sk_s4_charge: 'هجمة العملاق',
-  sk_s4_missiles: 'وابل الصواريخ', sk_s4_quake: 'زلزال الحديد', sk_s4_net: 'شبكة المعلم', sk_s4_rock: 'قبضة الصخر', sk_s4_lash: 'الذراع الطويلة', sk_s4_axe: 'الفأسين الدوّارين', sk_s4_laser: 'ليزر البدلة', sk_s4_jet: 'اندفاع النفاثات' });
+  sk_s4_missiles: 'وابل الصواريخ', sk_s4_quake: 'زلزال الحديد', sk_s4_net: 'شبكة الداهية', sk_s4_rock: 'قبضة الصخر', sk_s4_lash: 'الذراع الطويلة', sk_s4_axe: 'الفأسين الدوّارين', sk_s4_laser: 'ليزر البدلة', sk_s4_jet: 'اندفاع النفاثات' });
 const S4_BOSS = {
   moalem: d => d > 300 ? [['sk_s4_net', 3], ['sk_s4_ringrain', 3], ['cb_13', 2]] : [['sk_s4_ringrain', 2], ['cb_24', 3], ['cb_34', 2]],
   abd: d => d > 300 ? [['sk_s4_meteor', 3], ['cb_13', 3], ['sk_s4_rock', 2]] : [['sk_s4_rock', 3], ['cb_24', 3], ['cb_34', 2]],
@@ -77,7 +77,7 @@ function s4BossPick(ci, d, r) {
   let w = 0; for (const [, x] of L) w += x; let q = r * w; for (const [id, x] of L) { q -= x; if (q <= 0) return id; } return L[0][0];
 }
 function F_shake(n) { try { G.fight && G.fight.shake(n); } catch (e) { } }
-const S4_SKILLS = { moalem: ['sk_s4_net', 'شبكة المعلم'], abd: ['sk_s4_rock', 'قبضة الصخر'], exp: ['sk_s4_lash', 'الذراع الطويلة'],
+const S4_SKILLS = { moalem: ['sk_s4_net', 'شبكة الداهية'], abd: ['sk_s4_rock', 'قبضة الصخر'], exp: ['sk_s4_lash', 'الذراع الطويلة'],
   bull: ['sk_s4_axe', 'الفأس الدوّار'], mech: ['sk_s4_laser', 'ليزر البدلة'], robot: ['sk_s4_jet', 'اندفاع النفاثات'] };
 for (const [key, base] of S4_FORMS) {
   const ci = S4[key];
@@ -120,13 +120,13 @@ function s4Hazard(F, kind) {
   F.s4T = (F.s4T || 150) - 1; if (F.s4T > 0) return; F.s4T = 330 + ((Math.random() * 160) | 0);
   const me = F.f[0], op = F.f[1], from = Math.random() < 0.5 ? -1 : 1, x0 = clamp(me.x - from * 760, -STAGE - 200, STAGE + 200);
   if (kind === 'beetle') {
-    SFX.rock(); F.banner = { t: '🪲 الخنفساء الآلية تهجم!', ar: true, dur: 60, k: 0 };
+    SFX.rock(); F.banner = { t: '🪲 قرناس — الخنفساء الآلية تهجم!', ar: true, dur: 60, k: 0 };
     spawnProj({ kind: 's4beetle', owner: op, x: x0, y: -60, vx: from * 12, vy: 0, g: 0, r: 62, life: 140, big: 1, draw(p) {
       const im = IMG.s4_beetle; if (!im) return; const w = 230, h = im.height * w / im.width; ctx.save(); ctx.translate(p.x, p.y + 60 - h / 2 + Math.abs(Math.sin(p.life * 0.5)) * -4);
       if (p.vx < 0) ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); },
       m: { dmg: 9, lvl: 'low', hs: 18, bs: 10, push: 50, stop: 6, p: 1.2, kd: 1 } });
   } else {
-    SFX.whoosh(1); F.banner = { t: '🦅 الصقر الآلي ينقضّ!', ar: true, dur: 60, k: 0 };
+    SFX.whoosh(1); F.banner = { t: '🦅 صقر النحاس ينقضّ!', ar: true, dur: 60, k: 0 };
     spawnProj({ kind: 's4falcon', owner: op, x: x0, y: -620, vx: from * 11, vy: 7.5, g: 0, r: 56, life: 120, big: 1, draw(p) {
       const im = IMG.s4_falcon; if (!im) return; const w = 300, h = im.height * w / im.width; ctx.save(); ctx.translate(p.x, p.y);
       ctx.rotate(Math.atan2(p.vy, Math.abs(p.vx)) * 0.4 * Math.sign(p.vx)); if (p.vx < 0) ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); },

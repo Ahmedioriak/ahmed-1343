@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.87';
+const GAME_VER = '1.88';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -7499,7 +7499,7 @@ function sgPickBtns(sv) {
 // ---- engine
 const SG_CI = { nasser: NASSER, hamad: HAMAD, mask: MASKED, shade: MYST, adel: NOKH, salah: RAIS, malali: MALALI, inv: CODER, dragon: 7, chef: CHEF, captain: 2, moalem: 6, bull: 5, dajaj: 8, teer: 14, gamer: 13, abd: 12, guard: 4 };
 Object.assign(SG_CI, { exp: S4_EXP, mech: S4_MECH, robot: S4_ROBOT });
-const SG_TITLE = { exp: 'التجربة صفر', mech: 'المخترع — البدلة الآلية', robot: 'الحارس الآلي', nasser: 'ناصر', hamad: 'حمد', mask: 'القائد المقنّع', shade: 'حارس الظل', adel: 'الخال عادل', salah: 'الخال صلاح', malali: 'ملالي', inv: 'المخترع' };
+const SG_TITLE = { exp: 'زيرو', mech: 'المخترع — الدرع الأسود', robot: 'تيتان', nasser: 'ناصر', hamad: 'حمد', mask: 'القائد المقنّع', shade: 'حارس الظل', adel: 'الخال عادل', salah: 'الخال صلاح', malali: 'ملالي', inv: 'المخترع' };
 const SG_SUB = { nasser: 'ابن العم · زعيم الشر', hamad: 'ابن العم · قوة المال', mask: '؟؟؟', shade: 'بلا وجه', adel: 'النوخذة', salah: 'الرئيس', inv: 'المبرمج', malali: 'سيد الظلام' };
 const SG_COL = { nasser: '#e0102a', hamad: '#e8b923', mask: '#ff1030', shade: '#ff3b4a', adel: '#3cb4ff', salah: '#d4a640', malali: '#b030ff', inv: '#ff2a3a', P: '#3ea0ff', N: '#9fd8ff', '?': '#ff3b4a', jadd: '#ffd34d' };
 const SG_STAND = [4, 9, 10, 11, 3, 1, 0];
@@ -7889,8 +7889,8 @@ function sgDrawCredits(W) { const S = W.saga, k = S.credits.k, a = Math.min(1, k
   ctx.globalAlpha = a; txt(sgBookInfo(S.ch).reward, VW / 2, 600, { size: 26, weight: 900, color: '#e0b0ff' }); txt('شكراً إنك لعبت يا ' + CHARS[W.P.ci].name + ' 🎉', VW / 2, 645, { size: 22, weight: 800, color: '#ffd34d' });
   if (k > 90 && G.frame % 50 < 34) txt(TOUCH_ON ? 'المس للمتابعة' : 'Enter للمتابعة', VW / 2, VH - 26, { size: 17, weight: 800, color: 'rgba(255,255,255,0.6)' }); ctx.restore(); }
 window.__sagaAPI = { SAGA, sgCast, sagaRestart, cov(base, eff) { const cast = sgCast(base, eff), nm = r => r === 'P' ? CHARS[eff === MALALI ? base : eff].name : r === 'X' ? CHARS[cast.chef].name : SG_TITLE[r] || CHARS[cast[r]].name, miss = new Set();
-    for (const x of window.__sagaAPI.texts()) { const t = x.split('|').slice(1).join('|').replace(/\{(\w+)\}/g, (m, r) => nm(r)); for (const sg of voiceSegs(t)) if (!VOX.txt[sg.t]) miss.add(sg.t); } return [...miss]; }, go(ch, st) { const W = G.world; W.saga.ch = ch; W.saga.st = st; W.saga.done = false; W.saga.wait = null; W.saga.say = null; W.saga.card = null; W.saga.choice = W.saga.retry = W.saga.esc = W.saga.credits = W.saga.items = null; sgReplay(W.saga); sgApplyPlace(W); sgStep(W, false); }, talk(r) { const W = G.world, n = W.npcs.find(n => n.sg === r); if (n) { W.map = n.map; sagaTalk(W, n); } return !!n; }, S: () => G.world.saga, tgt: () => sgTarget(G.world), goal: () => sgGoal(G.world), adv(n) { for (let i = 0; i < n; i++) { const W = G.world, D = W.saga.say; if (!D) break; D.i++; if (D.i >= D.L.length) sgSayEnd(W); else sgLineStart(W); } }, texts: () => { const T = new Set(); const add = L => (L || []).forEach(l => T.add(l[0] + '|' + l[1]));
-  for (const C of SAGA) for (const st of C.steps) { add(st.say); add(st.win); add(st.lose); add(st.yes); add(st.no); add(st.after); if (st.talks) for (const k in st.talks) add(st.talks[k]); if (st.find) st.find.forEach(f => add(f[4])); } return [...T]; } };
+    for (const x of window.__sagaAPI.texts()) { const t = x.split('|').slice(1).join('|').replace(/\{(\w+)\}/g, (m, r) => nm(r)); for (const sg of voiceSegs(t)) if (!VOX.txt[sg.t]) miss.add(sg.t); } return [...miss]; }, go(ch, st) { const W = G.world; W.saga.ch = ch; W.saga.st = st; W.saga.done = false; W.saga.wait = null; W.saga.say = null; W.saga.card = null; W.saga.choice = W.saga.retry = W.saga.esc = W.saga.credits = W.saga.items = null; sgReplay(W.saga); sgApplyPlace(W); sgStep(W, false); }, talk(r) { const W = G.world, n = W.npcs.find(n => n.sg === r); if (n) { W.map = n.map; sagaTalk(W, n); } return !!n; }, S: () => G.world.saga, tgt: () => sgTarget(G.world), goal: () => sgGoal(G.world), adv(n) { for (let i = 0; i < n; i++) { const W = G.world, D = W.saga.say; if (!D) break; D.i++; if (D.i >= D.L.length) sgSayEnd(W); else sgLineStart(W); } }, texts: (from = 0, to = SAGA.length) => { const T = new Set(); const add = L => (L || []).forEach(l => T.add(l[0] + '|' + l[1]));
+  for (const C of SAGA.slice(from, to)) for (const st of C.steps) { add(st.say); add(st.win); add(st.lose); add(st.yes); add(st.no); add(st.after); if (st.talks) for (const k in st.talks) add(st.talks[k]); if (st.find) st.find.forEach(f => add(f[4])); } return [...T]; } };
 
 function wEqFor(base, eff) { const P = profCur(), e = eqOfProf(P, eff); return e && Object.values(e).some(Boolean) ? e : eqOfProf(P, base); }
 function wDress(W) { if (!W || !W.P) return; W.P.fig = wMakeFig(W.P.ci, isFortressWorld(W) ? null : wEqFor(W.P.base, W.P.ci)); W.pf = null; }
@@ -7951,7 +7951,11 @@ function voxEach(fn) {   // fn(tag, text, inPieces, source)
   const COMBOS = [[0, 0], [1, 1], [1, 18], [3, 19], [5, 21], [6, 6], [6, 22], [7, 7], [0, 20], [2, 2], [4, 4], [8, 8], [9, 9], [10, 10], [11, 11], [12, 12], [13, 13], [14, 14], [0, 23], [BABA, BABA], [FARMER, FARMER]];
   // «حرب الخالين»: whole sentences (lines that name the player go in pieces, so each name is recorded once per voice)
   for (const [base, eff] of COMBOS) { const cast = sgCast(base, eff), nm = r => r === 'P' ? CHARS[eff === MALALI ? base : eff].name : r === 'X' ? CHARS[cast.chef].name : SG_TITLE[r] || CHARS[cast[r]].name;
-    for (const x of window.__sagaAPI.texts()) { const who = x.split('|')[0], raw = x.split('|').slice(1).join('|'), t = raw.replace(/\{(\w+)\}/g, (m, r) => nm(r));
+    for (const x of window.__sagaAPI.texts(0, SG_BOOK_START[3])) { const who = x.split('|')[0], raw = x.split('|').slice(1).join('|'), t = raw.replace(/\{(\w+)\}/g, (m, r) => nm(r));
+      fn(who === 'N' ? 'nar' : who === '?' ? 'myst' : who === 'jadd' ? 'old' : voxTag(who === 'P' ? eff : cast[who]), t, raw.includes('{P}'), 'saga'); } }
+  // story 4 uses its own cast (new looks and names for المعلّم والعبد والبلدوزر)
+  for (const [base, eff] of COMBOS) { const cast = s4Cast(base, eff), nm = r => r === 'P' ? CHARS[eff === MALALI ? base : eff].name : SG_TITLE[r] || CHARS[cast[r]].name;
+    for (const x of window.__sagaAPI.texts(SG_BOOK_START[3])) { const who = x.split('|')[0], raw = x.split('|').slice(1).join('|'), t = raw.replace(/\{(\w+)\}/g, (m, r) => nm(r));
       fn(who === 'N' ? 'nar' : who === '?' ? 'myst' : who === 'jadd' ? 'old' : voxTag(who === 'P' ? eff : cast[who]), t, raw.includes('{P}'), 'saga'); } }
   // the arcade story: names change with every pairing → pieces around the names
   const S0 = G.story; try { for (const pc of PLAYABLE) for (const o of PLAYABLE) { if (o === pc) continue; G.story = { pc, opps: [o, o, o, o], ch: 0, lines: [], li: 0 };
