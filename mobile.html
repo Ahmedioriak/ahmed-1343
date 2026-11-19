@@ -323,7 +323,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.91';
+const GAME_VER = '1.92';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -8948,7 +8948,7 @@ const STORY_FOUR = [
       ['exp', 'وين… أنا؟ ليش… كل شي يوجع؟'],
       ['malali', 'ابعدوا عنه! هو مو عدو… هو خايف.'],
     ] },
-    s4Fight('malali', 'exp', 'dark', 2, { hp: 0.8, name: 'زيرو — خوف وغضب', win: [
+    s4Fight('salah', 'exp', 'dark', 2, { hp: 0.8, name: 'زيرو — خوف وغضب', win: [
       ['malali', 'خلاص… خلاص. محد بيرجعك للخزان.'],
       ['exp', 'أنت… ما تخاف مني؟'],
       ['malali', 'أنا عشت عمري كله في الظل… أعرف شعورك.'],
@@ -9032,11 +9032,11 @@ const STORY_FOUR = [
       ['captain', 'درّبتني على الحركات… بس ما درّبتني على الولاء.'],
     ] },
     s4Fight('captain', 'moalem', 'roof', 2.4, { hp: 1, boss: 1, hazard: 'falcon', name: '{moalem} — صاحب المعطف الأسود', win: [['moalem', 'هذي جولة… والحرب أطول.']] }),
-    { say: [['N', 'وفي آخر الشارع… تواجه ملالي وعادل.', ['vs', 'malali', 'adel']], ['adel', 'كنت أعرف إنك بتطلع لي من الظلام.']] },
-    s4Fight('malali', 'adel', 'dark', 2.5, { hp: 1.05, boss: 1, name: 'الخال عادل', win: [
-      ['N', 'طاح عادل… ووقف ملالي فوقه.'],
-      ['malali', 'ما زالت قدامك فرصة… تصلح اللي سويته.'],
-      ['N', 'ورفض ملالي ينهي حياته… ومشى.'],
+    { say: [['N', 'وفي آخر الشارع… وقف صلاح قدام أخوه عادل، وملالي يراقبهم من الظلام.', ['vs', 'salah', 'adel']], ['adel', 'حتى أنت يا صلاح؟ تعال إذن.']] },
+    s4Fight('salah', 'adel', 'dark', 2.5, { hp: 1.05, boss: 1, name: 'الخال عادل', win: [
+      ['N', 'طاح عادل… ووقف صلاح فوقه.'],
+      ['salah', 'ما زالت قدامك فرصة… تصلح اللي سويته.'],
+      ['N', 'ورفض صلاح ينهي حياة أخوه… ومشى.'],
     ] }),
   ] },
   { part: S4P + 2, n: 'الخيانة الأخيرة', coins: 90, place: {
@@ -9051,7 +9051,7 @@ const STORY_FOUR = [
       ['adel', 'رغم كل شي… أنت أخوي.'],
       ['moalem', 'مشهد مؤثر… خلني أنهيه.'],
     ] },
-    s4Fight('adel', 'moalem', 'dark', 2.6, { hp: 1.05, boss: 1, hazard: 'falcon', name: '{moalem} — الضربة الغادرة', win: [
+    s4Fight('salah', 'moalem', 'dark', 2.6, { hp: 1.05, boss: 1, hazard: 'falcon', name: '{moalem} — الضربة الغادرة', win: [
       ['N', 'وقف عادل بين أخوه و{moalem}… وتلقى الضربة الأخيرة بداله.', 'hit'],
       ['adel', 'هالمرة… اخترت العائلة.'],
       ['salah', 'عادل! لا!'],
@@ -9117,7 +9117,6 @@ const STORY_FOUR = [
     { unlock: 'qalaa', say: [['malali', 'أهلاً في قلعتي. أبيكم تلعبون بطولتي… قبل لا تشوفون صلاح.', 'eyes']] },
     { go: ['qalaa', 1000, 760], goal: 'روح القلعة — بطولة الانتقام' },
     { say: [['N', 'عادل ضد {dragon}… و{bull} ضد {teer}… و{gamer} ضد المخترع… وملالي ضد {moalem}.', ['vs', 'adel', 'dragon']]] },
-    s4Fight('adel', 'dragon', 'dark', 2.6, { hp: 1, name: '{dragon} — مقاتل القلعة', win: [['dragon', 'عادل هذا… مو نفس عادل اللي أعرفه.']] }),
     { say: [['gamer', 'تيتان مرة ثانية؟ حدّثت حركاتي من آخر مرة!'], ['inv', 'وأنا حدّثت دروعه!']] },
     s4Fight('gamer', 'robot', 'dark', 2.7, { hp: 1.05, hazard: 'beetle', name: 'تيتان — النسخة الثانية', win: [['gamer', 'نسخة ثانية… ونفس النتيجة.']] }),
     { say: [
