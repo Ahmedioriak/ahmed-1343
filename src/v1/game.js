@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.88';
+const GAME_VER = '1.89';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1401,7 +1401,7 @@ function bossTick(f, opp) {
   const teachBlack = bci === FORT_NASSER && F.storyLearnBlack && !opp.storySkill;
   const id = teachBlack ? 'sk_fortress_black' : bossPick(bci, Math.abs(opp.x - f.x));
   if (!id) { f.bossCD = 30; return; }
-  f.startMove(id); f.vx = 0; f.buf = null; f.bossCD = (f.ci === RAIS2 ? 115 : f.ci === NOKH ? 170 : bci === MASKED ? 74 : bci === MYST ? 130 : (bci === NASSER || bci === FORT_NASSER) ? 68 : bci === HAMAD ? 78 : bci === MALALI ? 105 : CHARS[bci].s4 ? 58 : 160) + ((Math.random() * (CHARS[bci].s4 ? 40 : 70)) | 0);
+  f.startMove(id); f.vx = 0; f.buf = null; f.bossCD = (f.ci === RAIS2 ? 115 : f.ci === NOKH ? 170 : bci === MASKED ? 74 : bci === MYST ? 130 : (bci === NASSER || bci === FORT_NASSER) ? 68 : bci === HAMAD ? 78 : bci === MALALI ? 105 : CHARS[bci].s4 ? 95 : 160) + ((Math.random() * 70) | 0);
   f.talk('skill', BOSS_LINES[id]); F.skBanner = { slot: f.slot, text: BOSS_NAMES[id] || (MV[id] && MV[id].cname) || '', t: 0 };
 }
 // ---- drawings
@@ -2634,7 +2634,7 @@ class CPUPad {
     if (!atk) this.seenMv = null;
     if (this.blockT > 0) return false;
     // the same move again? he already knows it
-    if (atk && op.mt < op.mv.st && (mem.get(op.mv) || 0) >= 2.5 && NEUTRAL.has(me.state) && (dist < 330 || op.mv.spawn)) {
+    if (atk && op.mt < op.mv.st && (mem.get(op.mv) || 0) >= 3 && NEUTRAL.has(me.state) && Math.random() < 0.7 && (dist < 330 || op.mv.spawn)) {
       if (!this.knew) { this.knew = true; popText('قرأ حركتك!', me.x, -360, '#ff8a3a', 34); }
       if (me.dgCD <= 0 && Math.random() < 0.6) { me.dodge(); this.punish = 26; return true; }
       if (Math.random() < 0.5) { me.sidestep(Math.random() < 0.5 ? 1 : -1); this.punish = 22; return true; }
@@ -2643,7 +2643,7 @@ class CPUPad {
     // reaction defence: decide once per attack, at the right height (duck the highs, crouch-block the lows)
     if (atk && op.mt < op.mv.st && dist < 320 && NEUTRAL.has(me.state) && this.dec !== op.mv) {
       this.dec = op.mv;
-      if (Math.random() < Math.min(0.85, 0.45 + this.lvl * 0.1)) {
+      if (Math.random() < Math.min(0.6, 0.3 + this.lvl * 0.07)) {
         this.blockT = op.mv.st - op.mt + (op.mv.ac || 4) + 6; this.blockLow = op.mv.lvl === 'low' || (op.mv.lvl === 'high' && Math.random() < 0.6); this.punish = 18; return true;
       }
     }
@@ -7637,7 +7637,7 @@ function sagaSetupFight(F) { const W = G.world, st = W && W.sagaF; if (!st) retu
     if (st.learnBlack) op.bossCD = 45;
     if (st.breakArmor || st.learnBlack) F.sagaTick = fortressBattleTick;
   }
-  if (sgStoryNo(W.saga.ch) === 4) { const c = F.pads[1], pro4 = !!op.C.s4; c.pro = true; c.lvl = (st.lvl || 1) + (pro4 ? 2.5 : 1.8); me.dmgMul = 1.0; me.defMul = 1.08; op.maxHp = Math.round(op.maxHp * (pro4 ? 1.25 : 1.15)); op.hp = op.trailHp = op.maxHp; op.dmgMul = (op.dmgMul || 1) * (pro4 ? 1.25 : 1.15); if (pro4) { op.defMul = 0.85; op.bossAI = 1; op.bossCD = 90; } else if (op.bossAI) op.bossCD = 70; }
+  if (sgStoryNo(W.saga.ch) === 4) { const c = F.pads[1], pro4 = !!op.C.s4; c.pro = true; c.lvl = (st.lvl || 1) + (pro4 ? 2 : 1.5); me.dmgMul = 1.15; me.defMul = 1; op.defMul = 1; op.dmgMul = op.dmgMul || 1; if (pro4) { op.bossAI = 1; op.bossCD = 110; } else if (op.bossAI) op.bossCD = 70; }
   if (st.final) F.sagaTick = st.final === 2 ? sagaFinalTick2 : sagaFinalTick;
   if (st.hazard) { const t0 = F.sagaTick; F.sagaTick = F2 => { if (t0) t0(F2); s4Hazard(F2, st.hazard); }; } }
 // the last fight of «مملكة الدم»: ناصر shuts the fortress down, then العبد jumps in
