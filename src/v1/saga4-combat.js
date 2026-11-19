@@ -1,12 +1,12 @@
 // القصة ٤ — أشكال جديدة من رسومات المستخدم (شخصيات القصة فقط)
 // [key, base (moves/voice), name, h, hp, dmg, color]
 const S4_FORMS = [
-  ['moalem', 6, 'المعلّم', 0.97, 1.18, 1.12, '#d4a640'],
-  ['abd', 12, 'العبد', 0.98, 1.2, 1.12, '#ffb347'],
-  ['exp', 0, 'التجربة صفر', 1.04, 1.1, 1.08, '#b47aff'],
-  ['bull', 5, 'البلدوزر', 1.06, 1.35, 1.15, '#2fb39a'],
-  ['mech', CODER, 'البدلة الآلية', 1.0, 1.4, 1.2, '#ff2a3a'],
-  ['robot', 5, 'الحارس الآلي', 1.02, 1.45, 1.15, '#54e0d0'],
+  ['moalem', 6, 'المعلّم', 0.97, 1.4, 1.3, '#d4a640'],
+  ['abd', 12, 'العبد', 0.98, 1.45, 1.32, '#ffb347'],
+  ['exp', 0, 'التجربة صفر', 1.04, 1.35, 1.28, '#b47aff'],
+  ['bull', 5, 'البلدوزر', 1.06, 1.6, 1.36, '#2fb39a'],
+  ['mech', CODER, 'البدلة الآلية', 1.0, 1.65, 1.4, '#ff2a3a'],
+  ['robot', 5, 'الحارس الآلي', 1.02, 1.7, 1.34, '#54e0d0'],
 ];
 const S4 = {};
 for (const [key, base, name, h, hp, dmg, color] of S4_FORMS) {
@@ -41,12 +41,41 @@ function s4Wave(f, color, o = {}) {
     ctx.restore();
   }, m: { dmg, lvl: low ? 'low' : 'mid', hs: 22, bs: 14, push: 38, stop: 8, p: 1.45, kd: 1 } });
 }
-MV.sk_s4_net = projMove(12, 22, PZ.windup, PZ.release, f => s4Wave(f, '#ff2a3a', { kind: 'grid', dmg: 19, r: 60, speed: 14 }), { skill: 1 });
-MV.sk_s4_rock = projMove(15, 22, PZ.stompUp, PZ.pound, f => { s4Wave(f, '#ffb347', { low: true, dmg: 21, r: 52 }); F_shake(16); }, { skill: 1 });
-MV.sk_s4_lash = dashMove({ st: 9, ac: 11, rc: 20, sp: 24, trail: 1, limb: 'fH', r: 70, dmg: 18, kd: 1, pose: PZ.punch, skill: 1 });
-MV.sk_s4_axe = projMove(13, 22, PZ.windup, PZ.release, f => s4Wave(f, '#c9a24a', { kind: 'axe', dmg: 20, r: 40, speed: 15, life: 60 }), { skill: 1 });
-MV.sk_s4_laser = projMove(14, 24, PZ.windup, PZ.release, f => s4Wave(f, '#ff2a3a', { kind: 'beam', dmg: 21, r: 42, speed: 26 }), { skill: 1 });
-MV.sk_s4_jet = dashMove({ st: 10, ac: 13, rc: 22, sp: 21, trail: 1, limb: 'fH', r: 64, dmg: 20, kd: 1, pose: PZ.shoulder, skill: 1 });
+// signature skills: several shots at once, heavier hits
+const s4Multi = (f, n, fn) => { for (let i = 0; i < n; i++) fn(i); };
+MV.sk_s4_net = projMove(11, 22, PZ.windup, PZ.release, f => s4Multi(f, 3, i => s4Wave(f, '#ff2a3a', { kind: 'grid', dmg: 13, r: 56, speed: 13 + i * 3 })), { skill: 1 });
+MV.sk_s4_rock = projMove(14, 22, PZ.stompUp, PZ.pound, f => { s4Wave(f, '#ffb347', { low: true, dmg: 22, r: 56 }); s4Rain(f, '#a0703c', 3, 12); F_shake(18); }, { skill: 1 });
+MV.sk_s4_lash = dashMove({ st: 8, ac: 13, rc: 18, sp: 28, trail: 1, limb: 'fH', r: 96, dmg: 24, kd: 1, pose: PZ.punch, skill: 1 });
+MV.sk_s4_axe = projMove(12, 22, PZ.windup, PZ.release, f => s4Multi(f, 2, i => s4Wave(f, '#c9a24a', { kind: 'axe', dmg: 18, r: 40, speed: 15 + i * 4, low: i === 1, life: 64 })), { skill: 1 });
+MV.sk_s4_laser = projMove(13, 24, PZ.windup, PZ.release, f => s4Multi(f, 3, i => s4Wave(f, '#ff2a3a', { kind: 'beam', dmg: 12, r: 42, speed: 20 + i * 7 })), { skill: 1 });
+MV.sk_s4_jet = dashMove({ st: 9, ac: 15, rc: 20, sp: 26, trail: 1, limb: 'fH', r: 76, dmg: 26, kd: 1, pose: PZ.shoulder, skill: 1 });
+// boss specials (the CPU uses them when you face these fighters)
+function s4Rain(f, color, n, dmg, kind = 'orb') {
+  const op = G.fight && G.fight.f.find(x => x !== f); if (!op) return;
+  for (let i = 0; i < n; i++) spawnProj({ kind: 's4rain', owner: f, x: op.x + (i - (n - 1) / 2) * 110 + rnd(-30, 30), y: -900 - i * 160, vx: 0, vy: 13, g: 0.3, r: 34, life: 150, col: color, big: 1, draw(p) {
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(p.x, p.y, 3, p.x, p.y, 48); g.addColorStop(0, '#fff8ee'); g.addColorStop(0.45, p.col); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, 48, 0, 7); ctx.fill(); ctx.restore(); },
+    m: { dmg, lvl: 'mid', hs: 20, bs: 12, push: 20, stop: 6, p: 1.3, kd: i === n - 1 ? 1 : 0 } });
+}
+MV.sk_s4_ringrain = projMove(12, 24, PZ.armsUp || PZ.windup, PZ.release, f => s4Rain(f, '#ffd34d', 4, 12), { skill: 1 });
+MV.sk_s4_meteor = projMove(14, 24, PZ.windup, PZ.pound, f => { s4Rain(f, '#c27a3a', 5, 13); F_shake(14); }, { skill: 1 });
+MV.sk_s4_spit = projMove(9, 22, PZ.windup, PZ.release, f => s4Multi(f, 4, i => s4Wave(f, '#b47aff', { dmg: 10, r: 32, speed: 18 + i * 3, low: i % 2 === 1 })), { skill: 1 });
+MV.sk_s4_charge = dashMove({ st: 11, ac: 16, rc: 22, sp: 27, trail: 1, limb: 'fH', r: 92, dmg: 27, kd: 1, pose: PZ.shoulder, skill: 1 });
+MV.sk_s4_missiles = projMove(13, 24, PZ.windup, PZ.release, f => { s4Rain(f, '#ff8a40', 5, 12); s4Wave(f, '#ff2a3a', { kind: 'beam', dmg: 14, r: 40, speed: 30 }); }, { skill: 1 });
+MV.sk_s4_quake = projMove(16, 24, PZ.stompUp, PZ.pound, f => { s4Multi(f, 3, i => s4Wave(f, '#9fe8ff', { low: true, dmg: 14, r: 52, speed: 15 + i * 3 })); F_shake(20); }, { skill: 1 });
+Object.assign(BOSS_NAMES, { sk_s4_ringrain: 'مطر الخواتم الذهبية', sk_s4_meteor: 'نيازك الصخر', sk_s4_spit: 'عاصفة البصق', sk_s4_charge: 'هجمة العملاق',
+  sk_s4_missiles: 'وابل الصواريخ', sk_s4_quake: 'زلزال الحديد', sk_s4_net: 'شبكة المعلم', sk_s4_rock: 'قبضة الصخر', sk_s4_lash: 'الذراع الطويلة', sk_s4_axe: 'الفأسين الدوّارين', sk_s4_laser: 'ليزر البدلة', sk_s4_jet: 'اندفاع النفاثات' });
+const S4_BOSS = {
+  moalem: d => d > 300 ? [['sk_s4_net', 3], ['sk_s4_ringrain', 3], ['cb_13', 2]] : [['sk_s4_ringrain', 2], ['cb_24', 3], ['cb_34', 2]],
+  abd: d => d > 300 ? [['sk_s4_meteor', 3], ['cb_13', 3], ['sk_s4_rock', 2]] : [['sk_s4_rock', 3], ['cb_24', 3], ['cb_34', 2]],
+  exp: d => d > 300 ? [['sk_s4_spit', 3], ['sk_s4_lash', 3], ['cb_13', 2]] : [['sk_s4_lash', 3], ['cb_34', 2], ['cb_24', 2]],
+  bull: d => d > 300 ? [['sk_s4_axe', 3], ['sk_s4_charge', 3], ['cb_13', 2]] : [['sk_s4_charge', 2], ['cb_34', 3], ['cb_24', 3]],
+  mech: d => d > 300 ? [['sk_s4_missiles', 3], ['sk_s4_laser', 3], ['cb_13', 2]] : [['cb_24', 3], ['sk_s4_missiles', 2], ['cb_34', 2]],
+  robot: d => d > 300 ? [['cb_24', 3], ['sk_s4_quake', 2], ['cb_13', 3]] : [['sk_s4_jet', 3], ['sk_s4_quake', 3], ['cb_34', 2]],
+};
+function s4BossPick(ci, d, r) {
+  const L = S4_BOSS[CHARS[ci].s4](d).map(([id, w]) => [id.startsWith('cb_') ? COMBOS[ci][id.slice(3)] : id, w]);
+  let w = 0; for (const [, x] of L) w += x; let q = r * w; for (const [id, x] of L) { q -= x; if (q <= 0) return id; } return L[0][0];
+}
 function F_shake(n) { try { G.fight && G.fight.shake(n); } catch (e) { } }
 const S4_SKILLS = { moalem: ['sk_s4_net', 'شبكة المعلم'], abd: ['sk_s4_rock', 'قبضة الصخر'], exp: ['sk_s4_lash', 'الذراع الطويلة'],
   bull: ['sk_s4_axe', 'الفأس الدوّار'], mech: ['sk_s4_laser', 'ليزر البدلة'], robot: ['sk_s4_jet', 'اندفاع النفاثات'] };
@@ -81,7 +110,7 @@ const S4_MOVES = {
     '24': ['القبضة الصاروخية', s4P(10, 22, PZ.windup, PZ.release, f => s4Wave(f, '#e8eef0', { dmg: 17, r: 40, speed: 24 }))],
     '34': ['دعسة الحديد', s4P(15, 22, PZ.stompUp, PZ.pound, f => { s4Wave(f, '#9fe8ff', { low: true, dmg: 17, r: 54 }); F_shake(14); })] },
 };
-for (const key in S4_MOVES) Object.assign(COMBOS[S4[key]], S4_MOVES[key]);
+for (const key in S4_MOVES) { for (const k in S4_MOVES[key]) { const mv = S4_MOVES[key][k][1]; if (mv.dmg) mv.dmg = Math.round(mv.dmg * 1.3); } Object.assign(COMBOS[S4[key]], S4_MOVES[key]); }
 
 function installS4() { for (const [key, base] of S4_FORMS) { const ci = S4[key]; PERSONA[ci] = PERSONA[base]; FIN[ci] = FIN[base]; } }
 
