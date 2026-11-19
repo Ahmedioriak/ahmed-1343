@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.89';
+const GAME_VER = '1.90';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2624,6 +2624,8 @@ class Fighter {
 function dashDust(f) { if (f.t % 4 === 0 && f.t < 12) dust(f.x - f.facing * 10, 2, -Math.sign(f.vx)); }
 
 // ================= CPU =================
+// skill damage evened out: characters whose skill hit too soft (measured on a still dummy) get a multiplier
+const SKILL_BOOST = {"1": 1.08, "2": 1.76, "3": 1.8, "5": 1.12, "6": 1.59, "7": 1.42, "8": 1.42, "9": 1.23, "10": 1.42, "11": 1.12, "12": 2.25, "13": 1.93, "14": 1.5, "15": 1.17, "16": 1.08, "23": 1.5, "26": 1.69, "27": 1.29, "28": 1.29, "29": 1.29, "19": 1.17, "20": 1.5, "21": 1.12, "22": 1.5, "30": 2.3, "33": 1.08}, SKILL2_BOOST = {"0": 1.25, "14": 1.25, "23": 1.82, "24": 1.18, "25": 1.82, "26": 1.67, "28": 1.25, "29": 1.18, "18": 1.05, "19": 1.33, "20": 1.67, "21": 1.33, "31": 2.0, "32": 1.67, "33": 1.82, "34": 1.43};
 class CPUPad {
   // «محترف» (story 4): reads the player's habits, blocks at the right height, slips projectiles, punishes recovery, attacks from range
   proRead(fK, bK, press, dist) {
@@ -3162,7 +3164,7 @@ function drawAura(f) {
 }
 
 // ================= PROJECTILES & SKILL PROPS =================
-function spawnProj(o) { if (!G.fight) return; G.fight.proj.push(Object.assign({ rot: 0, vr: 0, g: 0, life: 120, r: 16, t: 0, dir: o.owner ? o.owner.facing : 1, z: o.owner ? o.owner.z || 0 : 0, wide: o.kind === 'wave' || o.r >= 55 || (o.y !== undefined && o.y < -700) }, o)); }
+function spawnProj(o) { if (!G.fight) return; if (o.m && o.owner && o.owner.mv && o.owner.mv.skill) o.m = Object.assign({}, o.m, { fromSkill: 1, fromSk2: o.owner.mv.sk2 ? 1 : 0 }); G.fight.proj.push(Object.assign({ rot: 0, vr: 0, g: 0, life: 120, r: 16, t: 0, dir: o.owner ? o.owner.facing : 1, z: o.owner ? o.owner.z || 0 : 0, wide: o.kind === 'wave' || o.r >= 55 || (o.y !== undefined && o.y < -700) }, o)); }
 function crumble(p) {
   const big = p.r > 40;
   for (let i = 0; i < (big ? 30 : 16); i++) { const a = rnd(Math.PI, Math.PI * 2); FX.push({ t: 'p', x: p.x + rnd(-p.r, p.r) * 0.5, y: Math.min(-4, p.y), vx: Math.cos(a) * rnd(2, big ? 11 : 8), vy: Math.sin(a) * rnd(3, big ? 12 : 9), life: rnd(20, 40), max: 40, c: i % 2 ? '#7d7266' : '#a39684', sz: rnd(4, big ? 11 : 7) }); }
@@ -4471,6 +4473,7 @@ class Fight {
     if (m.onHit) m.onHit(a, d, false, m);
   }
   applyDamage(a, d, dmg, kind, lp, fixed, hb, m) {
+    if (m && (m.skill || m.fromSkill)) dmg *= ((m.sk2 || m.fromSk2) ? SKILL2_BOOST : SKILL_BOOST)[a.ci] || 1;   // weak skills hit harder
     const stunned = ['hit', 'juggle', 'rageVic'].includes(d.state);
     if (stunned && a.comboT > 0) { a.combo++; } else { a.combo = 1; a.comboDmg = 0; }
     const scale = fixed ? 1 : Math.max(0.45, 1 - (a.combo - 1) * 0.12);
@@ -7888,6 +7891,7 @@ function sgDrawCredits(W) { const S = W.saga, k = S.credits.k, a = Math.min(1, k
   R.forEach((r, i) => { const row = i < 7 ? 0 : 1, n = row ? R.length - 7 : Math.min(7, R.length), j = row ? i - 7 : i, x = VW / 2 + ((n - 1) / 2 - j) * 150, y = 290 + row * 160, u = easeOut(clamp((k - 20 - i * 5) / 20, 0, 1)); ctx.globalAlpha = a * u; sgFace(W, r, x, y, 52); txt(sgName(W, r), x, y + 76, { size: 18, weight: 900, color: '#fff' }); });
   ctx.globalAlpha = a; txt(sgBookInfo(S.ch).reward, VW / 2, 600, { size: 26, weight: 900, color: '#e0b0ff' }); txt('شكراً إنك لعبت يا ' + CHARS[W.P.ci].name + ' 🎉', VW / 2, 645, { size: 22, weight: 800, color: '#ffd34d' });
   if (k > 90 && G.frame % 50 < 34) txt(TOUCH_ON ? 'المس للمتابعة' : 'Enter للمتابعة', VW / 2, VH - 26, { size: 17, weight: 800, color: 'rgba(255,255,255,0.6)' }); ctx.restore(); }
+window.__nh_skill = ci => SKILL_IDS[ci]; window.__nh_skill2 = ci => SKILL2[ci];
 window.__sagaAPI = { SAGA, sgCast, sagaRestart, cov(base, eff) { const cast = sgCast(base, eff), nm = r => r === 'P' ? CHARS[eff === MALALI ? base : eff].name : r === 'X' ? CHARS[cast.chef].name : SG_TITLE[r] || CHARS[cast[r]].name, miss = new Set();
     for (const x of window.__sagaAPI.texts()) { const t = x.split('|').slice(1).join('|').replace(/\{(\w+)\}/g, (m, r) => nm(r)); for (const sg of voiceSegs(t)) if (!VOX.txt[sg.t]) miss.add(sg.t); } return [...miss]; }, go(ch, st) { const W = G.world; W.saga.ch = ch; W.saga.st = st; W.saga.done = false; W.saga.wait = null; W.saga.say = null; W.saga.card = null; W.saga.choice = W.saga.retry = W.saga.esc = W.saga.credits = W.saga.items = null; sgReplay(W.saga); sgApplyPlace(W); sgStep(W, false); }, talk(r) { const W = G.world, n = W.npcs.find(n => n.sg === r); if (n) { W.map = n.map; sagaTalk(W, n); } return !!n; }, S: () => G.world.saga, tgt: () => sgTarget(G.world), goal: () => sgGoal(G.world), adv(n) { for (let i = 0; i < n; i++) { const W = G.world, D = W.saga.say; if (!D) break; D.i++; if (D.i >= D.L.length) sgSayEnd(W); else sgLineStart(W); } }, texts: (from = 0, to = SAGA.length) => { const T = new Set(); const add = L => (L || []).forEach(l => T.add(l[0] + '|' + l[1]));
   for (const C of SAGA.slice(from, to)) for (const st of C.steps) { add(st.say); add(st.win); add(st.lose); add(st.yes); add(st.no); add(st.after); if (st.talks) for (const k in st.talks) add(st.talks[k]); if (st.find) st.find.forEach(f => add(f[4])); } return [...T]; } };
