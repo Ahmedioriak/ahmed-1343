@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.90';
+const GAME_VER = '1.91';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -7640,7 +7640,7 @@ function sagaSetupFight(F) { const W = G.world, st = W && W.sagaF; if (!st) retu
     if (st.learnBlack) op.bossCD = 45;
     if (st.breakArmor || st.learnBlack) F.sagaTick = fortressBattleTick;
   }
-  if (sgStoryNo(W.saga.ch) === 4) { const c = F.pads[1], pro4 = !!op.C.s4; c.pro = true; c.lvl = (st.lvl || 1) + (pro4 ? 2 : 1.5); me.dmgMul = 1.15; me.defMul = 1; op.defMul = 1; op.dmgMul = op.dmgMul || 1; if (pro4) { op.bossAI = 1; op.bossCD = 110; } else if (op.bossAI) op.bossCD = 70; }
+  if (sgStoryNo(W.saga.ch) === 4) { const c = F.pads[1], pro4 = !!op.C.s4; c.pro = true; c.lvl = (st.lvl || 1) + (pro4 ? 1.2 : 0.8); me.dmgMul = 1.15; me.defMul = 1; op.defMul = 1; op.dmgMul = (op.dmgMul || 1) * clamp(0.7 + 0.1 * (st.lvl || 1), 0.8, 1); if (pro4) { op.bossAI = 1; op.bossCD = 110; } else if (op.bossAI) op.bossCD = 70; }
   if (st.final) F.sagaTick = st.final === 2 ? sagaFinalTick2 : sagaFinalTick;
   if (st.hazard) { const t0 = F.sagaTick; F.sagaTick = F2 => { if (t0) t0(F2); s4Hazard(F2, st.hazard); }; } }
 // the last fight of «مملكة الدم»: ناصر shuts the fortress down, then العبد jumps in
