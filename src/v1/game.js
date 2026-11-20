@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.97';
+const GAME_VER = '1.98';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -663,7 +663,7 @@ const MV = {
   hook: { name: 'hook', limb: 'fH', lvl: 'mid', st: 12, ac: 3, rc: 18, dmg: 14, hs: 20, bs: 14, push: 26, stop: 8, r: 30, p: 1.3, mvx: [[2, 12, 4.5]],
     kf: [[0, {}], [6, { ua: 20, fa: 90, lean: -6, dx: -6 }], [12, { ua: 85, fa: 55, lean: 26, dx: 18, th: 40, bth: -30 }], [15, {}], [23, { ua: 50, fa: 100, lean: 10, dx: 6 }], [33, null]],
     cancel: { rk: 1 } },
-  upper: { name: 'uppercut', limb: 'fH', lvl: 'mid', st: 14, ac: 4, rc: 18, dmg: 16, hs: 0, bs: 14, push: 10, stop: 9, r: 32, p: 1.4, launch: 1, base: 'CROUCH',
+  upper: { name: 'uppercut', limb: 'fH', lvl: 'mid', st: 14, ac: 4, rc: 18, dmg: 16, hs: 0, bs: 14, push: 10, stop: 9, r: 32, ar: 40, p: 1.4, launch: 1, base: 'CROUCH',
     kf: [[0, {}], [8, { ua: 0, fa: 70, lean: 26, dx: -30 }], [14, { ua: 118, fa: 50, lean: 4, th: 20, sh: 20, bth: -4, bsh: 10, dx: 12 }], [18, { ua: 165, fa: 15, lean: -8, th: 10, sh: 10, bth: -8, bsh: 6 }], [26, { ua: 120, fa: 60, lean: 0, th: 30, sh: 40, bth: 10, bsh: 30 }], [36, { ...GUARD }]] },
   dp: { name: 'crouchjab', limb: 'bH', lvl: 'low', st: 7, ac: 3, rc: 12, dmg: 5, hs: 14, bs: 9, push: 10, stop: 5, r: 26, p: 0.7, base: 'CROUCH', crouch: 1,
     kf: [[0, {}], [4, { bua: 70, bfa: 60 }], [7, { bua: 96, bfa: 0, lean: 30, dx: -38 }], [10, {}], [16, { bua: 40, bfa: 110, lean: 22, dx: -48 }], [22, null]] },
@@ -696,7 +696,7 @@ const MV = {
   k4: { name: 'backkick', limb: 'fT', lvl: 'mid', st: 18, ac: 4, rc: 26, dmg: 20, hs: 0, bs: 18, push: 40, stop: 10, r: 36, p: 1.7, kick: 1, kd: 1, mvx: [[4, 18, 4]],
     kf: [[0, {}], [9, { r: 6, lean: 32, th: 30, sh: 70, bth: -10, bsh: 20, ua: 10, fa: 70, dx: -6 }], [18, { r: 2, lean: 46, th: 102, sh: 0, ffl: 0, ft: -20, bth: -6, bsh: 0, dx: 14 }], [22, {}], [34, { r: 0, lean: 6, th: 40, sh: 50, ffl: 1, dx: 0 }], [48, null]] },
   // up + □ : rising anti-air punch (beats jumps)
-  u1: { name: 'risingpunch', limb: 'fH', lvl: 'high', st: 9, ac: 5, rc: 18, dmg: 12, hs: 18, bs: 12, push: 12, stop: 7, r: 30, p: 1.1, aa: 1,
+  u1: { name: 'risingpunch', limb: 'fH', lvl: 'high', st: 9, ac: 5, rc: 18, dmg: 12, hs: 18, bs: 12, push: 12, stop: 7, r: 30, ar: 38, p: 1.1, aa: 1,
     kf: [[0, {}], [5, { ua: 50, fa: 120, lean: 8, th: 40, sh: 60, bth: 24, bsh: 50, dy: 6 }], [9, { ua: 122, fa: 22, lean: 4, th: 12, sh: 10, bth: -10, bsh: 6, dy: -16, dx: 14 }], [14, { ua: 160, fa: 8, lean: -6, dy: -26 }], [22, { ua: 90, fa: 90, lean: 4, dy: 0 }], [32, null]] },
   // up + △ : jumping hammer fist (slow, heavy, mid)
   u2: { name: 'hammer', limb: 'fH', lvl: 'mid', st: 18, ac: 4, rc: 22, dmg: 18, hs: 22, bs: 18, push: 20, stop: 10, r: 34, p: 1.6, kdCH: 1, mvx: [[4, 18, 2.5]],
@@ -2641,8 +2641,9 @@ class CPUPad {
     if (atk && op.mv !== this.seenMv) { this.seenMv = op.mv; this.knew = false; mem.set(op.mv, (mem.get(op.mv) || 0) + 1); }
     if (!atk) this.seenMv = null;
     if (this.blockT > 0) return false;
+    if (me.state === 'attack') this.wasAtk = true; else if (this.wasAtk) { this.wasAtk = false; this.rest = 16 + ((Math.random() * 30) | 0); }
     // the same move again? he already knows it
-    if (atk && op.mt < op.mv.st && (mem.get(op.mv) || 0) >= 3 && NEUTRAL.has(me.state) && Math.random() < 0.7 && (dist < 330 || op.mv.spawn)) {
+    if (atk && op.mt < op.mv.st && (mem.get(op.mv) || 0) >= 3 && NEUTRAL.has(me.state) && Math.random() < 0.45 && (dist < 330 || op.mv.spawn)) {
       if (!this.knew) { this.knew = true; popText('قرأ حركتك!', me.x, -360, '#ff8a3a', 34); }
       if (me.dgCD <= 0 && Math.random() < 0.6) { me.dodge(); this.punish = 26; return true; }
       if (Math.random() < 0.5) { me.sidestep(Math.random() < 0.5 ? 1 : -1); this.punish = 22; return true; }
@@ -2651,7 +2652,7 @@ class CPUPad {
     // reaction defence: decide once per attack, at the right height (duck the highs, crouch-block the lows)
     if (atk && op.mt < op.mv.st && dist < 320 && NEUTRAL.has(me.state) && this.dec !== op.mv) {
       this.dec = op.mv;
-      if (Math.random() < Math.min(0.6, 0.3 + this.lvl * 0.07)) {
+      if (Math.random() < Math.min(0.42, 0.22 + this.lvl * 0.05)) {
         this.blockT = op.mv.st - op.mt + (op.mv.ac || 4) + 6; this.blockLow = op.mv.lvl === 'low' || (op.mv.lvl === 'high' && Math.random() < 0.6); this.punish = 18; return true;
       }
     }
@@ -2659,13 +2660,15 @@ class CPUPad {
     // projectiles: jump the low ones, duck the high ones, slip or block the rest
     for (const q of F.proj) if (q.owner === op && !q.noHit && Math.sign(q.vx || 0) === Math.sign(me.x - q.x) && Math.abs(q.x - me.x) < 300 && NEUTRAL.has(me.state)) {
       if (this.pdec === q) break; this.pdec = q;
-      const lv = q.m && q.m.lvl; if (Math.random() < 0.82) {
+      const lv = q.m && q.m.lvl; if (Math.random() < 0.6) {
         if (lv === 'low' && Math.random() < 0.7) { h.up = true; this.hold = ['up', 'F']; this.holdT = 8; return true; }
         if (lv === 'high') { this.blockT = 22; this.blockLow = true; return true; }
         if (me.dgCD <= 0 && Math.random() < 0.4) { me.dodge(); return true; }
         this.blockT = 24; this.blockLow = lv === 'low'; return true;
       }
     }
+    // a short breather after each of his own attacks (no endless chains)
+    if (this.rest > 0) { this.rest--; if (NEUTRAL.has(me.state)) return true; }
     // punish: hit him while he recovers
     if (this.punish > 0) this.punish--;
     if (op.state === 'attack' && op.mv && op.mt > op.mv.st + (op.mv.ac || 4) && dist < 230 && NEUTRAL.has(me.state) && (this.punish > 0 || Math.random() < 0.35)) {
@@ -2680,7 +2683,7 @@ class CPUPad {
     if (me.cbCD <= 0 && dist > 260 && dist < 820 && Math.random() < 0.03) { if (me.tryCombo(pick(['13', '13', '34', '14']))) return true; }
     if (me.cbCD <= 0 && dist < 240 && Math.random() < 0.025) { if (me.tryCombo(pick(['24', '34', '23']))) return true; }
     if (dist < 220 && Math.random() < 0.012 && me.dgCD <= 0) { me.sidestep(Math.random() < 0.5 ? 1 : -1); return true; }
-    if (this.cd > 6) this.cd = 6;
+    if (this.cd > 14) this.cd = 14;
     return false;
   }
   constructor(level) { this.h = {}; this.p = {}; this.cpu = true; this.cd = 40; this.hold = null; this.holdT = 0; this.blockT = 0; this.blockLow = false; this.lvl = level || 1; this.me = null; this.op = null; this.react = 0; }
@@ -4222,7 +4225,7 @@ FIN[HAMAD] = { name: 'صفقة العمر', line: 'وقّع هني… بدمك.'
     return true;
   },
   back(F, a, d, t) { const S = a.finS; if (!S || t < 22 || t >= 104) return; drawMoneyStorm(S.x0, -120, t, Math.min(1, (t - 22) / 10) * (t > 94 ? (104 - t) / 10 : 1)); } };
-window.__nh = { NASSER, HAMAD, MV, SKILL_IDS, SKILL2, COMBOS, CHARS };
+window.__nh = { NASSER, HAMAD, MV, SKILL_IDS, SKILL2, COMBOS, CHARS, MOVESET };
 
 // ---- حارس الظل والقائد المقنّع: الصوت والقاضيات
 PERSONA[MYST] = { vo: 'deep', intro: ['…'], skill: ['…'], win: ['…'], st: { lean: 4, th: 10, bth: -10 }, br: 0.03 };
@@ -4419,6 +4422,9 @@ class Fight {
     if (m.lvl === 'high' && d.lowProfile() && d.state !== 'juggle') return null;
     if (hb.ar !== undefined && d.caps) { // limb strike: striking segment vs body capsules
       let ok = false; for (const c of d.caps) if (segSeg(hb.x2, hb.y2, hb.x, hb.y, c[0], c[1], c[2], c[3]) <= hb.ar + c[4]) { ok = true; break; }
+      // up close the foot/fist can swing right past the body: if the strike reaches across him at body height, it counts
+      if (!ok) { const r = d.hurt, lo = Math.min(a.x, hb.x, hb.x2), hi = Math.max(a.x, hb.x, hb.x2) + ((m.launch || m.aa) ? 30 : 0), y = Math.max(hb.y, hb.y2, (m.launch || m.aa) ? a.hipY : -1e9);
+        if (r && r.x1 >= lo && r.x0 <= hi && Math.min(hb.y, hb.y2) <= r.y1 + 10 && y >= r.y0 - 10 && Math.abs(d.x - a.x) <= Math.abs(hb.x - a.x) + 40) ok = true; }
       if (!ok) return null;
     } else {
       const r = d.hurt; const cx = clamp(hb.x, r.x0, r.x1), cy = clamp(hb.y, r.y0, r.y1);
@@ -7651,7 +7657,7 @@ function sagaSetupFight(F) { const W = G.world, st = W && W.sagaF; if (!st) retu
     if (st.learnBlack) op.bossCD = 45;
     if (st.breakArmor || st.learnBlack) F.sagaTick = fortressBattleTick;
   }
-  if (sgStoryNo(W.saga.ch) === 4) { const c = F.pads[1], pro4 = !!op.C.s4; c.pro = true; c.lvl = (st.lvl || 1) + (pro4 ? 1.2 : 0.8); me.dmgMul = 1.15; me.defMul = 1; op.defMul = 1; op.dmgMul = (op.dmgMul || 1) * clamp(0.7 + 0.1 * (st.lvl || 1), 0.8, 1); if (pro4) { op.bossAI = 1; op.bossCD = 110; } else if (op.bossAI) op.bossCD = 70; }
+  if (sgStoryNo(W.saga.ch) === 4) { const c = F.pads[1], pro4 = !!op.C.s4; c.pro = true; c.lvl = Math.min(3.4, (st.lvl || 1) + (pro4 ? 0.5 : 0.25)); me.dmgMul = 1.15; me.defMul = 1; op.defMul = 1; op.dmgMul = (op.dmgMul || 1) * clamp(0.6 + 0.08 * (st.lvl || 1), 0.7, 0.88); if (pro4) { op.bossAI = 1; op.bossCD = 110; } else if (op.bossAI) op.bossCD = 70; }
   if (st.final) F.sagaTick = st.final === 2 ? sagaFinalTick2 : sagaFinalTick;
   if (op.C.dark) { const t1 = F.sagaTick; F.sagaTick = F2 => { if (t1) t1(F2); s4DarkPhase(F2); }; }
   if (st.hazard) { const t0 = F.sagaTick; F.sagaTick = F2 => { if (t0) t0(F2); s4Hazard(F2, st.hazard); }; } }

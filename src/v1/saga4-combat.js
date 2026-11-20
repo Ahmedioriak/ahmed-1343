@@ -243,7 +243,7 @@ function saga4Assets() {
 
 // قوة الظلام: لما تنزل صحته للنص، ينفجر الظلام فيه (أسرع وأقوى)
 function s4DarkPhase(F) { if (F.phase !== 'fight' || F.fin) return; const op = F.f[1]; if (!op.C.dark || F.s4dk || op.hp > op.maxHp * 0.5) return;
-  F.s4dk = 1; F_shake(24); SFX.rage(); op.flash = 12; op.dmgMul = (op.dmgMul || 1) * (op.C.dark === 2 ? 1.18 : 1.1); op.bossCD = 20;
+  F.s4dk = 1; F_shake(24); SFX.rage(); op.flash = 12; op.dmgMul = (op.dmgMul || 1) * (op.C.dark === 2 ? 1.08 : 1.05); op.bossCD = 60;
   finRing(op.x, -200, '#b030ff', 420, 26); finBurst(op.x, -200, 50, VOIDC, 12, 8); s4Rain(op, '#b030ff', op.C.dark === 2 ? 6 : 4, 8, 'dark');
   F.banner = { text: op.C.dark === 2 ? '🌑 طاقة الظلام تنفجر في بابا الوه!' : '🌑 الظلام يغلي في المزارع!', ar: true, t: 0, dur: 80 };
-  const pad = F.pads[1]; if (pad) pad.lvl = (pad.lvl || 3) + 0.6; }
+  const pad = F.pads[1]; if (pad) pad.lvl = Math.min(3.6, (pad.lvl || 3) + 0.3); }
