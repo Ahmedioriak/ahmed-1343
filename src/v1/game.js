@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.94';
+const GAME_VER = '1.95';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -367,7 +367,7 @@ function uiTapZone(gx, gy) {
     if (G.scene === 'story' && G.story && G.story.step === 'select' && gy > 90) return true;
     if (G.scene === 'cup' || G.scene === 'shop') return true;
     if (G.scene === 'world' && G.world && (G.world.phase === 'pick' || G.world.dlg || G.world.mapOpen || G.world.menu || G.world.sleep || G.world.cal)) return true;
-    if (G.scene === 'world' && G.world && G.world.saga && (G.world.saga.say || G.world.saga.card || G.world.saga.choice || G.world.saga.retry || G.world.saga.credits)) return true;
+    if (G.scene === 'world' && G.world && G.world.saga && (G.world.saga.say || G.world.saga.card || G.world.saga.choice || G.world.saga.pick || G.world.saga.retry || G.world.saga.credits)) return true;
     if (G.scene === 'title' && !G.settingsOpen && gx < 340 && gy > VH - 80) return true;   // your name/coins → wardrobe
   } catch (e) { }
   return false;
@@ -378,7 +378,7 @@ function enableTouch() {
 let tcVisKey = '';
 function tcUiOnly() { try {
     if (G.scene === 'shop' || G.scene === 'cup' || G.scene === 'story') return true;
-    const W = G.world; if (G.scene === 'world' && W) { if (W.phase === 'pick' || W.dlg || W.menu || W.mapOpen || W.sleep || W.cal) return true; const S = W.saga; if (S && (S.say || S.card || S.choice || S.retry || S.credits)) return true; }
+    const W = G.world; if (G.scene === 'world' && W) { if (W.phase === 'pick' || W.dlg || W.menu || W.mapOpen || W.sleep || W.cal) return true; const S = W.saga; if (S && (S.say || S.card || S.choice || S.pick || S.retry || S.credits)) return true; }
   } catch (e) { } return false; }
 function tcFrame() {
   if (!TOUCH_ON) return;
@@ -1401,7 +1401,7 @@ function bossTick(f, opp) {
   const teachBlack = bci === FORT_NASSER && F.storyLearnBlack && !opp.storySkill;
   const id = teachBlack ? 'sk_fortress_black' : bossPick(bci, Math.abs(opp.x - f.x));
   if (!id) { f.bossCD = 30; return; }
-  f.startMove(id); f.vx = 0; f.buf = null; f.bossCD = (f.ci === RAIS2 ? 115 : f.ci === NOKH ? 170 : bci === MASKED ? 74 : bci === MYST ? 130 : (bci === NASSER || bci === FORT_NASSER) ? 68 : bci === HAMAD ? 78 : bci === MALALI ? 105 : CHARS[bci].s4 ? 95 : 160) + ((Math.random() * 70) | 0);
+  f.startMove(id); f.vx = 0; f.buf = null; f.bossCD = (f.ci === RAIS2 ? 115 : f.ci === NOKH ? 170 : bci === MASKED ? 74 : bci === MYST ? 130 : (bci === NASSER || bci === FORT_NASSER) ? 68 : bci === HAMAD ? 78 : bci === MALALI ? 105 : CHARS[bci].s4 ? (CHARS[bci].dark === 2 ? 66 : CHARS[bci].dark ? 78 : 95) : 160) + ((Math.random() * 70) | 0);
   f.talk('skill', BOSS_LINES[id]); F.skBanner = { slot: f.slot, text: BOSS_NAMES[id] || (MV[id] && MV[id].cname) || '', t: 0 };
 }
 // ---- drawings
@@ -3154,6 +3154,7 @@ function drawFighter(f, opts = {}) {
 }
 function drawAura(f) {
   if (f.state === 'attack' && f.mv && f.mv.vanish && f.mt >= f.mv.vanish[0] && f.mt < f.mv.vanish[1]) return;
+  if (f.C.dark && f.hp > 0) s4DarkAura(f);
   if (f.shadow && f.hp > 0) { const b = f.hurt, cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const r = 190 + Math.sin(G.frame * 0.15) * 14; const gr = ctx.createRadialGradient(cx, cy, 20, cx, cy, r); gr.addColorStop(0, 'rgba(170,40,255,0.3)'); gr.addColorStop(1, 'rgba(120,0,200,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(cx, cy, r * 0.7, r, 0, 0, 7); ctx.fill(); ctx.restore(); if (G.frame % 3 === 0) FX.push({ t: 'p', x: cx + rnd(-50, 50), y: b.y1 - rnd(0, 60), vx: rnd(-0.5, 0.5), vy: -rnd(2, 5), life: 26, max: 26, c: '#b030ff', sz: rnd(2, 5) }); }
   if (!f.rage || f.hp <= 0) return;
   const b = f.hurt; const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
@@ -6853,7 +6854,7 @@ function drawWorld0() {
     ctx.restore(); }
   if (W.prompt) { const [x, y] = W.prompt; ctx.fillStyle = 'rgba(0,0,0,0.7)'; rrect(x - 110, y - 20, 220, 40, 20); ctx.fill(); txt(near ? (TOUCH_ON ? '✕ أو المس: كلّمه' : 'Enter: كلّمه') : (TOUCH_ON ? '✕: ' : 'Enter: ') + W_ACT[rack.act], x, y + 1, { size: 18, weight: 900, color: '#ffd34d' }); }
   // HUD (hidden while a story scene plays)
-  if (!(W.saga && (W.saga.say || W.saga.card || W.saga.choice || W.saga.credits))) {
+  if (!(W.saga && (W.saga.say || W.saga.card || W.saga.choice || W.saga.pick || W.saga.credits))) {
   const P0 = profCur(), dd = Math.floor(W.min / (24 * 60)) % 7, hh = Math.floor(hr), mm = W.min % 60;
   ctx.fillStyle = 'rgba(10,30,70,0.82)'; rrect(VW - 300, 14, 284, 164, 16); ctx.fill(); ctx.strokeStyle = 'rgba(160,210,255,0.6)'; ctx.lineWidth = 2; ctx.stroke();
   txt(wDateStr(wDay(W)) + ' · ' + M.name, VW - 158, 40, { size: 20, weight: 900, color: '#fff' });
@@ -7503,7 +7504,7 @@ function sgPickBtns(sv) {
 }
 // ---- engine
 const SG_CI = { nasser: NASSER, hamad: HAMAD, mask: MASKED, shade: MYST, adel: NOKH, salah: RAIS, malali: MALALI, inv: CODER, dragon: 7, chef: CHEF, captain: 2, moalem: 6, bull: 5, dajaj: 8, teer: 14, gamer: 13, abd: 12, guard: 4 };
-Object.assign(SG_CI, { exp: S4_EXP, mech: S4_MECH, robot: S4_ROBOT });
+Object.assign(SG_CI, { exp: S4_EXP, mech: S4_MECH, robot: S4_ROBOT, diver: S4.diver, masks: S4.masks, echo: S4.echo, prisoner: S4.prisoner, warden: S4.warden, dfarmer: S4.dfarmer, dbaba: S4.dbaba });
 const SG_TITLE = { exp: 'زيرو', mech: 'المخترع — الدرع الأسود', robot: 'تيتان', nasser: 'ناصر', hamad: 'حمد', mask: 'القائد المقنّع', shade: 'حارس الظل', adel: 'الخال عادل', salah: 'الخال صلاح', malali: 'ملالي', inv: 'المخترع' };
 const SG_SUB = { nasser: 'ابن العم · زعيم الشر', hamad: 'ابن العم · قوة المال', mask: '؟؟؟', shade: 'بلا وجه', adel: 'النوخذة', salah: 'الرئيس', inv: 'المبرمج', malali: 'سيد الظلام' };
 const SG_COL = { nasser: '#e0102a', hamad: '#e8b923', mask: '#ff1030', shade: '#ff3b4a', adel: '#3cb4ff', salah: '#d4a640', malali: '#b030ff', inv: '#ff2a3a', P: '#3ea0ff', N: '#9fd8ff', '?': '#ff3b4a', jadd: '#ffd34d' };
@@ -7523,7 +7524,7 @@ function sgSave(S) {
   if (earned) SAGA_DONE = true;
   const ci0 = S.base != null ? S.base : sgHero(), old = sgLoad(ci0) || {};
   const rec = { ...old, ch: S.ch, st: S.st, done: S.done ? 1 : 0, ever: earned || old.ever ? 1 : 0,
-    wd: S.wait != null ? S.wait : undefined };
+    wd: S.wait != null ? S.wait : undefined, hero: S.hero || undefined };
   sgPut(ci0, rec);
   try { localStorage.setItem('shilla_saga', JSON.stringify({ ...rec, ever: SAGA_DONE ? 1 : 0 })); } catch (e) { }
 }
@@ -7532,7 +7533,7 @@ function sgCast(base, eff) { const cast = Object.assign({}, SG_CI), mine = new S
   for (const r in cast) if (mine.has(cast[r])) { if (r === 'malali' && !mine.has(0)) { cast[r] = 0; continue; } const s = SG_STAND.find(c => !mine.has(c) && !used.has(c)); if (s !== undefined) { cast[r] = s; used.add(s); } }
   return cast; }
 // story 4: المعلّم والعبد والبلدوزر بأشكالهم الجديدة
-function s4Cast(base, eff) { const c = sgCast(base, eff); for (const k of ['moalem', 'abd', 'bull']) c[k] = S4[k]; c.exp = S4_EXP; c.mech = S4_MECH; c.robot = S4_ROBOT; return c; }
+function s4Cast(base, eff) { const c = sgCast(base, eff); for (const k of ['moalem', 'abd', 'bull']) c[k] = S4[k]; c.exp = S4_EXP; c.mech = S4_MECH; c.robot = S4_ROBOT; for (const k of ['diver', 'masks', 'echo', 'prisoner', 'warden', 'dfarmer', 'dbaba']) c[k] = S4[k]; return c; }
 function sgName(W, r) { if (r === 'P') return CHARS[W.P.ci === MALALI ? W.P.base : W.P.ci].name; if (r === 'N') return 'الراوي'; if (r === '?') return '؟؟؟'; if (r === 'jadd') return 'الجد'; return SG_TITLE[r] || CHARS[W.saga.cast[r]].name; }
 function sgTok(W, s) { return s.replace(/\{(\w+)\}/g, (m, r) => sgName(W, r)); }
 function sgCiOf(W, r) { return r === 'P' ? W.P.ci : r === '?' ? MYST : W.saga.cast[r]; }
@@ -7562,7 +7563,7 @@ setTimeout(() => { if (proVoices.fail) storyVoices(); }, 5000);
 function sagaBegin(W) {
   storyVoices();
   const sv = sgLoad(W.P.base) || { ch: 0, st: 0 };
-  const S = W.saga = { ch: clamp(sv.ch | 0, 0, SAGA.length - 1), st: sv.st | 0, done: !!sv.done, ever: !!(sv.ever || (sv.done && sgStoryNo(sv.ch) !== 3)), base: W.P.base, cast: sgStoryNo(sv.ch) === 3 ? sgCast(W.P.ci, W.P.ci) : sgStoryNo(sv.ch) === 4 ? s4Cast(W.P.base, W.P.ci) : sgCast(W.P.base, W.P.ci), figs: {}, place: {}, un: new Set(), k: 0 };
+  const S = W.saga = { ch: clamp(sv.ch | 0, 0, SAGA.length - 1), st: sv.st | 0, done: !!sv.done, ever: !!(sv.ever || (sv.done && sgStoryNo(sv.ch) !== 3)), base: W.P.base, cast: sgStoryNo(sv.ch) === 3 ? sgCast(W.P.ci, W.P.ci) : sgStoryNo(sv.ch) === 4 ? s4Cast(W.P.base, W.P.ci) : sgCast(W.P.base, W.P.ci), figs: {}, place: {}, un: new Set(), k: 0, hero: sv.hero || null };
   if (S.st >= SAGA[S.ch].steps.length) S.st = 0; S.wait = sv.wd != null && !S.done && S.st === 0 ? sv.wd : null;
   sgReplay(S); if (S.wait != null && !sgDue(W)) S.place = {}; else S.wait = null; sgApplyPlace(W);
   if (S.wait != null) { W.toast = { t: '📅 الفصل ' + SG_ORD[S.ch] + ' يوم ' + wDateStr(S.wait) + ' — نام 🛏️ لين يجي الوقت', k: 0 }; return; }
@@ -7585,6 +7586,7 @@ function sgStep(W, resume) {
   if (st.fight) { if (resume) { S.fightLater = true; sgEnsure(W, st.fight); } else sgFight(W, st); return; }
   if (st.escape) { sgEscape(W, st); return; }
   if (st.choice) { S.choice = { st, sel: 0, k: 0 }; return; }
+  if (st.pickHero) { S.pick = { st, sel: Math.max(0, st.pickHero.indexOf(S.hero || 'P')), k: 0 }; return; }
   if (st.end) sgFinish(W);
 }
 function sgNext(W) { const S = W.saga; S.st++; sgSave(S); if (S.st >= SAGA[S.ch].steps.length) sgChapterEnd(W); else sgStep(W); }
@@ -7623,10 +7625,11 @@ function sgFight(W, st) { const S = W.saga; worldSave(); W.dlg = null; S.fightLa
   const fortress = sgStoryNo(S.ch) === 3, asCi = sgAsCi(W, st);
   G.sel = { cur: [asCi != null ? asCi : fortress ? W.P.ci : W.P.base, st.darkForm ? FORT_NASSER : oc],
     done: [true, true], t: 0, readyT: 0, outfit: [asCi != null || fortress ? 0 : W.P.o, 0] };
-  G.stageId = st.stage || 'arena'; G.vsName = [asCi != null ? sgName(W, st.as) : null, st.name ? sgTok(W, st.name) : sgName(W, st.fight)];
-  if (asCi != null) W.toast = { t: '🎭 في هالقتال أنت ' + sgName(W, st.as) + '!', k: 0 }; SFX.ok(); G.toVS(); }
+  G.stageId = st.stage || 'arena'; G.vsName = [asCi != null ? sgName(W, sgAsR(W, st)) : null, st.name ? sgTok(W, st.name) : sgName(W, st.fight)];
+  if (asCi != null) W.toast = { t: '🎭 في هالقتال أنت ' + sgName(W, sgAsR(W, st)) + '!', k: 0 }; SFX.ok(); G.toVS(); }
 // the fighter you play in a story fight: your own hero, or the good side of the duel (st.as)
-function sgAsCi(W, st) { if (!st.as || st.as === 'P') return null; const S = W.saga, base = SG_CI[st.as]; if (base === W.P.base || base === W.P.ci) return W.P.base; return S.cast[st.as]; }
+function sgAsR(W, st) { return st.as === 'H' ? (W.saga.hero || 'P') : st.as; }
+function sgAsCi(W, st) { const as = sgAsR(W, st); if (!as || as === 'P') return null; const S = W.saga, base = SG_CI[as]; if (base === undefined) return S.cast[as]; if (base === W.P.base || base === W.P.ci) return W.P.base; return S.cast[as]; }
 function sagaSetupFight(F) { const W = G.world, st = W && W.sagaF; if (!st) return; const me = F.f[0], op = F.f[1];
   me.dmgMul = 1.3; me.defMul = 0.85; me.storyBuff = true; F.pads[1].lvl = st.lvl || 1;
   if (st.hp) { op.maxHp = Math.round(op.maxHp * st.hp); op.hp = op.trailHp = op.maxHp; } if (st.dmg) op.dmgMul = st.dmg;
@@ -7644,6 +7647,7 @@ function sagaSetupFight(F) { const W = G.world, st = W && W.sagaF; if (!st) retu
   }
   if (sgStoryNo(W.saga.ch) === 4) { const c = F.pads[1], pro4 = !!op.C.s4; c.pro = true; c.lvl = (st.lvl || 1) + (pro4 ? 1.2 : 0.8); me.dmgMul = 1.15; me.defMul = 1; op.defMul = 1; op.dmgMul = (op.dmgMul || 1) * clamp(0.7 + 0.1 * (st.lvl || 1), 0.8, 1); if (pro4) { op.bossAI = 1; op.bossCD = 110; } else if (op.bossAI) op.bossCD = 70; }
   if (st.final) F.sagaTick = st.final === 2 ? sagaFinalTick2 : sagaFinalTick;
+  if (op.C.dark) { const t1 = F.sagaTick; F.sagaTick = F2 => { if (t1) t1(F2); s4DarkPhase(F2); }; }
   if (st.hazard) { const t0 = F.sagaTick; F.sagaTick = F2 => { if (t0) t0(F2); s4Hazard(F2, st.hazard); }; } }
 // the last fight of «مملكة الدم»: ناصر shuts the fortress down, then العبد jumps in
 function sagaFinalTick2(F) { if (F.phase !== 'fight' || F.fin) return; const me = F.f[0], op = F.f[1], r = op.hp / op.maxHp, d = Math.sign(op.x - me.x) || 1;
@@ -7677,6 +7681,14 @@ function sagaUpd(W, p, q, ok, back, tap) { const S = W.saga; if (!S) return fals
     if (ok && C.k > 10) pick = C.sel;
     if (pick >= 0) { const st = C.st, r = st.choice[pick], good = r === st.right; S.choice = null; SFX.ok();
       sgSay(W, (good ? st.yes : st.no.map(l => [l[0], l[1].replace('{X}', sgName(W, r)), l[2]])).concat(st.after), () => sgNext(W)); }
+    return true; }
+  if (S.pick) { const C = S.pick, L = C.st.pickHero, n = L.length, per = Math.ceil(n / 2); C.k++;
+    if (p.left || q.left) { C.sel = (C.sel + 1) % n; SFX.move(); } if (p.right || q.right) { C.sel = (C.sel + n - 1) % n; SFX.move(); }
+    if (p.up || q.up || p.down || q.down) { C.sel = (C.sel + per) % (per * 2); if (C.sel >= n) C.sel = n - 1; SFX.move(); }
+    let pk = -1; if (tap) for (let i = 0; i < n; i++) { const [x, y] = sgPickXY(i, n); if (Math.hypot(tap[0] - x, tap[1] - y) < 70) pk = i; }
+    if (ok && C.k > 12) pk = C.sel;
+    if (pk >= 0) { if (tap && pk !== C.sel) { C.sel = pk; SFX.move(); return true; } S.hero = L[pk]; S.pick = null; SFX.ok(); sgSave(S);
+      sgSay(W, [['N', 'اخترت ' + sgName(W, S.hero) + '… والمصير كله بين إيدينك الحين!', 'banner']], () => sgNext(W)); }
     return true; }
   if (S.retry) { const R = S.retry; R.k++; if (p.left || q.left || p.right || q.right) { R.sel = 1 - R.sel; SFX.move(); }
     let pick = -1; if (tap) { if (Math.abs(tap[1] - 440) < 40) { if (Math.abs(tap[0] - (VW / 2 + 150)) < 140) pick = 0; else if (Math.abs(tap[0] - (VW / 2 - 150)) < 140) pick = 1; } }
@@ -7739,8 +7751,8 @@ function sgAmbient(W, M, cam) { if (M.ambient) { ctx.fillStyle = M.ambient; ctx.
   if (M.glows) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (const [x, y, r, rgb] of M.glows) { const sx = x - cam.x, sy = y - cam.y; if (sx < -r || sx > VW + r || sy < -r || sy > VH + r) continue; const fl = 0.85 + 0.15 * Math.sin(G.frame * 0.2 + x); const g = ctx.createRadialGradient(sx, sy, 4, sx, sy, r); g.addColorStop(0, `rgba(${rgb},${0.32 * fl})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, r, 0, 7); ctx.fill(); } ctx.restore(); } }
 // ---- drawing: screen layer (objective, timers, the cinematic, cards)
 function sagaDrawTop(W) { const S = W.saga; if (!S) return;
-  W._gR = 0; if (!S.say && !S.card && !S.choice && !S.retry && !S.credits && !W.mapOpen && !W.cal && !W.menu && !W.sleep) { sgDrawGoal(W); if (S.esc) sgDrawEsc(W); }
-  if (S.say) sgDrawSay(W); if (S.choice) sgDrawChoice(W); if (S.retry) sgDrawRetry(W); if (S.card) sgDrawCard(W); if (S.credits) sgDrawCredits(W); }
+  W._gR = 0; if (!S.say && !S.card && !S.choice && !S.pick && !S.retry && !S.credits && !W.mapOpen && !W.cal && !W.menu && !W.sleep) { sgDrawGoal(W); if (S.esc) sgDrawEsc(W); }
+  if (S.say) sgDrawSay(W); if (S.choice) sgDrawChoice(W); if (S.pick) sgDrawPick(W); if (S.retry) sgDrawRetry(W); if (S.card) sgDrawCard(W); if (S.credits) sgDrawCredits(W); }
 function sgDrawGoal(W) { const S = W.saga, rows = []; let away = false, col = '#ffd34d';
   if (S && !S.done && S.wait == null) { const C = SAGA[S.ch], g = sgGoal(W), T = sgTarget(W); away = !!(T && T.map !== W.map); col = SG_PARTS[C.part][2];
     rows.push({ t: '📜 الفصل ' + SG_ORD[S.ch] + ' · ' + C.n, s: 16, c: col, w: 800 }); if (g) rows.push({ t: g, s: 21, c: '#fff', w: 900 });
@@ -7884,6 +7896,12 @@ function sgDrawChoice(W) { const S = W.saga, C = S.choice, st = C.st, n = st.cho
   st.choice.forEach((r, i) => { const x = sgChoiceX(i, n), on = i === C.sel; ctx.fillStyle = on ? 'rgba(230,20,40,0.35)' : 'rgba(255,255,255,0.06)'; rrect(x - 115, 240, 230, 290, 20); ctx.fill(); ctx.strokeStyle = on ? '#ff3b4a' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = on ? 4 : 2; ctx.stroke();
     sgFace(W, r, x, 350, 86); txt(sgName(W, r), x, 478, { size: 28, weight: 900, color: on ? '#fff' : 'rgba(255,255,255,0.8)' }); });
   txt(TOUCH_ON ? 'المس الشخص اللي تشك فيه' : '◀ ▶ اختيار · Enter تأكيد', VW / 2, VH - 60, { size: 18, weight: 800, color: 'rgba(255,255,255,0.6)' }); }
+function sgPickXY(i, n) { const per = Math.ceil(n / 2), row = i < per ? 0 : 1, k = row ? n - per : per, j = row ? i - per : i; return [VW / 2 + ((k - 1) / 2 - j) * 160, 300 + row * 190]; }
+function sgDrawPick(W) { const S = W.saga, C = S.pick, L = C.st.pickHero, n = L.length; ctx.fillStyle = 'rgba(3,2,10,0.9)'; ctx.fillRect(0, 0, VW, VH);
+  txt(C.st.q || 'اختار بطلك للمعركة الأخيرة', VW / 2, 110, { size: 44, weight: 900, color: '#fff', glow: '#b030ff', glowBlur: 24 }); txt('أي واحد من العائلة… كلهم يقدرون يواجهون الظلام', VW / 2, 162, { size: 20, weight: 700, color: '#ffd34d' });
+  L.forEach((r, i) => { const [x, y] = sgPickXY(i, n), on = i === C.sel; if (on) { ctx.fillStyle = 'rgba(176,48,255,0.35)'; ctx.beginPath(); ctx.arc(x, y, 72 + Math.sin(S.k * 0.15) * 3, 0, 7); ctx.fill(); }
+    sgFace(W, r, x, y, on ? 62 : 54, on ? '#ffd34d' : undefined); txt(sgName(W, r), x, y + 84, { size: on ? 22 : 18, weight: 900, color: on ? '#fff' : 'rgba(255,255,255,0.75)' }); });
+  txt(TOUCH_ON ? 'المس البطل مرتين للتأكيد' : '◀ ▶ ▲ ▼ اختيار · Enter تأكيد', VW / 2, VH - 40, { size: 18, weight: 800, color: 'rgba(255,255,255,0.6)' }); }
 function sgDrawRetry(W) { const R = W.saga.retry; ctx.fillStyle = 'rgba(3,4,10,0.8)'; ctx.fillRect(0, 0, VW, VH); sgFrame(VW / 2 - 330, 220, 660, 290, '#ff3b4a');
   txt('😓 خسرت المواجهة', VW / 2, 290, { size: 44, weight: 900, color: '#fff' }); txt('القصة تنتظرك… تبي تعيد الحين؟', VW / 2, 345, { size: 22, weight: 700, color: '#ffd34d' });
   [['🔁 مرة ثانية', VW / 2 + 150], ['🚶 بعدين', VW / 2 - 150]].forEach(([l, x], i) => { const on = i === R.sel; ctx.fillStyle = on ? 'rgba(230,20,40,0.95)' : 'rgba(255,255,255,0.1)'; rrect(x - 130, 410, 260, 60, 16); ctx.fill(); if (on) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); } txt(l, x, 441, { size: 26, weight: 900, color: '#fff' }); }); }
