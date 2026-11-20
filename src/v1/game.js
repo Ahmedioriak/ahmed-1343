@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.96';
+const GAME_VER = '1.97';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1395,12 +1395,16 @@ function bossPick(ci, d) {
 function bossTick(f, opp) {
   const F = G.fight; if (!F || F.phase !== 'fight') return;
   if (f.bossCD > 0) f.bossCD--;
+  if (F.phase === 'fight' && f.sk < SKMAX && !(f.state === 'attack' && f.mv && f.mv.skill)) f.sk = Math.min(SKMAX, f.sk + 0.5); // bosses charge a bit faster
   if (f.C.awake && f.clock % 3 === 0) FX.push({ t: 'p', x: f.x + rnd(-60, 60), y: -rnd(20, 380), vx: rnd(-0.6, 0.6), vy: -rnd(1.5, 4), life: 30, max: 30, c: f.clock % 2 ? '#ff2030' : '#ff7040', sz: rnd(2, 5) });
   if (f.bossCD > 0 || !NEUTRAL.has(f.state) || opp.state === 'down' || opp.state === 'rageVic') return;
   const bci = f.bossAs !== undefined ? f.bossAs : f.ci;
   const teachBlack = bci === FORT_NASSER && F.storyLearnBlack && !opp.storySkill;
   const id = teachBlack ? 'sk_fortress_black' : bossPick(bci, Math.abs(opp.x - f.x));
   if (!id) { f.bossCD = 30; return; }
+  // المهارات الخاصة تحتاج العداد مشحون كامل (مثل اللاعب) — ما يرشّها ورا بعض
+  const isSk = /^sk/.test(id) || (MV[id] && MV[id].skill);
+  if (isSk && !teachBlack) { if (f.sk < SKMAX) { f.bossCD = 20; return; } f.sk = 0; }
   f.startMove(id); f.vx = 0; f.buf = null; f.bossCD = (f.ci === RAIS2 ? 115 : f.ci === NOKH ? 170 : bci === MASKED ? 74 : bci === MYST ? 130 : (bci === NASSER || bci === FORT_NASSER) ? 68 : bci === HAMAD ? 78 : bci === MALALI ? 105 : CHARS[bci].s4 ? (CHARS[bci].dark === 2 ? 66 : CHARS[bci].dark ? 78 : 95) : 160) + ((Math.random() * 70) | 0);
   f.talk('skill', BOSS_LINES[id]); F.skBanner = { slot: f.slot, text: BOSS_NAMES[id] || (MV[id] && MV[id].cname) || '', t: 0 };
 }
