@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.98';
+const GAME_VER = '1.99';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -6622,8 +6622,8 @@ function wExits(W) {
 function wSolids(W) { const M = WMAPS[W.map], L = []; for (const o of M.objs) if (o.solid) L.push([o.x, o.y, o.w, o.d]); for (const b of (M.block || [])) L.push(b); if (M.wall) L.push([0, 0, M.W, M.wall]); return L; }
 function wFree(W, x, y, r, skip) {
   const M = WMAPS[W.map]; if (x < r || y < r || x > M.W - r || y > M.H - r) return false;
-  for (const [bx, by, bw, bd] of W.solid) if (x > bx - r && x < bx + bw + r && y > by - r * 0.6 && y < by + bd + r * 0.6) return false;
-  for (const n of W.npcs) if (n !== skip && n.map === W.map) { const d = Math.hypot(n.x - x, n.y - y); if (d < r * 2 && !(skip && d > Math.hypot(n.x - skip.x, n.y - skip.y) + 0.01)) return false; }
+  for (const [bx, by, bw, bd] of (W.solid || [])) if (x > bx - r && x < bx + bw + r && y > by - r * 0.6 && y < by + bd + r * 0.6) return false;
+  for (const n of (W.npcs || [])) if (n !== skip && n.map === W.map) { const d = Math.hypot(n.x - x, n.y - y); if (d < r * 2 && !(skip && d > Math.hypot(n.x - skip.x, n.y - skip.y) + 0.01)) return false; }
   if (skip !== W.P && Math.hypot(W.P.x - x, W.P.y - y) < r * 2) return false;
   return true;
 }

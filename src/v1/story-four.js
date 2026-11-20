@@ -465,6 +465,7 @@ const STORY_FOUR = [
     adel: ['fareej', 1340, 692, 'left'], salah: ['fareej', 1480, 764, 'left'], captain: ['fareej', 1440, 700, 'left'], bull: ['fareej', 1560, 755, 'left'],
     chef: ['fareej', 1640, 700, 'left'], dajaj: ['fareej', 1640, 814, 'left'], teer: ['fareej', 1730, 748, 'left'], dragon: ['fareej', 1850, 740, 'left'],
     gamer: ['fareej', 2000, 760, 'left'], inv: ['fareej', 2140, 720, 'left'], abd: ['fareej', 1260, 694, 'right'], exp: ['fareej', 1230, 684, 'right'],
+    robot: ['fareej', 2300, 760, 'left'], diver: ['fareej', 2420, 700, 'left'],
   }, steps: [
     { go: ['fareej', 1190, 760], goal: 'روح الفريج — آخر تحالف' },
     { say: [
