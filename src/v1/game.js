@@ -62,7 +62,7 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => { keys.delete(e.code); });
 addEventListener('blur', () => keys.clear());
 let started = false;
-cv.addEventListener('pointerdown', e => { cv.focus(); audioInit(); started = true; pressQ.add('Click'); if (e.pointerType === 'mouse' && (G.scene === 'story' || G.scene === 'cup' || G.scene === 'shop' || G.scene === 'world')) { const r = cv.getBoundingClientRect(); window.__mtap = [(e.clientX - r.left) / r.width * VW, (e.clientY - r.top) / r.height * VH]; } });
+cv.addEventListener('pointerdown', e => { cv.focus(); audioInit(); started = true; pressQ.add('Click'); if (e.pointerType === 'mouse' && (G.scene === 'story' || G.scene === 'cup' || G.scene === 'anime' || G.scene === 'shop' || G.scene === 'world')) { const r = cv.getBoundingClientRect(); window.__mtap = [(e.clientX - r.left) / r.width * VW, (e.clientY - r.top) / r.height * VH]; } });
 
 const MAPS = [
   { up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'], b1: ['KeyR'], b2: ['KeyT'], b3: ['KeyF'], b4: ['KeyG'], sp: ['KeyE'], dg: ['KeyQ'], ok: ['KeyR', 'Space', 'KeyF'], back: ['KeyT', 'Escape'] },
@@ -155,7 +155,7 @@ function rumble(slot, strong, weak, ms) {
 let TOAST = null;
 function toast(text) { TOAST = { text, t: 0 }; }
 // ---- Install as an app (PWA) + offline play ----
-const GAME_VER = '1.95';
+const GAME_VER = '1.96';
 const PWA = { evt: null, standalone: false };
 try { PWA.standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { }
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -365,7 +365,7 @@ function uiTapZone(gx, gy) {
       if (gy > 550 && gy < 600 && (gx < 330 || gx > VW - 330)) return true;   // outfits button
     }
     if (G.scene === 'story' && G.story && G.story.step === 'select' && gy > 90) return true;
-    if (G.scene === 'cup' || G.scene === 'shop') return true;
+    if (G.scene === 'cup' || G.scene === 'shop' || G.scene === 'anime') return true;
     if (G.scene === 'world' && G.world && (G.world.phase === 'pick' || G.world.dlg || G.world.mapOpen || G.world.menu || G.world.sleep || G.world.cal)) return true;
     if (G.scene === 'world' && G.world && G.world.saga && (G.world.saga.say || G.world.saga.card || G.world.saga.choice || G.world.saga.pick || G.world.saga.retry || G.world.saga.credits)) return true;
     if (G.scene === 'title' && !G.settingsOpen && gx < 340 && gy > VH - 80) return true;   // your name/coins → wardrobe
@@ -377,7 +377,7 @@ function enableTouch() {
 }
 let tcVisKey = '';
 function tcUiOnly() { try {
-    if (G.scene === 'shop' || G.scene === 'cup' || G.scene === 'story') return true;
+    if (G.scene === 'shop' || G.scene === 'cup' || G.scene === 'story' || G.scene === 'anime') return true;
     const W = G.world; if (G.scene === 'world' && W) { if (W.phase === 'pick' || W.dlg || W.menu || W.mapOpen || W.sleep || W.cal) return true; const S = W.saga; if (S && (S.say || S.card || S.choice || S.pick || S.retry || S.credits)) return true; }
   } catch (e) { } return false; }
 function tcFrame() {
@@ -3053,6 +3053,7 @@ const STAGE_DEFS = {
 };
 const STAGE_POOL = ['arena', 'pitch', 'hosh', 'roof'];
 const BDS = {};
+/*ANIME_WORLD*/
 function stageBD(id) { return BDS[id] || (BDS[id] = STAGE_DEFS[id].make()); }
 
 function drawStage(cam, t, sid) {
@@ -3069,6 +3070,7 @@ function drawStage(cam, t, sid) {
     if (ph < 0.25) { const x = (((i * 397) % W) + bx + W) % W, y = 400 + ((i * 53) % 50); ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill(); }
   }
   ctx.restore();
+  if (SD.petals) animePetals(SD, t);
   // floor
   const fg = ctx.createLinearGradient(0, HORIZON, 0, VH); fg.addColorStop(0, SD.floor[0]); fg.addColorStop(0.4, SD.floor[1]); fg.addColorStop(1, SD.floor[2]);
   ctx.fillStyle = fg; ctx.fillRect(0, HORIZON, VW, VH - HORIZON);
@@ -4587,7 +4589,7 @@ class Fight {
     for (const f of order) withDepth(f, cam.z, () => drawAura(f));
     for (const f of order) withDepth(f, cam.z, () => {
       if ((f.state === 'attack' && f.mv && f.mv.trail && f.mt >= f.mv.st && f.mt < f.mv.st + f.mv.ac) || (f.state === 'dodge' && f.t < 12) || (f.state === 'rageSeq' && f.finTrail)) for (let g = 3; g >= 1; g--) drawFighter(f, { ghost: g });
-      if (f.C.awake) drawWings(f); if (f.eq) drawEqBack(f); drawFighter(f); if (f.eq) drawEqFront(f); if (f.hat && !(f.state === 'attack' && f.mv && (f.mv.ball || f.mv.car))) drawChefHat(f); drawRide(f); drawHeld(f); if (f.C.awake) drawAwakeFront(f); if (window.__caps) drawCaps(f);
+      if (f.C.awake) drawWings(f); if (f.eq) drawEqBack(f); if (G.anime && G.anime.play) ctx.filter = 'saturate(1.35) contrast(1.1)'; drawFighter(f); ctx.filter = 'none'; if (f.eq) drawEqFront(f); if (f.hat && !(f.state === 'attack' && f.mv && (f.mv.ball || f.mv.car))) drawChefHat(f); drawRide(f); drawHeld(f); if (f.C.awake) drawAwakeFront(f); if (window.__caps) drawCaps(f);
     });
     for (const pr of this.proj) drawProj(pr);
     if (this.fin && FIN[this.fin.ci].front) FIN[this.fin.ci].front(this, this.fin.a, this.fin.d, this.fin.t);
@@ -5426,7 +5428,7 @@ function drawStory() {
 // ================= SCENES =================
 const G = {
   scene: 'boot', frame: 0, mode: '2p', menuIdx: 0, debug: false, fight: null, sel: null, vs: null, res: null, t: 0,
-  toTitle() { if (window.__updPending) { window.__updPending = false; location.reload(); } this.vsName = null; this.cup = null; this.shop = null; if (this.world) { worldSave(); this.world = null; } this.scene = 'title'; this.t = 0; this.fight = null; this.story = null; this.storyPick = false; this.storyMap = null; if (AC) Music.intensity = 0; },
+  toTitle() { if (window.__updPending) { window.__updPending = false; location.reload(); } this.vsName = null; this.cup = null; this.anime = null; this.shop = null; if (this.world) { worldSave(); this.world = null; } this.scene = 'title'; this.t = 0; this.fight = null; this.story = null; this.storyPick = false; this.storyMap = null; if (AC) Music.intensity = 0; },
   toSelect() {
     this.story = null; this.storyPick = false; this.cup = null; this.world = null;
     const prev = this.sel ? this.sel.cur.slice() : [0, 1];
@@ -5434,14 +5436,14 @@ const G = {
     this.scene = 'select'; this.t = 0; this.fight = null; this.sel = { cur: prev, done: [false, false], t: 0, readyT: 0, outfit: pout };
     if (AC) Music.intensity = 0;
   },
-  toVS() { this.scene = 'vs'; this.t = 0; if (!this.story && !(this.world && this.world.sagaF) && this.mode !== 'online') this.stageId = STAGE_POOL[(RR() * STAGE_POOL.length) | 0]; },
+  toVS() { this.scene = 'vs'; this.t = 0; if (!this.story && !(this.world && this.world.sagaF) && !(this.anime && this.anime.play) && this.mode !== 'online') this.stageId = STAGE_POOL[(RR() * STAGE_POOL.length) | 0]; },
   fightEqFor() {
     try { if (this.cup && this.cup.play) return this.cup.play.eq || [null, null];
       if (this.mode === 'online') { const me = NET.slot | 0, a = [null, null]; a[me] = eqOfProf(profCur(), selCI(this.sel, me)); a[1 - me] = eqClean(NET.reqEq); return a; }
       return [eqOfProf(profCur(), selCI(this.sel, 0)), null]; } catch (e) { return [null, null]; }
   },
-  toFight() { this.scene = 'fight'; this.t = 0; this.fight = new Fight(selCI(this.sel, 0), selCI(this.sel, 1), this.mode); { const mi = this.mode === 'online' ? NET.slot : 0, mc = this.fight.f[mi].ci; statsPing({ fight: 1, char: CHARS[mc].name, mode: this.story ? 'القصة' : this.cup ? 'الدوري' : this.world ? 'العالم المفتوح' : ({ '2p': 'لاعبين', cpu: 'ضد الكمبيوتر', online: 'أونلاين', train: 'التدريب' })[this.mode] || this.mode }); } if (this.mode === 'online') netFightInit(this.fight); if (this.story) storySetupFight(this.fight); if (this.cup) cupSetupFight(this.fight); if (this.world && this.world.sagaF) sagaSetupFight(this.fight); },
-  toResult(w, fight) { if (this.story) { storyResult(w); return; } if (this.cup && this.cup.play) { cupResult(w); return; } if (this.world && this.world.sagaF) { sagaResult(w); return; } if (this.world && this.world.fightWith) { worldResult(w); return; } this.scene = 'result'; this.t = 0; this.res = { w, ci: fight.cis[w], wins: fight.wins.slice() }; if (AC) Music.intensity = 0; say(`${w === 0 ? 'Player one' : (this.mode === 'cpu' ? 'Computer' : 'Player two')} wins`); },
+  toFight() { this.scene = 'fight'; this.t = 0; this.fight = new Fight(selCI(this.sel, 0), selCI(this.sel, 1), this.mode); { const mi = this.mode === 'online' ? NET.slot : 0, mc = this.fight.f[mi].ci; statsPing({ fight: 1, char: CHARS[mc].name, mode: this.story ? 'القصة' : this.cup ? 'الدوري' : this.world ? 'العالم المفتوح' : ({ '2p': 'لاعبين', cpu: 'ضد الكمبيوتر', online: 'أونلاين', train: 'التدريب' })[this.mode] || this.mode }); } if (this.mode === 'online') netFightInit(this.fight); if (this.story) storySetupFight(this.fight); if (this.cup) cupSetupFight(this.fight); if (this.anime) animeSetupFight(this.fight); if (this.world && this.world.sagaF) sagaSetupFight(this.fight); },
+  toResult(w, fight) { if (this.story) { storyResult(w); return; } if (this.cup && this.cup.play) { cupResult(w); return; } if (this.anime && this.anime.play) { animeResult(w); return; } if (this.world && this.world.sagaF) { sagaResult(w); return; } if (this.world && this.world.fightWith) { worldResult(w); return; } this.scene = 'result'; this.t = 0; this.res = { w, ci: fight.cis[w], wins: fight.wins.slice() }; if (AC) Music.intensity = 0; say(`${w === 0 ? 'Player one' : (this.mode === 'cpu' ? 'Computer' : 'Player two')} wins`); },
 };
 window.__storyAPI = { storyAdvance, storyStart, storyFight, storyMapOpen, storyScript };
 window.__worldAPI = { worldOpen, worldStart, WMAPS: () => WMAPS, worldGo };
@@ -5935,7 +5937,7 @@ function wMakeFig(ci, eq) { const f = new Fighter(0, ci, { h: {}, p: {}, read() 
 function wAnimFig(e) { const f = e.fig; if (!f) return; f.facing = e.face || 1; f.state = e.act || (e.moving ? 'wwalk' : 'widle'); f.wph = e.ph; f.clock++; f.animate(); }
 function drawFig(c, e, s = WFIG_S) { const f = e.fig; if (!f) return; c.save(); c.translate(e.x, e.y); c.fillStyle = 'rgba(0,0,0,0.28)'; c.beginPath(); c.ellipse(0, 0, 36, 10, 0, 0, 7); c.fill();
   if (f.shadow) { const g = c.createRadialGradient(0, -90, 10, 0, -90, 130); g.addColorStop(0, 'rgba(170,40,255,0.34)'); g.addColorStop(1, 'rgba(120,0,200,0)'); c.fillStyle = g; c.beginPath(); c.ellipse(0, -85, 80, 125, 0, 0, 7); c.fill(); }
-  c.scale(s, s); if (f.eq) drawEqBack(f); drawFighter(f); if (f.eq) drawEqFront(f); if (f.cit) drawCitHead(f); if (e.eat) drawHeldFood(e); c.restore(); }
+  c.scale(s, s); if (f.eq) drawEqBack(f); if (G.anime && G.anime.play) ctx.filter = 'saturate(1.35) contrast(1.1)'; drawFighter(f); ctx.filter = 'none'; if (f.eq) drawEqFront(f); if (f.cit) drawCitHead(f); if (e.eat) drawHeldFood(e); c.restore(); }
 // ---- building blocks of the maps
 const W_SHADE = (hex, k) => { const n = parseInt(hex.slice(1), 16); const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255, f = v => Math.max(0, Math.min(255, Math.round(v * k))); return `rgb(${f(r)},${f(g)},${f(b)})`; };
 function wBox(x, y, w, d, h, col, extra = {}) {
@@ -8199,7 +8201,7 @@ function drawCup() {
     const cc = ['#ffd34d', '#ffffff', '#ff3b4a', '#3ea0ff', '#5be37d']; for (let i = 0; i < 70; i++) { const x = (i * 97 + C.t * (1 + i % 3)) % VW, y = ((i * 53 + C.t * (2 + i % 4)) % (VH + 40)) - 20; ctx.save(); ctx.translate(x, y); ctx.rotate(C.t * 0.1 + i); ctx.fillStyle = cc[i % 5]; ctx.fillRect(-5, -3, 10, 6); ctx.restore(); }
   }
 }
-const TITLE_MENU = [['2p', 'لاعب ضد لاعب'], ['cpu', 'ضد الكمبيوتر'], ['train', 'التدريب 🎯'], ['cup', 'الدوري 🏆'], ['world', 'العالم المفتوح + القصة 📜'], ['shop', 'الملابس 👕'], ['story', 'قصة الكأس 📖'], ['online', 'أونلاين 🌐'], ['set', 'الإعدادات']], MENU_Y0 = 384, MENU_DY = 28;
+const TITLE_MENU = [['2p', 'لاعب ضد لاعب'], ['cpu', 'ضد الكمبيوتر'], ['train', 'التدريب 🎯'], ['cup', 'الدوري 🏆'], ['world', 'العالم المفتوح + القصة 📜'], ['anime', 'عالم الأنمي 🌸'], ['shop', 'الملابس 👕'], ['story', 'قصة الكأس 📖'], ['online', 'أونلاين 🌐'], ['set', 'الإعدادات']], MENU_Y0 = 384, MENU_DY = 28;
 function updTitle() {
   G.t++;
   if (G.settingsOpen) { if (updSettings()) G.settingsOpen = false; return; }
@@ -8211,7 +8213,7 @@ function updTitle() {
   if (G.tap && G.tap[0] < 330 && G.tap[1] > VH - 74) { shopOpen(); return; }
   if (G.tap) { const i = Math.round((G.tap[1] - MENU_Y0) / MENU_DY); if (i >= 0 && i < NM && Math.abs(G.tap[0] - VW / 2) < 300) G.menuIdx = i; }
   if (pads[0].p.ok || pads[1].p.ok || anyP('Click')) { if (G.t > 10) { SFX.ok(); const id = TITLE_MENU[G.menuIdx][0];
-    if (id === 'set') { G.settingsOpen = true; setIdx = 0; } else if (id === 'online') { G.scene = 'online'; G.t = 0; NET.ui = 'menu'; NET.idx = 0; } else if (id === 'story') { storyMapOpen(); } else if (id === 'cup') { cupOpen(); } else if (id === 'shop') { shopOpen(); } else if (id === 'world') { worldOpen(); } else { G.mode = id; G.toSelect(); } } }
+    if (id === 'set') { G.settingsOpen = true; setIdx = 0; } else if (id === 'online') { G.scene = 'online'; G.t = 0; NET.ui = 'menu'; NET.idx = 0; } else if (id === 'story') { storyMapOpen(); } else if (id === 'cup') { cupOpen(); } else if (id === 'shop') { shopOpen(); } else if (id === 'world') { worldOpen(); } else if (id === 'anime') { animeOpen(); } else { G.mode = id; G.toSelect(); } } }
 }
 function drawTitle() {
   drawStage({ x: Math.sin(G.frame * 0.003) * 120, z: 1, yaw: Math.sin(G.frame * 0.004) * 0.5 }, G.frame);
@@ -8524,6 +8526,7 @@ function tick() {
     case 'online': updOnline(); break;
     case 'story': updStory(); break;
     case 'cup': updCup(); break;
+    case 'anime': updAnime(); break;
     case 'shop': updShop(); break;
     case 'world': updWorld(); break;
     case 'result': updResult(); break;
@@ -8543,6 +8546,7 @@ function render() {
     case 'online': drawOnline(); break;
     case 'story': drawStory(); break;
     case 'cup': drawCup(); break;
+    case 'anime': drawAnime(); break;
     case 'shop': drawShop(); break;
     case 'world': drawWorld(); break;
     case 'result': drawResult(); break;
